@@ -1,10 +1,11 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LucideIcon, X, ChevronLeft, ChevronRight, Menu, ChevronDown } from 'lucide-react';
+import { LucideIcon, X, ChevronLeft, ChevronRight, Menu, ChevronDown, Grid3x3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { MenuPickerDialog } from './MenuPickerDialog';
 
 // ==================== TYPES ====================
 
@@ -43,8 +44,16 @@ export interface AppShellMenuGroup {
 export interface AppShellProps {
   /** Menu items for sidebar navigation (flat list) */
   menuItems?: AppShellMenuItem[];
-  /** Grouped menu items for sidebar navigation */
+  /** All available menu items (for menu picker) */
+  allMenuItems?: AppShellMenuItem[];
+  /** Pinned menu IDs (user's customized sidebar) */
+  pinnedMenuIds?: string[];
+  /** Callback when menu is pinned/unpinned */
+  onTogglePin?: (menuId: string, isPinned: boolean) => void;
+  /** Grouped menu items for sidebar navigation (legacy, deprecated) */
   menuGroups?: AppShellMenuGroup[];
+  /** Menu categories for picker dialog */
+  menuCategories?: { id: string; label: string; icon?: LucideIcon }[];
   /** Header/toolbar content (custom components) */
   headerContent?: ReactNode;
   /** Brand logo component */
@@ -114,7 +123,11 @@ function useIsLarge() {
 
 export function AppShell({
   menuItems,
+  allMenuItems = [],
+  pinnedMenuIds = [],
+  onTogglePin,
   menuGroups,
+  menuCategories = [],
   headerContent,
   logo,
   brandName = 'App',
@@ -136,6 +149,9 @@ export function AppShell({
 }: AppShellProps) {
   const location = useLocation();
   const isLarge = useIsLarge();
+
+  // Menu picker dialog state
+  const [menuPickerOpen, setMenuPickerOpen] = useState(false);
 
   // Internal state for collapse (if not controlled)
   const [internalCollapsed, setInternalCollapsed] = useState(() => {
@@ -225,12 +241,15 @@ export function AppShell({
         {/* Pass all props to AppShellSidebar sub-component */}
         <AppShellSidebar
           menuItems={menuItems}
+          allMenuItems={allMenuItems}
+          pinnedMenuIds={pinnedMenuIds}
           menuGroups={menuGroups}
           collapsed={collapsed}
           logo={logo}
           brandName={brandName}
           onToggleSidebar={handleToggleSidebar}
           onCloseMobileMenu={handleCloseMobileMenu}
+          onOpenMenuPicker={() => setMenuPickerOpen(true)}
           showCollapseButton={showCollapseButton}
           renderMenuItem={renderMenuItem}
           onNavigate={onNavigate}
@@ -288,6 +307,16 @@ export function AppShell({
           />
         )}
       </AnimatePresence>
+
+      {/* Menu Picker Dialog */}
+      <MenuPickerDialog
+        open={menuPickerOpen}
+        onOpenChange={setMenuPickerOpen}
+        allMenuItems={allMenuItems}
+        pinnedMenuIds={pinnedMenuIds}
+        onTogglePin={onTogglePin || (() => {})}
+        menuCategories={menuCategories}
+      />
     </div>
   );
 }
@@ -296,12 +325,15 @@ export function AppShell({
 
 interface AppShellSidebarProps {
   menuItems?: AppShellMenuItem[];
+  allMenuItems?: AppShellMenuItem[];
+  pinnedMenuIds?: string[];
   menuGroups?: AppShellMenuGroup[];
   collapsed: boolean;
   logo?: ReactNode;
   brandName: string;
   onToggleSidebar: () => void;
   onCloseMobileMenu: () => void;
+  onOpenMenuPicker: () => void;
   showCollapseButton: boolean;
   renderMenuItem?: AppShellProps['renderMenuItem'];
   onNavigate?: AppShellProps['onNavigate'];
@@ -310,17 +342,31 @@ interface AppShellSidebarProps {
 
 function AppShellSidebar({
   menuItems,
+  allMenuItems = [],
+  pinnedMenuIds = [],
   menuGroups,
   collapsed,
   logo,
   brandName,
   onToggleSidebar,
   onCloseMobileMenu,
+  onOpenMenuPicker,
   showCollapseButton,
   renderMenuItem,
   onNavigate,
   location,
 }: AppShellSidebarProps) {
+  // Determine which menu items to display
+  // If pinnedMenuIds is provided, filter menuItems or allMenuItems by pinned IDs
+  const displayMenuItems = useMemo(() => {
+    if (pinnedMenuIds.length > 0 && allMenuItems.length > 0) {
+      // Show only pinned menus from allMenuItems
+      return allMenuItems.filter((item) => pinnedMenuIds.includes(item.id));
+    }
+    // Fallback to regular menuItems
+    return menuItems || [];
+  }, [menuItems, allMenuItems, pinnedMenuIds]);
+
   // Track which groups are open (only used when not collapsed)
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initialOpen = new Set<string>();
@@ -385,19 +431,30 @@ function AppShellSidebar({
   return (
     <div className="flex h-full flex-col">
       {/* Sidebar Header */}
-      <div className="flex h-16 items-center gap-3 border-b px-4">
+      <div className="flex h-16 items-center gap-2 border-b px-3">
         {logo && <div className="flex-shrink-0">{logo}</div>}
         {!collapsed && (
-          <div className="flex flex-col min-w-0">
-            <span className="text-base font-semibold truncate">{brandName}</span>
-            <span className="text-xs text-muted-foreground truncate">HRMS Platform</span>
-          </div>
+          <>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-base font-semibold truncate">{brandName}</span>
+              <span className="text-xs text-muted-foreground truncate">HRMS Platform</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenMenuPicker}
+              className="flex-shrink-0 h-9 w-9"
+              title="More menus"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+          </>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={onCloseMobileMenu}
-          className="lg:hidden ml-auto flex-shrink-0"
+          className="lg:hidden flex-shrink-0 h-9 w-9"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -405,8 +462,21 @@ function AppShellSidebar({
 
       {/* Navigation Menu */}
       <nav className="flex-1 p-2 overflow-y-auto overscroll-contain custom-scrollbar">
-        {/* Grouped Menu Items */}
-        {menuGroups && menuGroups.length > 0 ? (
+        {/* Pinned/Flat Menu Items (New Outlook-style approach) */}
+        {displayMenuItems.length > 0 ? (
+          <div className="space-y-1">
+            {displayMenuItems.map((item) => {
+              // Check permission
+              if (item.permission && !item.permission()) {
+                return null;
+              }
+
+              const isActive = isItemActive(item);
+              return <div key={item.id}>{renderItem(item, isActive)}</div>;
+            })}
+          </div>
+        ) : /* Legacy: Grouped Menu Items (backward compatibility) */
+        menuGroups && menuGroups.length > 0 ? (
           <div className="space-y-1">
             {menuGroups.map((group) => {
               // Filter items by permission
@@ -467,19 +537,6 @@ function AppShellSidebar({
                   </CollapsibleContent>
                 </Collapsible>
               );
-            })}
-          </div>
-        ) : menuItems ? (
-          /* Flat Menu Items (backward compatibility) */
-          <div className="space-y-1">
-            {menuItems.map((item) => {
-              // Check permission
-              if (item.permission && !item.permission()) {
-                return null;
-              }
-
-              const isActive = isItemActive(item);
-              return <div key={item.id}>{renderItem(item, isActive)}</div>;
             })}
           </div>
         ) : null}

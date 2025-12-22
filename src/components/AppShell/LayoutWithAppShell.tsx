@@ -1,4 +1,5 @@
-import { AppShell, AppShellMenuItem, AppShellMenuGroup } from './AppShell';
+import { useState } from 'react';
+import { AppShell, AppShellMenuItem } from './AppShell';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   User,
@@ -20,41 +21,57 @@ import {
 } from '../ui/dropdown-menu';
 import { LoadingBar } from '../LoadingBar';
 import { useAuth } from '@/contexts/AuthContext';
-import { menuStructure } from '@/config/menuConfig';
+import { getAllMenuItems, menuCategories } from '@/config/menuConfig';
+import {
+  getMenuPreferences,
+  addPinnedMenu,
+  removePinnedMenu,
+} from '@/store/menuPreferences';
 
 /**
  * LayoutWithAppShell - Employee 360 HRMS Layout
  * 
- * Complete HRMS application layout with grouped menu structure
+ * Outlook-style customizable sidebar with pinned menus
  */
 export function LayoutWithAppShell() {
-  const { can, user, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { activePage } = useLayoutContext();
 
   const path = location.pathname || '';
 
-  // Convert menu structure to grouped format
-  const menuGroups: AppShellMenuGroup[] = menuStructure.map((category) => ({
-    id: category.id,
-    label: category.label,
-    icon: category.icon,
-    items: category.items.map((item) => ({
-      ...item,
-      permission: item.permission || (() => true), // Default to visible for all
-    })),
-    defaultOpen: category.id === 'dashboard' || category.id === 'core-hr', // Open first two groups by default
-  }));
+  // Get all menu items (flat list from all categories)
+  const allMenuItems: AppShellMenuItem[] = getAllMenuItems();
+
+  // Menu preferences state (pinned menus)
+  const [pinnedMenuIds, setPinnedMenuIds] = useState<string[]>(() => {
+    const prefs = getMenuPreferences();
+    return prefs.pinnedMenuIds;
+  });
+
+  // Menu categories for picker dialog
+  const menuCategoriesForPicker = menuCategories;
+
+  // Handle pin/unpin
+  const handleTogglePin = (menuId: string, isPinned: boolean) => {
+    if (isPinned) {
+      // Unpin
+      removePinnedMenu(menuId);
+      setPinnedMenuIds((prev) => prev.filter((id) => id !== menuId));
+    } else {
+      // Pin
+      addPinnedMenu(menuId);
+      setPinnedMenuIds((prev) => [...prev, menuId]);
+    }
+  };
 
   const getPageTitle = () => {
     if (activePage) return activePage;
     
-    // Find the menu item for the current path across all groups
-    for (const group of menuGroups) {
-      const currentMenuItem = group.items.find((item) => item.to === path);
-      if (currentMenuItem) return currentMenuItem.label;
-    }
+    // Find the menu item for the current path
+    const currentMenuItem = allMenuItems.find((item) => item.to === path);
+    if (currentMenuItem) return currentMenuItem.label;
     
     // Fallback to path-based titles
     if (path.startsWith('/settings')) return 'Settings';
@@ -122,10 +139,13 @@ export function LayoutWithAppShell() {
 
   return (
     <AppShell
-      menuGroups={menuGroups}
+      allMenuItems={allMenuItems}
+      pinnedMenuIds={pinnedMenuIds}
+      onTogglePin={handleTogglePin}
+      menuCategories={menuCategoriesForPicker}
       headerContent={headerContent}
       logo={<User className="h-6 w-6 text-primary" />}
-      brandName="Employee 360" // Employee 360 HRMS Platform
+      brandName="Employee 360"
       loadingBar={<LoadingBar />}
       onNavigate={handleNavigate}
     >

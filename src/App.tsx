@@ -122,78 +122,78 @@ function App() {
                 <Route path="/account/profile" element={<Profile />} />
                 <Route path="/account/inspector" element={<SessionInspector />} />
 
-                {/* Core HR routes */}
-                <Route path="/core-hr/employee-database" element={<EmployeeDatabase />} />
-                <Route path="/core-hr/org-structure" element={<OrgStructure />} />
-                <Route path="/core-hr/employee-documents" element={<EmployeeDocuments />} />
+                {/* Core HR routes - Flat paths */}
+                <Route path="/employee-database" element={<EmployeeDatabase />} />
+                <Route path="/org-structure" element={<OrgStructure />} />
+                <Route path="/employee-documents" element={<EmployeeDocuments />} />
 
-                {/* Time, Leave & Attendance routes */}
-                <Route path="/time-attendance/attendance" element={<AttendanceManagement />} />
-                <Route path="/time-attendance/shift-schedule" element={<ShiftSchedule />} />
-                <Route path="/time-attendance/leave-holiday" element={<LeaveHoliday />} />
-                <Route path="/time-attendance/overtime" element={<OvertimeManagement />} />
+                {/* Time, Leave & Attendance routes - Flat paths */}
+                <Route path="/attendance-management" element={<AttendanceManagement />} />
+                <Route path="/shift-schedule" element={<ShiftSchedule />} />
+                <Route path="/leave-holiday" element={<LeaveHoliday />} />
+                <Route path="/overtime" element={<OvertimeManagement />} />
 
-                {/* Payroll & Compensation routes */}
-                <Route path="/payroll/salary-structure" element={<SalaryStructure />} />
-                <Route path="/payroll/payroll-run" element={<PayrollRun />} />
-                <Route path="/payroll/statutory-compliance" element={<StatutoryCompliance />} />
-                <Route path="/payroll/incentives-bonuses" element={<IncentivesBonuses />} />
+                {/* Payroll & Compensation routes - Flat paths */}
+                <Route path="/salary-structure" element={<SalaryStructure />} />
+                <Route path="/payroll-run" element={<PayrollRun />} />
+                <Route path="/statutory-compliance" element={<StatutoryCompliance />} />
+                <Route path="/incentives-bonuses" element={<IncentivesBonuses />} />
 
-                {/* Recruitment & Onboarding routes */}
-                <Route path="/recruitment/job-requisitions" element={<JobRequisitions />} />
-                <Route path="/recruitment/candidate-tracking" element={<CandidateTracking />} />
-                <Route path="/recruitment/interviews" element={<Interviews />} />
-                <Route path="/recruitment/offers-preboarding" element={<OffersPreboarding />} />
-                <Route path="/recruitment/onboarding" element={<OnboardingChecklists />} />
+                {/* Recruitment & Onboarding routes - Flat paths */}
+                <Route path="/job-requisitions" element={<JobRequisitions />} />
+                <Route path="/candidate-tracking" element={<CandidateTracking />} />
+                <Route path="/interviews" element={<Interviews />} />
+                <Route path="/offers-preboarding" element={<OffersPreboarding />} />
+                <Route path="/onboarding" element={<OnboardingChecklists />} />
 
-                {/* Performance & Development routes */}
-                <Route path="/performance/goals-okrs" element={<GoalsOKRs />} />
-                <Route path="/performance/performance-reviews" element={<PerformanceReviews />} />
-                <Route path="/performance/360-feedback" element={<Feedback360 />} />
-                <Route path="/performance/training-learning" element={<TrainingLearning />} />
-                <Route path="/performance/skills-career" element={<SkillsCareer />} />
+                {/* Performance & Development routes - Flat paths */}
+                <Route path="/goals-okrs" element={<GoalsOKRs />} />
+                <Route path="/performance-reviews" element={<PerformanceReviews />} />
+                <Route path="/360-feedback" element={<Feedback360 />} />
+                <Route path="/training-learning" element={<TrainingLearning />} />
+                <Route path="/skills-career" element={<SkillsCareer />} />
 
-                {/* Self Service routes */}
-                <Route path="/self-service/my-profile" element={<MyProfile />} />
-                <Route path="/self-service/my-attendance-leave" element={<MyAttendanceLeave />} />
-                <Route path="/self-service/my-payslips" element={<MyPayslips />} />
-                <Route path="/self-service/my-expenses" element={<MyExpenses />} />
-                <Route path="/self-service/my-requests" element={<MyRequests />} />
-                <Route path="/self-service/team-overview" element={<TeamOverview />} />
-                <Route path="/self-service/manager-approvals" element={<ManagerApprovals />} />
+                {/* Self Service routes - Flat paths */}
+                <Route path="/my-profile" element={<MyProfile />} />
+                <Route path="/my-attendance-leave" element={<MyAttendanceLeave />} />
+                <Route path="/my-payslips" element={<MyPayslips />} />
+                <Route path="/my-expenses" element={<MyExpenses />} />
+                <Route path="/my-requests" element={<MyRequests />} />
+                <Route path="/team-overview" element={<TeamOverview />} />
+                <Route path="/manager-approvals" element={<ManagerApprovals />} />
 
-                {/* Expenses, Travel & Assets routes */}
-                <Route path="/expenses-assets/expense-management" element={<ExpenseManagement />} />
-                <Route path="/expenses-assets/travel-requests" element={<TravelRequests />} />
-                <Route path="/expenses-assets/advances-settlements" element={<AdvancesSettlements />} />
-                <Route path="/expenses-assets/asset-management" element={<AssetManagement />} />
+                {/* Expenses, Travel & Assets routes - Flat paths */}
+                <Route path="/expense-management" element={<ExpenseManagement />} />
+                <Route path="/travel-requests" element={<TravelRequests />} />
+                <Route path="/advances-settlements" element={<AdvancesSettlements />} />
+                <Route path="/asset-management" element={<AssetManagement />} />
 
-                {/* Policy & Document Center routes */}
-                <Route path="/policy-documents/policy-library" element={<PolicyLibrary />} />
-                <Route path="/policy-documents/acknowledgements" element={<Acknowledgements />} />
-                <Route path="/policy-documents/forms-templates" element={<FormsTemplates />} />
+                {/* Policy & Document Center routes - Flat paths */}
+                <Route path="/policy-library" element={<PolicyLibrary />} />
+                <Route path="/acknowledgements" element={<Acknowledgements />} />
+                <Route path="/forms-templates" element={<FormsTemplates />} />
 
-                {/* Projects & Work Management routes */}
-                <Route path="/projects/project-list" element={<ProjectList />} />
-                <Route path="/projects/tasks-timesheets" element={<TasksTimesheets />} />
-                <Route path="/projects/project-attendance" element={<ProjectAttendance />} />
+                {/* Projects & Work Management routes - Flat paths */}
+                <Route path="/project-list" element={<ProjectList />} />
+                <Route path="/tasks-timesheets" element={<TasksTimesheets />} />
+                <Route path="/project-attendance" element={<ProjectAttendance />} />
 
-                {/* Visitor & Room Management routes */}
-                <Route path="/visitor-room/visitor-management" element={<VisitorManagement />} />
-                <Route path="/visitor-room/room-booking" element={<RoomBooking />} />
+                {/* Visitor & Room Management routes - Flat paths */}
+                <Route path="/visitor-management" element={<VisitorManagement />} />
+                <Route path="/room-booking" element={<RoomBooking />} />
 
-                {/* Administration & Security routes */}
-                <Route path="/administration/user-management" element={<UserManagement />} />
-                <Route path="/administration/role-permissions" element={<RolePermissions />} />
-                <Route path="/administration/audit-logs" element={<AuditLogs />} />
-                <Route path="/administration/integrations" element={<Integrations />} />
-                <Route path="/administration/system-settings" element={<SystemSettings />} />
+                {/* Administration & Security routes - Flat paths */}
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/role-permissions" element={<RolePermissions />} />
+                <Route path="/audit-logs" element={<AuditLogs />} />
+                <Route path="/integrations" element={<Integrations />} />
+                <Route path="/system-settings" element={<SystemSettings />} />
 
-                {/* Analytics & Dashboards routes */}
-                <Route path="/analytics/hr-dashboard" element={<HRDashboard />} />
-                <Route path="/analytics/workforce-analytics" element={<WorkforceAnalytics />} />
-                <Route path="/analytics/payroll-analytics" element={<PayrollAnalytics />} />
-                <Route path="/analytics/custom-reports" element={<CustomReports />} />
+                {/* Analytics & Dashboards routes - Flat paths */}
+                <Route path="/hr-dashboard" element={<HRDashboard />} />
+                <Route path="/workforce-analytics" element={<WorkforceAnalytics />} />
+                <Route path="/payroll-analytics" element={<PayrollAnalytics />} />
+                <Route path="/custom-reports" element={<CustomReports />} />
               </Route>
 
               {/* Redirect root and unknown routes */}
