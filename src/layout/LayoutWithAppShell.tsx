@@ -1,5 +1,44 @@
+/**
+ * LayoutWithAppShell - Application-specific layout implementation
+ * 
+ * This file serves as the APPLICATION LAYER that connects your app's specific
+ * requirements (auth, navigation, menu config, etc.) to the reusable AppShell component.
+ * 
+ * 🔧 CUSTOMIZATION GUIDE:
+ * ----------------------
+ * To adapt this for your application:
+ * 
+ * 1. MENU CONFIGURATION:
+ *    - Import your menu items from your config: `import { getAllMenuItems } from '@/config/menuConfig'`
+ *    - Define your menu categories for grouping in the menu picker
+ *    - Set up initial pinned menus (default sidebar items)
+ * 
+ * 2. AUTHENTICATION:
+ *    - Import your auth context: `import { useAuth } from '@/contexts/AuthContext'`
+ *    - Access user data, logout functions, etc.
+ * 
+ * 3. HEADER CONTENT:
+ *    - Customize the header toolbar (breadcrumbs, search, user menu, etc.)
+ *    - Add theme toggle, notifications, or other global actions
+ * 
+ * 4. NAVIGATION:
+ *    - Define how menu items navigate (React Router, Next.js Router, etc.)
+ *    - Add custom navigation logic if needed
+ * 
+ * 5. BRANDING:
+ *    - Set logo, brand name, and colors
+ *    - Customize the sidebar appearance
+ * 
+ * 6. STATE MANAGEMENT:
+ *    - Connect to your state management solution (Redux, Zustand, Context, etc.)
+ *    - Manage pinned menus, user preferences, etc.
+ * 
+ * 📚 The underlying AppShell component is completely reusable and agnostic.
+ * This layout file is the ONLY place you need to wire up your app-specific logic.
+ */
+
 import { useState } from 'react';
-import { AppShell, AppShellMenuItem } from './AppShell';
+import { AppShell, AppShellMenuItem } from '@/components/AppShell';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   User,
@@ -7,10 +46,10 @@ import {
   Settings as SettingsIcon,
   Code,
 } from 'lucide-react';
-import { useLayoutContext } from '../../contexts/LayoutContext';
-import { ThemeToggle } from '../ThemeToggle';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { useLayoutContext } from '@/contexts/LayoutContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +57,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { LoadingBar } from '../LoadingBar';
+} from '@/components/ui/dropdown-menu';
+import { LoadingBar } from '@/components/LoadingBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllMenuItems, menuCategories } from '@/config/menuConfig';
 import {
@@ -29,9 +68,14 @@ import {
 } from '@/store/menuPreferences';
 
 /**
- * LayoutWithAppShell - Employee 360 HRMS Layout
+ * Main application layout component using AppShell
  * 
- * Outlook-style customizable sidebar with pinned menus
+ * Features:
+ * - Outlook-style customizable sidebar with pinned menus
+ * - User authentication integration
+ * - Theme switching
+ * - Dynamic page titles
+ * - Responsive mobile menu
  */
 export function LayoutWithAppShell() {
   const { user, logout } = useAuth();
@@ -41,31 +85,40 @@ export function LayoutWithAppShell() {
 
   const path = location.pathname || '';
 
-  // Get all menu items (flat list from all categories)
+  // ==================== MENU CONFIGURATION ====================
+  // Get all available menu items from your config
   const allMenuItems: AppShellMenuItem[] = getAllMenuItems();
 
-  // Menu preferences state (pinned menus)
+  // Menu categories for the menu picker dialog
+  const menuCategoriesForPicker = menuCategories;
+
+  // ==================== STATE MANAGEMENT ====================
+  // Manage pinned menus (user's customized sidebar)
   const [pinnedMenuIds, setPinnedMenuIds] = useState<string[]>(() => {
     const prefs = getMenuPreferences();
     return prefs.pinnedMenuIds;
   });
 
-  // Menu categories for picker dialog
-  const menuCategoriesForPicker = menuCategories;
-
-  // Handle pin/unpin
+  // ==================== EVENT HANDLERS ====================
+  
+  /**
+   * Handle pin/unpin of menu items
+   */
   const handleTogglePin = (menuId: string, isPinned: boolean) => {
     if (isPinned) {
-      // Unpin
+      // Unpin - remove from sidebar
       removePinnedMenu(menuId);
       setPinnedMenuIds((prev) => prev.filter((id) => id !== menuId));
     } else {
-      // Pin
+      // Pin - add to sidebar
       addPinnedMenu(menuId);
       setPinnedMenuIds((prev) => [...prev, menuId]);
     }
   };
 
+  /**
+   * Get dynamic page title based on current route
+   */
   const getPageTitle = () => {
     if (activePage) return activePage;
     
@@ -82,18 +135,25 @@ export function LayoutWithAppShell() {
     return 'Employee 360';
   };
 
-  // Navigation handler
+  /**
+   * Handle navigation when menu item is clicked
+   */
   const handleNavigate = (item: AppShellMenuItem) => {
-    navigate(item.to);
+    if (item.to) {
+      navigate(item.to);
+    }
   };
 
-  // Header content
+  // ==================== HEADER CONTENT ====================
+  // Custom header toolbar with page title and user menu
   const headerContent = (
     <>
+      {/* Page Title */}
       <div className="flex-1 items-center gap-2 min-w-0">
         <h1 className="text-lg font-semibold truncate">{getPageTitle()}</h1>
       </div>
 
+      {/* Right Actions: Theme Toggle & User Menu */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <ThemeToggle />
 
@@ -137,18 +197,32 @@ export function LayoutWithAppShell() {
     </>
   );
 
+  // ==================== RENDER ====================
   return (
     <AppShell
+      // Menu configuration
       allMenuItems={allMenuItems}
       pinnedMenuIds={pinnedMenuIds}
       onTogglePin={handleTogglePin}
       menuCategories={menuCategoriesForPicker}
-      headerContent={headerContent}
+      
+      // Branding
       logo={<User className="h-6 w-6 text-primary" />}
       brandName="Employee 360"
+      
+      // Header & Loading
+      headerContent={headerContent}
       loadingBar={<LoadingBar />}
+      
+      // Navigation
       onNavigate={handleNavigate}
+      
+      // Customization options (all optional with sensible defaults)
+      sheetAnimationDuration={0}         // 0 = instant (no animation), 200 = smooth slide (default)
+      sheetPosition="left"           
+      // useMenuPicker={true}             // Enable menu picker (false = show all menus in sidebar)
     >
+      {/* Page content rendered here */}
       <Outlet />
     </AppShell>
   );

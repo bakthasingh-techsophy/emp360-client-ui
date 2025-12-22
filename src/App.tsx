@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { LayoutWithAppShell } from './components/AppShell';
+import { LayoutWithAppShell } from './layout';
 import { RequireAuth } from './components/RequireAuth';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';

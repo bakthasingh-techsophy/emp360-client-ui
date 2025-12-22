@@ -5,7 +5,7 @@ import { LucideIcon, X, ChevronLeft, ChevronRight, Menu, ChevronDown, Grid3x3 } 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { MenuPickerDialog } from './MenuPickerDialog';
+import { MenuPickerSheet, type GenericMenuItem, type MenuPickerCategory } from './MenuPickerDialog';
 
 // ==================== TYPES ====================
 
@@ -13,7 +13,7 @@ export interface AppShellMenuItem {
   /** Unique identifier for the menu item */
   id: string;
   /** Navigation path/route */
-  to: string;
+  to?: string;
   /** Icon component from lucide-react */
   icon: LucideIcon;
   /** Display label */
@@ -45,7 +45,7 @@ export interface AppShellProps {
   /** Menu items for sidebar navigation (flat list) */
   menuItems?: AppShellMenuItem[];
   /** All available menu items (for menu picker) */
-  allMenuItems?: AppShellMenuItem[];
+  allMenuItems?: GenericMenuItem[];
   /** Pinned menu IDs (user's customized sidebar) */
   pinnedMenuIds?: string[];
   /** Callback when menu is pinned/unpinned */
@@ -53,7 +53,7 @@ export interface AppShellProps {
   /** Grouped menu items for sidebar navigation (legacy, deprecated) */
   menuGroups?: AppShellMenuGroup[];
   /** Menu categories for picker dialog */
-  menuCategories?: { id: string; label: string; icon?: LucideIcon }[];
+  menuCategories?: MenuPickerCategory[];
   /** Header/toolbar content (custom components) */
   headerContent?: ReactNode;
   /** Brand logo component */
@@ -86,6 +86,12 @@ export interface AppShellProps {
   showCollapseButton?: boolean;
   /** Custom render for menu item */
   renderMenuItem?: (item: AppShellMenuItem, isActive: boolean, collapsed: boolean) => ReactNode;
+  /** Sheet animation duration in milliseconds (default: 200) */
+  sheetAnimationDuration?: number;
+  /** Sheet position: 'left' | 'right' | 'top' | 'bottom' (default: 'right') */
+  sheetPosition?: 'left' | 'right' | 'top' | 'bottom';
+  /** Use menu picker sheet (if false, shows all menus in sidebar) (default: true) */
+  useMenuPicker?: boolean;
 }
 
 // ==================== HOOKS ====================
@@ -146,6 +152,9 @@ export function AppShell({
   onMobileClose,
   showCollapseButton = true,
   renderMenuItem,
+  sheetAnimationDuration = 200,
+  sheetPosition = 'right',
+  useMenuPicker = true,
 }: AppShellProps) {
   const location = useLocation();
   const isLarge = useIsLarge();
@@ -254,6 +263,7 @@ export function AppShell({
           renderMenuItem={renderMenuItem}
           onNavigate={onNavigate}
           location={location}
+          useMenuPicker={useMenuPicker}
         />
       </motion.aside>
 
@@ -308,15 +318,23 @@ export function AppShell({
         )}
       </AnimatePresence>
 
-      {/* Menu Picker Dialog */}
-      <MenuPickerDialog
-        open={menuPickerOpen}
-        onOpenChange={setMenuPickerOpen}
-        allMenuItems={allMenuItems}
-        pinnedMenuIds={pinnedMenuIds}
-        onTogglePin={onTogglePin || (() => {})}
-        menuCategories={menuCategories}
-      />
+      {/* Menu Picker Sheet */}
+      {useMenuPicker && (
+        <MenuPickerSheet
+          open={menuPickerOpen}
+          onOpenChange={setMenuPickerOpen}
+          allMenuItems={allMenuItems}
+          pinnedMenuIds={pinnedMenuIds}
+          onTogglePin={onTogglePin || (() => {})}
+          categories={menuCategories}
+          title="All Menus"
+          description="Click menu to navigate, click pin icon to add to sidebar"
+          searchPlaceholder="Search menus..."
+          animationDuration={sheetAnimationDuration}
+          sheetPosition={sheetPosition}
+          onMenuClick={onNavigate}
+        />
+      )}
     </div>
   );
 }
@@ -325,7 +343,7 @@ export function AppShell({
 
 interface AppShellSidebarProps {
   menuItems?: AppShellMenuItem[];
-  allMenuItems?: AppShellMenuItem[];
+  allMenuItems?: GenericMenuItem[];
   pinnedMenuIds?: string[];
   menuGroups?: AppShellMenuGroup[];
   collapsed: boolean;
@@ -338,6 +356,7 @@ interface AppShellSidebarProps {
   renderMenuItem?: AppShellProps['renderMenuItem'];
   onNavigate?: AppShellProps['onNavigate'];
   location: ReturnType<typeof useLocation>;
+  useMenuPicker: boolean;
 }
 
 function AppShellSidebar({
@@ -355,17 +374,23 @@ function AppShellSidebar({
   renderMenuItem,
   onNavigate,
   location,
+  useMenuPicker,
 }: AppShellSidebarProps) {
   // Determine which menu items to display
+  // If useMenuPicker is false, show all menus
   // If pinnedMenuIds is provided, filter menuItems or allMenuItems by pinned IDs
   const displayMenuItems = useMemo(() => {
+    if (!useMenuPicker && allMenuItems.length > 0) {
+      // Show all menus when menu picker is disabled
+      return allMenuItems;
+    }
     if (pinnedMenuIds.length > 0 && allMenuItems.length > 0) {
       // Show only pinned menus from allMenuItems
       return allMenuItems.filter((item) => pinnedMenuIds.includes(item.id));
     }
     // Fallback to regular menuItems
     return menuItems || [];
-  }, [menuItems, allMenuItems, pinnedMenuIds]);
+  }, [menuItems, allMenuItems, pinnedMenuIds, useMenuPicker]);
 
   // Track which groups are open (only used when not collapsed)
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
@@ -393,19 +418,20 @@ function AppShellSidebar({
   };
 
   // Helper to check if an item is active
-  const isItemActive = (item: AppShellMenuItem) => {
-    const pathBase = location.pathname.replace(/^\//, '').split('/')[0];
+  const isItemActive = (item: AppShellMenuItem | GenericMenuItem) => {
+    if (!item.to) return false;
+    const pathBase = location.pathname.replace(/^\//g, '').split('/')[0];
     return item.isActive
       ? item.isActive(location.pathname)
       : item.exact
       ? location.pathname === item.to
-      : location.pathname.startsWith(item.to) || pathBase === item.to.replace(/^\//, '');
+      : location.pathname.startsWith(item.to) || pathBase === item.to.replace(/^\//g, '');
   };
 
   // Render a single menu item
-  const renderItem = (item: AppShellMenuItem, isActive: boolean) => {
-    if (renderMenuItem) {
-      return renderMenuItem(item, isActive, collapsed);
+  const renderItem = (item: AppShellMenuItem | GenericMenuItem, isActive: boolean) => {
+    if (renderMenuItem && 'to' in item && item.to) {
+      return renderMenuItem(item as AppShellMenuItem, isActive, collapsed);
     }
 
     return (
@@ -432,24 +458,31 @@ function AppShellSidebar({
     <div className="flex h-full flex-col">
       {/* Sidebar Header */}
       <div className="flex h-16 items-center gap-2 border-b px-3">
-        {logo && <div className="flex-shrink-0">{logo}</div>}
-        {!collapsed && (
-          <>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-base font-semibold truncate">{brandName}</span>
-              <span className="text-xs text-muted-foreground truncate">HRMS Platform</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onOpenMenuPicker}
-              className="flex-shrink-0 h-9 w-9"
-              title="More menus"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-          </>
+        {/* Menu Picker Icon - Left side */}
+        {useMenuPicker && !collapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenMenuPicker}
+            className="flex-shrink-0 h-9 w-9"
+            title="More menus"
+          >
+            <Grid3x3 className="h-4 w-4" />
+          </Button>
         )}
+        
+        {/* Logo - Always show when present */}
+        {logo && <div className="flex-shrink-0">{logo}</div>}
+        
+        {/* Brand Name */}
+        {!collapsed && (
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-base font-semibold truncate">{brandName}</span>
+            <span className="text-xs text-muted-foreground truncate">HRMS Platform</span>
+          </div>
+        )}
+        
+        {/* Mobile Close Button */}
         <Button
           variant="ghost"
           size="icon"
