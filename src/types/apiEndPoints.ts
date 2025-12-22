@@ -1,0 +1,1 @@
+export const API_GATEWAY = 'https://api-dev.mindzage.com';
