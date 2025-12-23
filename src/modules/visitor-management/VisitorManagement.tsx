@@ -52,10 +52,27 @@ export function VisitorManagement() {
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'name', 'phone', 'company', 'purpose', 'hostEmployeeName', 'expectedArrivalDate', 'status', 'checkInOut', 'registrationType', 'actions'
+  ]);
 
   // Pagination
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+
+  // Available columns for configure view
+  const allColumns = [
+    { id: 'name', label: 'Visitor Name' },
+    { id: 'phone', label: 'Phone' },
+    { id: 'company', label: 'Company' },
+    { id: 'purpose', label: 'Purpose' },
+    { id: 'hostEmployeeName', label: 'Host' },
+    { id: 'expectedArrivalDate', label: 'Expected Arrival' },
+    { id: 'status', label: 'Status' },
+    { id: 'checkInOut', label: 'Check In/Out' },
+    { id: 'registrationType', label: 'Type' },
+    { id: 'actions', label: 'Actions' },
+  ];
 
   // Calculate stats
   const stats: VisitorStats = useMemo(() => {
@@ -101,8 +118,8 @@ export function VisitorManagement() {
           }
           break;
         case 'registrationType':
-          if (Array?.isArray(filter?.value) && filter?.value?.length > 0) {
-            filtered = filtered?.filter((v) => filter?.value?.includes(v?.registrationType));
+          if (filter?.value) {
+            filtered = filtered?.filter((v) => v?.registrationType === filter?.value);
           }
           break;
         case 'hostEmployee':
@@ -110,10 +127,40 @@ export function VisitorManagement() {
             filtered = filtered?.filter((v) => filter?.value?.includes(v?.hostEmployeeId));
           }
           break;
+        case 'company':
+          if (filter?.value && typeof filter?.value === 'string') {
+            const query = filter?.value?.toLowerCase();
+            filtered = filtered?.filter((v) => 
+              v?.company?.toLowerCase().includes(query)
+            );
+          }
+          break;
+        case 'phone':
+          if (filter?.value && typeof filter?.value === 'string') {
+            const query = filter?.value?.toLowerCase();
+            filtered = filtered?.filter((v) => 
+              v?.phone?.toLowerCase().includes(query)
+            );
+          }
+          break;
         case 'expectedDate':
           if (filter?.value) {
             const date = new Date(filter?.value).toISOString().split('T')[0];
             filtered = filtered?.filter((v) => v?.expectedArrivalDate === date);
+          }
+          break;
+        case 'hasCheckedIn':
+          if (typeof filter?.value === 'boolean') {
+            filtered = filtered?.filter((v) => 
+              filter?.value ? v?.checkInTime !== null : v?.checkInTime === null
+            );
+          }
+          break;
+        case 'hasCheckedOut':
+          if (typeof filter?.value === 'boolean') {
+            filtered = filtered?.filter((v) => 
+              filter?.value ? v?.checkOutTime !== null : v?.checkOutTime === null
+            );
           }
           break;
       }
@@ -164,6 +211,13 @@ export function VisitorManagement() {
     // API call here
   };
 
+  const handleDelete = (visitor: Visitor) => {
+    if (confirm(`Are you sure you want to delete visitor ${visitor?.name}?`)) {
+      console?.log('Delete visitor:', visitor?.id);
+      // API call here
+    }
+  };
+
   // Table columns
   const columns: ColumnDef<Visitor>[] = [
     {
@@ -175,6 +229,11 @@ export function VisitorManagement() {
           <span className="text-xs text-muted-foreground">{row?.original?.email}</span>
         </div>
       ),
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => row?.original?.phone || '-',
     },
     {
       accessorKey: 'company',
@@ -217,75 +276,158 @@ export function VisitorManagement() {
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: () => <div className="text-center">Status</div>,
       cell: ({ row }) => (
-        <Badge className={VISITOR_STATUS_COLORS[row?.original?.status]}>
-          {VISITOR_STATUS_LABELS[row?.original?.status]}
-        </Badge>
+        <div className="flex justify-center">
+          <Badge className={VISITOR_STATUS_COLORS[row?.original?.status]}>
+            {VISITOR_STATUS_LABELS[row?.original?.status]}
+          </Badge>
+        </div>
       ),
     },
     {
+      id: 'checkInOut',
+      header: 'Check In/Out',
+      cell: ({ row }) => {
+        const visitor = row?.original;
+        const formatTime = (isoString: string | null) => {
+          if (!isoString) return null;
+          try {
+            const date = new Date(isoString);
+            return format(date, 'hh:mm a');
+          } catch {
+            return null;
+          }
+        };
+        
+        const checkIn = formatTime(visitor?.checkInTime);
+        const checkOut = formatTime(visitor?.checkOutTime);
+        
+        if (!checkIn && !checkOut) return <span className="text-muted-foreground text-xs">-</span>;
+        
+        return (
+          <div className="flex flex-col text-xs">
+            {checkIn && (
+              <span className="text-green-600 dark:text-green-400">
+                In: {checkIn}
+              </span>
+            )}
+            {checkOut && (
+              <span className="text-orange-600 dark:text-orange-400">
+                Out: {checkOut}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'registrationType',
-      header: 'Type',
+      header: () => <div className="text-center">Type</div>,
       cell: ({ row }) => (
-        <Badge variant="outline">
-          {row?.original?.registrationType === 'pre-registered' ? 'Pre-registered' : 'Instant'}
-        </Badge>
+        <div className="flex justify-center">
+          <Badge variant="outline">
+            {row?.original?.registrationType === 'pre-registered' ? 'Pre-registered' : 'Instant'}
+          </Badge>
+        </div>
       ),
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: () => <div className="text-center">Actions</div>,
       cell: ({ row }) => {
         const visitor = row?.original;
+        const hasCheckedIn = visitor?.checkInTime !== null;
+        const hasCheckedOut = visitor?.checkOutTime !== null;
+        const canCheckIn = (visitor?.status === 'approved' || visitor?.status === 'pending') && !hasCheckedIn;
+        const canCheckOut = visitor?.status === 'checked-in' && !hasCheckedOut;
+        
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => handleView(visitor)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEdit(visitor)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {visitor?.status === 'pending' && (
-                <>
-                  <DropdownMenuItem onClick={() => handleApprove(visitor)}>
-                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                    Approve
+          <div className="flex items-center justify-center gap-1">
+            {/* View Details Button */}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleView(visitor)}
+              className="h-8 px-2"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            
+            {/* Check-in Button - Always show, disabled if already checked in */}
+            <Button 
+              variant={canCheckIn ? "default" : "secondary"}
+              size="sm"
+              onClick={() => handleCheckIn(visitor)}
+              disabled={!canCheckIn}
+              className="h-8 px-2 text-xs"
+            >
+              <UserCheck className="h-3.5 w-3.5 mr-1" />
+              In
+            </Button>
+            
+            {/* Check-out Button - Always show, disabled if not checked in or already checked out */}
+            <Button 
+              variant={canCheckOut ? "default" : "secondary"}
+              size="sm"
+              onClick={() => handleCheckOut(visitor)}
+              disabled={!canCheckOut}
+              className="h-8 px-2 text-xs"
+            >
+              <UserX className="h-3.5 w-3.5 mr-1" />
+              Out
+            </Button>
+            
+            {/* More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>More Actions</DropdownMenuLabel>
+                {/* Only show Edit if not checked in */}
+                {!hasCheckedIn && (
+                  <DropdownMenuItem onClick={() => handleEdit(visitor)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleReject(visitor)}>
-                    <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                    Reject
-                  </DropdownMenuItem>
-                </>
-              )}
-              {visitor?.status === 'approved' && (
-                <DropdownMenuItem onClick={() => handleCheckIn(visitor)}>
-                  <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                  Check In
+                )}
+                {visitor?.status === 'pending' && (
+                  <>
+                    {!hasCheckedIn && <DropdownMenuSeparator />}
+                    <DropdownMenuItem onClick={() => handleApprove(visitor)}>
+                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      Approve
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleReject(visitor)}>
+                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                      Reject
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => handleDelete(visitor)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Delete
                 </DropdownMenuItem>
-              )}
-              {visitor?.status === 'checked-in' && (
-                <DropdownMenuItem onClick={() => handleCheckOut(visitor)}>
-                  <UserX className="mr-2 h-4 w-4 text-gray-600" />
-                  Check Out
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
   ];
+
+  // Filter columns based on visibility
+  const visibleTableColumns = columns.filter(col => {
+    const columnId = ('accessorKey' in col ? col.accessorKey as string : col.id) || '';
+    return visibleColumns.includes(columnId);
+  });
 
   // Filter configuration
   const filterConfig: any[] = [
@@ -294,15 +436,6 @@ export function VisitorManagement() {
       label: 'Status',
       type: 'multiselect',
       options: Object?.entries(VISITOR_STATUS_LABELS).map(([value, label]) => ({
-        value,
-        label,
-      })),
-    },
-    {
-      id: 'purpose',
-      label: 'Purpose',
-      type: 'multiselect',
-      options: Object?.entries(PURPOSE_LABELS).map(([value, label]) => ({
         value,
         label,
       })),
@@ -317,6 +450,15 @@ export function VisitorManagement() {
       ],
     },
     {
+      id: 'purpose',
+      label: 'Purpose',
+      type: 'multiselect',
+      options: Object?.entries(PURPOSE_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    },
+    {
       id: 'hostEmployee',
       label: 'Host Employee',
       type: 'multiselect',
@@ -326,9 +468,31 @@ export function VisitorManagement() {
       })),
     },
     {
+      id: 'company',
+      label: 'Company',
+      type: 'text',
+      placeholder: 'Enter company name',
+    },
+    {
+      id: 'phone',
+      label: 'Phone',
+      type: 'text',
+      placeholder: 'Enter phone number',
+    },
+    {
       id: 'expectedDate',
       label: 'Expected Date',
       type: 'date',
+    },
+    {
+      id: 'hasCheckedIn',
+      label: 'Checked In',
+      type: 'boolean',
+    },
+    {
+      id: 'hasCheckedOut',
+      label: 'Checked Out',
+      type: 'boolean',
     },
   ];
 
@@ -363,6 +527,10 @@ export function VisitorManagement() {
             searchPlaceholder="Search visitors by name, email, phone, or company..."
             searchValue={searchQuery}
             onSearchChange={setSearchQuery}
+            showConfigureView
+            allColumns={allColumns}
+            visibleColumns={visibleColumns}
+            onVisibleColumnsChange={setVisibleColumns}
             showFilters
             availableFilters={filterConfig}
             activeFilters={activeFilters}
@@ -379,7 +547,7 @@ export function VisitorManagement() {
           <DataTable
             ref={tableRef}
             data={paginatedVisitors}
-            columns={columns}
+            columns={visibleTableColumns}
             loading={loading}
             pagination={{
               pageIndex,
@@ -390,6 +558,7 @@ export function VisitorManagement() {
               onPageSizeChange: setPageSize,
             }}
             paginationVariant="default"
+            fixedPagination={true}
             emptyState={{
               title: 'No visitors found',
               description: 'Get started by registering your first visitor',

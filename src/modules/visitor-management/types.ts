@@ -8,88 +8,60 @@ export type VisitorPurpose = 'meeting' | 'interview' | 'delivery' | 'maintenance
 
 export interface Visitor {
   id: string;
-  // Basic Information
+  
+  // Form fields - Basic Information
   name: string;
   email: string;
   phone: string;
-  company?: string;
-  idType?: 'passport' | 'driving_license' | 'national_id' | 'other';
-  idNumber?: string;
-  photoUrl?: string;
+  company: string | null;
+  photoUrl: string | null;
   
-  // Visit Details
+  // Form fields - Visit Details
   purpose: VisitorPurpose;
-  purposeDetails?: string;
   hostEmployeeId: string;
-  hostEmployeeName: string;
-  hostEmployeeEmail: string;
-  hostDepartment?: string;
   
-  // Registration Info
-  registrationType: RegistrationType;
-  registeredBy: string; // User ID who registered
-  registeredByName: string;
-  registrationDate: string;
-  
-  // Visit Schedule
-  expectedArrivalDate: string;
+  // Form fields - Visit Schedule
+  expectedArrivalDate: string; // ISO date string
   expectedArrivalTime: string; // 12-hour format (e.g., "02:00 PM")
-  expectedDepartureTime?: string; // 12-hour format (e.g., "04:00 PM")
+  expectedDepartureTime: string | null; // 12-hour format
   
-  // Status & Approval
+  // Form fields - Registration Type & Notes
+  registrationType: RegistrationType;
+  notes: string | null;
+  
+  // Derived/System fields (not in form)
+  hostEmployeeName: string; // Derived from hostEmployeeId
+  hostEmployeeEmail: string; // Derived from hostEmployeeId
+  hostDepartment: string | null; // Derived from hostEmployeeId
+  
+  // Status & Check-in/out
   status: VisitorStatus;
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
-  approvedBy?: string;
-  approvedByName?: string;
-  approvalDate?: string;
-  rejectionReason?: string;
-  
-  // Check-in/out
-  actualCheckInTime?: string;
-  actualCheckOutTime?: string;
-  checkedInBy?: string;
-  checkedInByName?: string;
-  checkedOutBy?: string;
-  checkedOutByName?: string;
-  
-  // Security
-  badgeNumber?: string;
-  accessLevel?: string;
-  escortRequired?: boolean;
-  
-  // Additional
-  notes?: string;
-  vehicleNumber?: string;
-  itemsCarried?: string;
+  checkInTime: string | null; // ISO datetime
+  checkOutTime: string | null; // ISO datetime
   
   // Metadata
-  createdAt: string;
-  updatedAt: string;
+  createdBy: string; // User ID who created/registered
+  createdByName: string; // Name of user who created
+  createdAt: string; // ISO datetime
+  updatedAt: string; // ISO datetime
 }
 
-export interface VisitorFormData {
-  // Basic Information
-  name: string;
-  email: string;
-  phone: string;
-  company?: string;
-  
-  // Visit Details
-  purpose: VisitorPurpose;
-  hostEmployeeId: string;
-  registeringForOther?: boolean; // For employees registering for someone else
-  
-  // Visit Schedule
-  expectedArrivalDate: Date;
-  expectedArrivalTime: string; // 12-hour format
-  expectedDepartureTime?: string; // 12-hour format
-  
-  // Registration Type
-  registrationType: RegistrationType;
-  
-  // Notes
-  notes?: string;
-}
+// Form data type - picks only form fields from Visitor
+export type VisitorFormData = Pick<Visitor, 
+  | 'name' 
+  | 'email' 
+  | 'phone' 
+  | 'company'
+  | 'purpose'
+  | 'hostEmployeeId'
+  | 'registrationType'
+  | 'expectedArrivalTime'
+  | 'expectedDepartureTime'
+  | 'notes'
+> & {
+  expectedArrivalDate: Date; // Date object for form, string in Visitor
+  photoUrl?: string; // Optional in form, added after submission
+};
 
 export interface VisitorStats {
   totalVisitors: number;

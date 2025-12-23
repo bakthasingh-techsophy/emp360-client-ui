@@ -41,20 +41,22 @@ import { FormActionBar } from '@/components/common/FormActionBar';
 import { TimePicker } from './TimePicker';
 import { PURPOSE_OPTIONS } from '../constants';
 import { mockEmployees, mockVisitors } from '../mockData';
+import { VisitorPurpose } from '../types';
 import { cn } from '@/lib/utils';
 
+// Form schema - matches Visitor type fields used in form
 const visitorFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number is required'),
-  company: z.string().optional(),
-  purpose: z.string().min(1, 'Purpose is required'),
+  company: z.string().nullable().optional().transform(val => val || null),
+  purpose: z.string().min(1, 'Purpose is required') as z.ZodType<VisitorPurpose>,
   hostEmployeeId: z.string().min(1, 'Host employee is required'),
   registrationType: z.enum(['pre-registered', 'instant']),
   expectedArrivalDate: z.date({ required_error: 'Arrival date is required' }),
   expectedArrivalTime: z.string().min(1, 'Arrival time is required'),
-  expectedDepartureTime: z.string().optional(),
-  notes: z.string().optional(),
+  expectedDepartureTime: z.string().nullable().optional().transform(val => val || null),
+  notes: z.string().nullable().optional().transform(val => val || null),
 });
 
 type VisitorFormValues = z.infer<typeof visitorFormSchema>;
@@ -89,7 +91,7 @@ export function VisitorRegistrationForm({
       email: '',
       phone: '',
       company: '',
-      purpose: '',
+      purpose: '' as VisitorPurpose,
       hostEmployeeId: currentUserRole === 'employee' ? currentUserId : '',
       registrationType: currentUserRole === 'admin' ? 'instant' : 'pre-registered',
       expectedArrivalTime: '',
@@ -99,7 +101,6 @@ export function VisitorRegistrationForm({
   });
 
   const selectedHostId = form.watch('hostEmployeeId');
-  const registrationType = form.watch('registrationType');
   const isAdmin = currentUserRole === 'admin';
 
   // Load visitor data in edit mode
@@ -424,7 +425,7 @@ export function VisitorRegistrationForm({
                     <FormItem>
                       <FormLabel className="text-xs">Company</FormLabel>
                       <FormControl>
-                        <Input placeholder="Company name" className="h-8 text-sm" {...field} />
+                        <Input placeholder="Company name" className="h-8 text-sm" {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -603,6 +604,7 @@ export function VisitorRegistrationForm({
                       placeholder="Additional notes or requirements..."
                       className="text-sm min-h-[120px] resize-y"
                       {...field}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
