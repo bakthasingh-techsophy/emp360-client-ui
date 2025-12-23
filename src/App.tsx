@@ -80,6 +80,7 @@ import { ProjectAttendance } from './modules/projects/ProjectAttendance';
 // Visitor & Room Management modules
 import { VisitorManagement } from './modules/visitor-management';
 import { RoomBooking } from './modules/visitor-room/RoomBooking';
+import { RoomForm } from './modules/visitor-room/RoomForm';
 
 // Administration & Security modules
 import { UserManagement } from './modules/administration/UserManagement';
@@ -182,7 +183,8 @@ function App() {
 
                 {/* Visitor & Room Management routes - Flat paths */}
                 <Route path="/visitor-management" element={<VisitorManagement />} />
-                <Route path="/room-booking" element={<RoomBooking />} />
+                <Route path="/room-management" element={<RoomBooking />} />
+                <Route path="/room-form" element={<RoomForm />} />
 
                 {/* Administration & Security routes - Flat paths */}
                 <Route path="/user-management" element={<UserManagement />} />
