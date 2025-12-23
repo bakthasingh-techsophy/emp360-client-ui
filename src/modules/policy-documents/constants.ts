@@ -3,14 +3,14 @@
  */
 
 export const POLICY_STATUS_LABELS: Record<string, string> = {
-  active: 'Active',
   draft: 'Draft',
+  published: 'Published',
   archived: 'Archived',
 };
 
 export const POLICY_STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20',
   draft: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20',
+  published: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20',
   archived: 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20',
 };
 

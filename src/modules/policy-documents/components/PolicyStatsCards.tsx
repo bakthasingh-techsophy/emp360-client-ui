@@ -20,8 +20,8 @@ export function PolicyStatsCards({ stats }: PolicyStatsCardsProps) {
       bgColor: 'bg-blue-500/10',
     },
     {
-      title: 'Active Policies',
-      value: stats.activePolicies,
+      title: 'Published Policies',
+      value: stats.publishedPolicies,
       icon: CheckCircle,
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-500/10',

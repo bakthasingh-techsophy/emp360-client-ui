@@ -3,26 +3,25 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { PolicyStatsCards } from './components/PolicyStatsCards';
 import { PolicyCard } from './components/PolicyCard';
-import { PolicyFormModal } from './components/PolicyFormModal';
-import { Policy, PolicyFormData, PolicyStats } from './types';
+import { Policy, PolicyStats } from './types';
 import { mockPolicies } from './mockData';
 import { FileText } from 'lucide-react';
 import { ReactNode } from 'react';
 
 export function PolicyLibrary() {
+  const navigate = useNavigate();
+
   // State
   const [policies] = useState<Policy[]>(mockPolicies);
   const [loading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
-  const [formModalOpen, setFormModalOpen] = useState(false);
-  const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -46,7 +45,7 @@ export function PolicyLibrary() {
   const stats: PolicyStats = useMemo(() => {
     return {
       totalPolicies: policies.length,
-      activePolicies: policies.filter((p) => p.status === 'active').length,
+      publishedPolicies: policies.filter((p) => p.status === 'published').length,
       draftPolicies: policies.filter((p) => p.status === 'draft').length,
       mandatoryPolicies: policies.filter((p) => p.mandatory).length,
     };
@@ -87,21 +86,18 @@ export function PolicyLibrary() {
 
   // Handlers
   const handleAddPolicy = () => {
-    setFormMode('create');
-    setSelectedPolicy(null);
-    setFormModalOpen(true);
+    navigate('/policy-form?mode=create');
   };
 
   const handleEdit = (policy: Policy) => {
-    setFormMode('edit');
-    setSelectedPolicy(policy);
-    setFormModalOpen(true);
+    navigate(`/policy-form?mode=edit&id=${policy.id}`);
   };
 
   const handleView = (policy: Policy) => {
-    // Open PDF in new tab
-    if (policy.fileUrl) {
-      window.open(policy.fileUrl, '_blank');
+    // Open document in new tab
+    const latestVersion = policy.versions[0];
+    if (latestVersion.documentUrl) {
+      window.open(latestVersion.documentUrl, '_blank');
     }
   };
 
@@ -128,16 +124,6 @@ export function PolicyLibrary() {
     });
   };
 
-  const handleFormSubmit = (data: PolicyFormData) => {
-    if (formMode === 'create') {
-      console.log('Create policy:', data);
-      // API call here
-    } else {
-      console.log('Update policy:', selectedPolicy?.id, data);
-      // API call here
-    }
-  };
-
   // Filter configuration for GenericToolbar
   const filterConfig = [
     {
@@ -145,7 +131,7 @@ export function PolicyLibrary() {
       label: 'Status',
       type: 'select' as const,
       options: [
-        { value: 'active', label: 'Active' },
+        { value: 'published', label: 'Published' },
         { value: 'draft', label: 'Draft' },
         { value: 'archived', label: 'Archived' },
       ],
@@ -238,18 +224,6 @@ export function PolicyLibrary() {
           )}
         </div>
       </PageLayout>
-
-      {/* Policy Form Modal */}
-      <PolicyFormModal
-        open={formModalOpen}
-        onClose={() => {
-          setFormModalOpen(false);
-          setSelectedPolicy(null);
-        }}
-        onSubmit={handleFormSubmit}
-        policy={selectedPolicy}
-        mode={formMode}
-      />
 
       {/* Confirmation Dialog */}
       <ConfirmationDialog

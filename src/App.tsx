@@ -68,6 +68,7 @@ import { AssetManagement } from './modules/expenses-assets/AssetManagement';
 
 // Policy & Document Center modules
 import { PolicyLibrary } from './modules/policy-documents/PolicyLibrary';
+import { PolicyForm } from './modules/policy-documents/PolicyForm';
 import { Acknowledgements } from './modules/policy-documents/Acknowledgements';
 import { FormsTemplates } from './modules/policy-documents/FormsTemplates';
 
@@ -170,6 +171,7 @@ function App() {
 
                 {/* Policy & Document Center routes - Flat paths */}
                 <Route path="/policy-library" element={<PolicyLibrary />} />
+                <Route path="/policy-form" element={<PolicyForm />} />
                 <Route path="/acknowledgements" element={<Acknowledgements />} />
                 <Route path="/forms-templates" element={<FormsTemplates />} />
 

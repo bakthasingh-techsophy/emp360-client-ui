@@ -2,8 +2,22 @@
  * Policy Library Types
  */
 
-export type PolicyStatus = 'active' | 'draft' | 'archived';
+export type PolicyStatus = 'draft' | 'published' | 'archived';
 export type PolicyCategory = 'hr' | 'it' | 'security' | 'compliance' | 'general' | 'safety';
+export type DocumentSourceType = 'upload' | 'url';
+
+export interface PolicyVersion {
+  versionNumber: string;
+  documentId?: string; // For uploaded files
+  documentUrl?: string; // For external URLs or uploaded file URL
+  sourceType: DocumentSourceType;
+  fileType?: 'pdf' | 'docx';
+  fileSize?: number; // in bytes
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedAt: string;
+  changeNotes?: string;
+}
 
 export interface Policy {
   id: string;
@@ -11,15 +25,13 @@ export interface Policy {
   description?: string;
   category: PolicyCategory;
   status: PolicyStatus;
-  version: string;
-  fileUrl?: string;
-  fileType?: 'pdf' | 'docx' | 'url';
-  fileSize?: number; // in bytes
+  currentVersion: string;
+  versions: PolicyVersion[]; // Version history
   effectiveDate: string;
   expiryDate?: string;
-  uploadedBy: string;
-  uploadedByName: string;
-  uploadedAt: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
   updatedAt?: string;
   viewCount?: number;
   mandatory?: boolean;
@@ -30,9 +42,12 @@ export interface PolicyFormData {
   description?: string;
   category: PolicyCategory;
   status: PolicyStatus;
-  version: string;
-  fileUrl?: string;
-  fileType?: 'pdf' | 'docx' | 'url';
+  versionNumber: string;
+  sourceType: DocumentSourceType;
+  documentId?: string; // For uploaded files
+  documentUrl?: string; // For URL
+  fileType?: 'pdf' | 'docx';
+  changeNotes?: string;
   effectiveDate: Date;
   expiryDate?: Date;
   mandatory?: boolean;
@@ -40,7 +55,7 @@ export interface PolicyFormData {
 
 export interface PolicyStats {
   totalPolicies: number;
-  activePolicies: number;
+  publishedPolicies: number;
   draftPolicies: number;
   mandatoryPolicies: number;
 }

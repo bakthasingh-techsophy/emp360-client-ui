@@ -48,6 +48,8 @@ export function PolicyCard({
   onDelete,
   isAdmin = false,
 }: PolicyCardProps) {
+  const latestVersion = policy.versions[0]; // Current version is always first
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'N/A';
     const mb = bytes / (1024 * 1024);
@@ -62,7 +64,7 @@ export function PolicyCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{FILE_TYPE_ICONS[policy.fileType || 'pdf']}</span>
+              <span className="text-2xl">{FILE_TYPE_ICONS[latestVersion.fileType || 'pdf']}</span>
               <h3 className="font-semibold text-base line-clamp-1">{policy.name}</h3>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
@@ -136,9 +138,9 @@ export function PolicyCard({
         <div className="space-y-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <FileText className="h-3 w-3 flex-shrink-0" />
-            <span>Version {policy.version}</span>
+            <span>Version {policy.currentVersion}</span>
             <span>•</span>
-            <span>{formatFileSize(policy.fileSize)}</span>
+            <span>{formatFileSize(latestVersion.fileSize)}</span>
           </div>
           
           <div className="flex items-center gap-2">
@@ -157,7 +159,7 @@ export function PolicyCard({
 
           <div className="flex items-center gap-2">
             <User className="h-3 w-3 flex-shrink-0" />
-            <span>Uploaded by {policy.uploadedByName}</span>
+            <span>Uploaded by {latestVersion.uploadedByName}</span>
           </div>
 
           {policy.viewCount !== undefined && (
