@@ -33,8 +33,8 @@ export interface Visitor {
   
   // Visit Schedule
   expectedArrivalDate: string;
-  expectedArrivalTime: string;
-  expectedDepartureTime?: string;
+  expectedArrivalTime: string; // 12-hour format (e.g., "02:00 PM")
+  expectedDepartureTime?: string; // 12-hour format (e.g., "04:00 PM")
   
   // Status & Approval
   status: VisitorStatus;
@@ -73,26 +73,22 @@ export interface VisitorFormData {
   email: string;
   phone: string;
   company?: string;
-  idType?: 'passport' | 'driving_license' | 'national_id' | 'other';
-  idNumber?: string;
   
   // Visit Details
   purpose: VisitorPurpose;
-  purposeDetails?: string;
   hostEmployeeId: string;
+  registeringForOther?: boolean; // For employees registering for someone else
   
   // Visit Schedule
-  expectedArrivalDate: string;
-  expectedArrivalTime: string;
-  expectedDepartureTime?: string;
+  expectedArrivalDate: Date;
+  expectedArrivalTime: string; // 12-hour format
+  expectedDepartureTime?: string; // 12-hour format
   
   // Registration Type
   registrationType: RegistrationType;
   
-  // Additional
+  // Notes
   notes?: string;
-  vehicleNumber?: string;
-  escortRequired?: boolean;
 }
 
 export interface VisitorStats {

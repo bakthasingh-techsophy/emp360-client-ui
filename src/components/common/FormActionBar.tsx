@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useLayoutContext } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
 
 interface FormActionBarProps {
@@ -80,8 +79,6 @@ export function FormActionBar({
   rightContent,
   className = '',
 }: FormActionBarProps) {
-  const { sidebarCollapsed } = useLayoutContext();
-  
   const defaultSubmitText = mode === 'edit' 
     ? (isSubmitting ? 'Updating...' : 'Update')
     : (isSubmitting ? 'Creating...' : 'Create');
@@ -90,14 +87,11 @@ export function FormActionBar({
 
   return (
     <div className={cn(
-      'fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-40',
-      'transition-[margin] duration-200 ease-out',
-      'lg:ml-16',
-      !sidebarCollapsed && 'lg:ml-64',
+      'sticky bottom-0 bg-background border-t shadow-lg z-40',
+      'mt-6 -mx-6 px-6 py-4',
       className
     )}>
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex justify-between items-center gap-4">
+      <div className="flex justify-between items-center gap-4">
           {/* Left side */}
           <div className="flex items-center gap-4">
             {showRequiredIndicator && (
@@ -126,6 +120,5 @@ export function FormActionBar({
           </div>
         </div>
       </div>
-    </div>
   );
 }
