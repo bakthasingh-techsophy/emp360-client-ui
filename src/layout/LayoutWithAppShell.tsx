@@ -62,9 +62,9 @@ import { LoadingBar } from '@/components/LoadingBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllMenuItems, menuCategories } from '@/config/menuConfig';
 import {
-  getMenuPreferences,
   addPinnedMenu,
   removePinnedMenu,
+  getOrderedPinnedMenuIds,
 } from '@/store/menuPreferences';
 
 /**
@@ -93,16 +93,17 @@ export function LayoutWithAppShell() {
   const menuCategoriesForPicker = menuCategories;
 
   // ==================== STATE MANAGEMENT ====================
-  // Manage pinned menus (user's customized sidebar)
+  // Manage pinned menus (user's customized sidebar) with proper ordering
   const [pinnedMenuIds, setPinnedMenuIds] = useState<string[]>(() => {
-    const prefs = getMenuPreferences();
-    return prefs.pinnedMenuIds;
+    // Get ordered pinned menu IDs from preferences
+    return getOrderedPinnedMenuIds();
   });
 
   // ==================== EVENT HANDLERS ====================
   
   /**
    * Handle pin/unpin of menu items
+   * Updates both pinned state and order preferences
    */
   const handleTogglePin = (menuId: string, isPinned: boolean) => {
     if (isPinned) {
@@ -110,7 +111,7 @@ export function LayoutWithAppShell() {
       removePinnedMenu(menuId);
       setPinnedMenuIds((prev) => prev.filter((id) => id !== menuId));
     } else {
-      // Pin - add to sidebar
+      // Pin - add to sidebar at the end
       addPinnedMenu(menuId);
       setPinnedMenuIds((prev) => [...prev, menuId]);
     }

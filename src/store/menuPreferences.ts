@@ -7,6 +7,7 @@ const MENU_PREFERENCES_KEY = 'emp360_menu_preferences';
 
 export interface MenuPreferences {
   pinnedMenuIds: string[];
+  menuOrder: Record<string, number>; // Maps menuId to order position
   lastUpdated: string;
 }
 
@@ -42,8 +43,14 @@ export function getMenuPreferences(): MenuPreferences {
   }
 
   // Return defaults if nothing stored
+  const defaultOrder: Record<string, number> = {};
+  DEFAULT_PINNED_MENUS.forEach((id, index) => {
+    defaultOrder[id] = index;
+  });
+  
   return {
     pinnedMenuIds: DEFAULT_PINNED_MENUS,
+    menuOrder: defaultOrder,
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -67,6 +74,8 @@ export function addPinnedMenu(menuId: string): void {
   const prefs = getMenuPreferences();
   if (!prefs.pinnedMenuIds.includes(menuId)) {
     prefs.pinnedMenuIds.push(menuId);
+    // Assign order as the last position
+    prefs.menuOrder[menuId] = Object.keys(prefs.menuOrder).length;
     saveMenuPreferences(prefs);
   }
 }
@@ -77,6 +86,8 @@ export function addPinnedMenu(menuId: string): void {
 export function removePinnedMenu(menuId: string): void {
   const prefs = getMenuPreferences();
   prefs.pinnedMenuIds = prefs.pinnedMenuIds.filter((id) => id !== menuId);
+  // Remove from order mapping
+  delete prefs.menuOrder[menuId];
   saveMenuPreferences(prefs);
 }
 
@@ -92,8 +103,45 @@ export function isMenuPinned(menuId: string): boolean {
  * Reset to default pinned menus
  */
 export function resetMenuPreferences(): void {
+  const defaultOrder: Record<string, number> = {};
+  DEFAULT_PINNED_MENUS.forEach((id, index) => {
+    defaultOrder[id] = index;
+  });
+  
   saveMenuPreferences({
     pinnedMenuIds: DEFAULT_PINNED_MENUS,
+    menuOrder: defaultOrder,
     lastUpdated: new Date().toISOString(),
+  });
+}
+
+/**
+ * Update menu order for pinned items
+ * @param orderedMenuIds - Array of menu IDs in desired order
+ */
+export function updateMenuOrder(orderedMenuIds: string[]): void {
+  const prefs = getMenuPreferences();
+  const newOrder: Record<string, number> = {};
+  
+  orderedMenuIds.forEach((id, index) => {
+    newOrder[id] = index;
+  });
+  
+  prefs.menuOrder = newOrder;
+  prefs.pinnedMenuIds = orderedMenuIds;
+  saveMenuPreferences(prefs);
+}
+
+/**
+ * Get ordered menu IDs for sidebar display
+ * Sorts pinned menus by their order value
+ */
+export function getOrderedPinnedMenuIds(): string[] {
+  const prefs = getMenuPreferences();
+  
+  return [...prefs.pinnedMenuIds].sort((a, b) => {
+    const orderA = prefs.menuOrder[a] ?? Number.MAX_SAFE_INTEGER;
+    const orderB = prefs.menuOrder[b] ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
   });
 }

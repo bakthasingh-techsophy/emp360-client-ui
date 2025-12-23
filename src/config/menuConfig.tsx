@@ -1,3 +1,4 @@
+import { AppShellMenuItem } from '@/components/AppShell';
 import {
   Users,
   Building2,
@@ -34,21 +35,12 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export interface MenuItemConfig {
-  id: string;
-  to: string;
-  icon: LucideIcon;
-  label: string;
-  permission?: () => boolean;
-  exact?: boolean;
-  category?: string; // For organizing in menu picker sheet
-}
 
 /**
  * Complete flat menu structure for Employee 360 HRMS
  * All menus are independent - no grouping, no sub-paths
  */
-export const allMenuItems: MenuItemConfig[] = [
+export const allMenuItems: AppShellMenuItem[] = [
   // Dashboard
   {
     id: 'dashboard',
@@ -57,6 +49,7 @@ export const allMenuItems: MenuItemConfig[] = [
     label: 'Dashboard',
     category: 'Dashboard',
     exact: true,
+    order: 1,
   },
 
   // Core HR
@@ -350,6 +343,7 @@ export const allMenuItems: MenuItemConfig[] = [
     icon: Eye,
     label: 'Visitor Management',
     category: 'Visitor & Room',
+    order: 2,
   },
   {
     id: 'room-booking',
@@ -357,6 +351,7 @@ export const allMenuItems: MenuItemConfig[] = [
     icon: Calendar,
     label: 'Meeting Room Booking',
     category: 'Visitor & Room',
+    order: 3,
   },
 
   // Administration & Security
@@ -451,7 +446,7 @@ export interface MenuCategory {
   id: string;
   label: string;
   icon?: LucideIcon;
-  items: MenuItemConfig[];
+  items: AppShellMenuItem[];
 }
 
 export const menuStructure: MenuCategory[] = menuCategories.map((cat) => ({
@@ -479,20 +474,20 @@ export const menuStructure: MenuCategory[] = menuCategories.map((cat) => ({
 /**
  * Get all menu items (main export for flat menu structure)
  */
-export const getAllMenuItems = (): MenuItemConfig[] => {
+export const getAllMenuItems = (): AppShellMenuItem[] => {
   return allMenuItems;
 };
 
 /**
  * Get menu item by ID
  */
-export const getMenuItemById = (id: string): MenuItemConfig | undefined => {
+export const getMenuItemById = (id: string): AppShellMenuItem | undefined => {
   return allMenuItems.find((item) => item.id === id);
 };
 
 /**
  * Get menu item by route
  */
-export const getMenuItemByRoute = (route: string): MenuItemConfig | undefined => {
+export const getMenuItemByRoute = (route: string): AppShellMenuItem | undefined => {
   return allMenuItems.find((item) => item.to === route);
 };
