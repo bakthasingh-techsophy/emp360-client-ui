@@ -2,19 +2,27 @@
  * Visitor Registration Form Component
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { ArrowLeft, CalendarIcon, Upload, Camera, User, X, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  ArrowLeft,
+  CalendarIcon,
+  Upload,
+  Camera,
+  User,
+  X,
+  Loader2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -22,63 +30,79 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { FormActionBar } from '@/components/common/FormActionBar';
-import { TimePicker } from './TimePicker';
-import { PURPOSE_OPTIONS } from '../constants';
-import { mockEmployees, mockVisitors } from '../mockData';
-import { VisitorPurpose } from '../types';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { FormActionBar } from "@/components/common/FormActionBar";
+import { TimePicker } from "./TimePicker";
+import { PURPOSE_OPTIONS } from "../constants";
+import { mockEmployees, mockVisitors } from "../mockData";
+import { VisitorPurpose } from "../types";
+import { cn } from "@/lib/utils";
 
 // Form schema - matches Visitor type fields used in form
 const visitorFormSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number is required'),
-  company: z.string().nullable().optional().transform(val => val || null),
-  purpose: z.string().min(1, 'Purpose is required') as z.ZodType<VisitorPurpose>,
-  hostEmployeeId: z.string().min(1, 'Host employee is required'),
-  registrationType: z.enum(['pre-registered', 'instant']),
-  expectedArrivalDate: z.date({ required_error: 'Arrival date is required' }),
-  expectedArrivalTime: z.string().min(1, 'Arrival time is required'),
-  expectedDepartureTime: z.string().nullable().optional().transform(val => val || null),
-  notes: z.string().nullable().optional().transform(val => val || null),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number is required"),
+  company: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val || null),
+  purpose: z
+    .string()
+    .min(1, "Purpose is required") as z.ZodType<VisitorPurpose>,
+  hostEmployeeId: z.string().min(1, "Host employee is required"),
+  registrationType: z.enum(["pre-registered", "instant"]),
+  expectedArrivalDate: z.date({ required_error: "Arrival date is required" }),
+  expectedArrivalTime: z.string().min(1, "Arrival time is required"),
+  expectedDepartureTime: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val || null),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val || null),
 });
 
 type VisitorFormValues = z.infer<typeof visitorFormSchema>;
 
 interface VisitorRegistrationFormProps {
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   visitorId?: string;
-  currentUserRole?: 'admin' | 'employee';
+  currentUserRole?: "admin" | "employee";
   currentUserId?: string;
 }
 
-export function VisitorRegistrationForm({ 
-  mode, 
+export function VisitorRegistrationForm({
+  mode,
   visitorId,
-  currentUserRole = 'employee',
-  currentUserId = 'emp001'
+  currentUserRole = "employee",
+  currentUserId = "emp001",
 }: VisitorRegistrationFormProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeringForOther, setRegisteringForOther] = useState(false);
-  const [visitorPhoto, setVisitorPhoto] = useState<string>('');
-  const [cameraState, setCameraState] = useState<'idle' | 'starting' | 'active'>('idle');
+  const [visitorPhoto, setVisitorPhoto] = useState<string>("");
+  const [cameraState, setCameraState] = useState<
+    "idle" | "starting" | "active"
+  >("idle");
   const visitorPhotoInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,39 +111,40 @@ export function VisitorRegistrationForm({
   const form = useForm<VisitorFormValues>({
     resolver: zodResolver(visitorFormSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      purpose: '' as VisitorPurpose,
-      hostEmployeeId: currentUserRole === 'employee' ? currentUserId : '',
-      registrationType: currentUserRole === 'admin' ? 'instant' : 'pre-registered',
-      expectedArrivalTime: '',
-      expectedDepartureTime: '',
-      notes: '',
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      purpose: "" as VisitorPurpose,
+      hostEmployeeId: currentUserRole === "employee" ? currentUserId : "",
+      registrationType:
+        currentUserRole === "admin" ? "instant" : "pre-registered",
+      expectedArrivalTime: "",
+      expectedDepartureTime: "",
+      notes: "",
     },
   });
 
-  const selectedHostId = form.watch('hostEmployeeId');
-  const isAdmin = currentUserRole === 'admin';
+  const selectedHostId = form.watch("hostEmployeeId");
+  const isAdmin = currentUserRole === "admin";
 
   // Load visitor data in edit mode
   useEffect(() => {
-    if (mode === 'edit' && visitorId) {
+    if (mode === "edit" && visitorId) {
       const foundVisitor = mockVisitors.find((v) => v.id === visitorId);
       if (foundVisitor) {
         form.reset({
           name: foundVisitor.name,
           email: foundVisitor.email,
           phone: foundVisitor.phone,
-          company: foundVisitor.company || '',
+          company: foundVisitor.company || "",
           purpose: foundVisitor.purpose,
           hostEmployeeId: foundVisitor.hostEmployeeId,
           registrationType: foundVisitor.registrationType,
           expectedArrivalDate: new Date(foundVisitor.expectedArrivalDate),
           expectedArrivalTime: foundVisitor.expectedArrivalTime,
-          expectedDepartureTime: foundVisitor.expectedDepartureTime || '',
-          notes: foundVisitor.notes || '',
+          expectedDepartureTime: foundVisitor.expectedDepartureTime || "",
+          notes: foundVisitor.notes || "",
         });
       }
     }
@@ -127,63 +152,67 @@ export function VisitorRegistrationForm({
 
   // Handle registeringForOther checkbox
   useEffect(() => {
-    if (currentUserRole === 'employee' && !registeringForOther) {
-      form.setValue('hostEmployeeId', currentUserId);
+    if (currentUserRole === "employee" && !registeringForOther) {
+      form.setValue("hostEmployeeId", currentUserId);
     }
   }, [registeringForOther, currentUserRole, currentUserId, form]);
 
   const onSubmit = async (data: VisitorFormValues) => {
     setIsSubmitting(true);
-    
+
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    console.log('Form data:', { ...data, photoUrl: visitorPhoto });
-    
+
+    console.log("Form data:", { ...data, photoUrl: visitorPhoto });
+
     setIsSubmitting(false);
-    
+
     // Navigate back to visitor management
-    navigate('/visitor-management');
+    navigate("/visitor-management");
   };
 
   const handleCancel = () => {
-    navigate('/visitor-management');
+    navigate("/visitor-management");
   };
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
-    setCameraState('idle');
+    setCameraState("idle");
   }, []);
 
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
 
   useEffect(() => {
-    if (cameraState === 'active' && videoRef.current && streamRef.current) {
+    if (cameraState === "active" && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
   }, [cameraState]);
 
   const startCamera = async () => {
-    setCameraState('starting');
+    setCameraState("starting");
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
       });
       streamRef.current = mediaStream;
-      setCameraState('active');
+      setCameraState("active");
     } catch (err) {
-      console.error('Error accessing camera:', err);
-      setCameraState('idle');
-      alert('Unable to access camera. Please check permissions.');
+      console.error("Error accessing camera:", err);
+      setCameraState("idle");
+      alert("Unable to access camera. Please check permissions.");
     }
   };
 
@@ -193,16 +222,16 @@ export function VisitorRegistrationForm({
       const canvas = canvasRef.current;
 
       if (video.videoWidth === 0 || video.videoHeight === 0) {
-        alert('Camera not ready. Please wait a moment and try again.');
+        alert("Camera not ready. Please wait a moment and try again.");
         return;
       }
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(video, 0, 0);
-        const imageUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const imageUrl = canvas.toDataURL("image/jpeg", 0.8);
         setVisitorPhoto(imageUrl);
         stopCamera();
       }
@@ -213,7 +242,7 @@ export function VisitorRegistrationForm({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+        alert("File size must be less than 5MB");
         return;
       }
       const reader = new FileReader();
@@ -224,7 +253,9 @@ export function VisitorRegistrationForm({
     }
   };
 
-  const selectedEmployee = mockEmployees.find((emp) => emp.id === selectedHostId);
+  const selectedEmployee = mockEmployees.find(
+    (emp) => emp.id === selectedHostId
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
@@ -240,10 +271,12 @@ export function VisitorRegistrationForm({
         </Button>
         <div>
           <h1 className="text-xl font-semibold">
-            {mode === 'edit' ? 'Edit Visitor' : 'Register Visitor'}
+            {mode === "edit" ? "Edit Visitor" : "Register Visitor"}
           </h1>
           <p className="text-xs text-muted-foreground">
-            {mode === 'edit' ? 'Update visitor information' : 'Fill in visitor details'}
+            {mode === "edit"
+              ? "Update visitor information"
+              : "Fill in visitor details"}
           </p>
         </div>
       </div>
@@ -267,8 +300,12 @@ export function VisitorRegistrationForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="pre-registered">Pre-registered</SelectItem>
-                        <SelectItem value="instant">Instant Check-in</SelectItem>
+                        <SelectItem value="pre-registered">
+                          Pre-registered
+                        </SelectItem>
+                        <SelectItem value="instant">
+                          Instant Check-in
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -281,13 +318,17 @@ export function VisitorRegistrationForm({
           {/* Basic Information */}
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-3">Basic Information</h3>
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Visitor Photo */}
               <div className="flex flex-col items-center gap-2">
                 <div className="relative">
                   <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed border-muted-foreground/25">
-                    <AvatarImage src={visitorPhoto} alt="Visitor" className="object-cover" />
+                    <AvatarImage
+                      src={visitorPhoto}
+                      alt="Visitor"
+                      className="object-cover"
+                    />
                     <AvatarFallback className="bg-muted">
                       <User className="w-8 h-8 text-muted-foreground" />
                     </AvatarFallback>
@@ -295,7 +336,7 @@ export function VisitorRegistrationForm({
                   {visitorPhoto && (
                     <button
                       type="button"
-                      onClick={() => setVisitorPhoto('')}
+                      onClick={() => setVisitorPhoto("")}
                       className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-md"
                     >
                       <X className="w-3 h-3" />
@@ -303,9 +344,9 @@ export function VisitorRegistrationForm({
                   )}
                 </div>
 
-                {cameraState !== 'idle' ? (
+                {cameraState !== "idle" ? (
                   <div className="space-y-1.5 w-full max-w-[200px]">
-                    {cameraState === 'starting' ? (
+                    {cameraState === "starting" ? (
                       <div className="w-full aspect-[4/3] rounded border bg-muted flex items-center justify-center">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                       </div>
@@ -323,7 +364,7 @@ export function VisitorRegistrationForm({
                         type="button"
                         size="sm"
                         onClick={capturePhoto}
-                        disabled={cameraState !== 'active'}
+                        disabled={cameraState !== "active"}
                         className="flex-1 h-7 text-xs"
                       >
                         <Camera className="mr-1 h-3 w-3" />
@@ -381,9 +422,15 @@ export function VisitorRegistrationForm({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel className="text-xs">
+                        Name <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" className="h-8 text-sm" {...field} />
+                        <Input
+                          placeholder="John Doe"
+                          className="h-8 text-sm"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -395,9 +442,16 @@ export function VisitorRegistrationForm({
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Email <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel className="text-xs">
+                        Email <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="john@example.com" className="h-8 text-sm" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="john@example.com"
+                          className="h-8 text-sm"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -409,9 +463,15 @@ export function VisitorRegistrationForm({
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Phone <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel className="text-xs">
+                        Phone <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="+1234567890" className="h-8 text-sm" {...field} />
+                        <Input
+                          placeholder="+1234567890"
+                          className="h-8 text-sm"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -425,7 +485,12 @@ export function VisitorRegistrationForm({
                     <FormItem>
                       <FormLabel className="text-xs">Company</FormLabel>
                       <FormControl>
-                        <Input placeholder="Company name" className="h-8 text-sm" {...field} value={field.value || ''} />
+                        <Input
+                          placeholder="Company name"
+                          className="h-8 text-sm"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -444,7 +509,9 @@ export function VisitorRegistrationForm({
                 name="purpose"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Purpose <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel className="text-xs">
+                      Purpose <span className="text-destructive">*</span>
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-8 text-sm">
@@ -473,7 +540,9 @@ export function VisitorRegistrationForm({
                       <FormLabel className="text-xs">
                         Host <span className="text-destructive">*</span>
                         {!isAdmin && !registeringForOther && (
-                          <span className="text-muted-foreground ml-1">(You)</span>
+                          <span className="text-muted-foreground ml-1">
+                            (You)
+                          </span>
                         )}
                       </FormLabel>
                       {!isAdmin && (
@@ -481,17 +550,22 @@ export function VisitorRegistrationForm({
                           <Checkbox
                             id="registerForOther"
                             checked={registeringForOther}
-                            onCheckedChange={(checked) => setRegisteringForOther(!!checked)}
+                            onCheckedChange={(checked) =>
+                              setRegisteringForOther(!!checked)
+                            }
                             className="h-3.5 w-3.5"
                           />
-                          <Label htmlFor="registerForOther" className="text-xs cursor-pointer font-normal">
+                          <Label
+                            htmlFor="registerForOther"
+                            className="text-xs cursor-pointer font-normal"
+                          >
                             For other
                           </Label>
                         </div>
                       )}
                     </div>
-                    <Select 
-                      value={field.value} 
+                    <Select
+                      value={field.value}
                       onValueChange={field.onChange}
                       disabled={!isAdmin && !registeringForOther}
                     >
@@ -529,19 +603,25 @@ export function VisitorRegistrationForm({
                 name="expectedArrivalDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">Arrival Date <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel className="text-xs">
+                      Arrival Date <span className="text-destructive">*</span>
+                    </FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             className={cn(
-                              'h-8 text-sm font-normal w-full',
-                              !field.value && 'text-muted-foreground'
+                              "h-8 text-sm font-normal w-full",
+                              !field.value && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                            {field.value ? format(field.value, 'PPP') : <span>Pick date</span>}
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick date</span>
+                            )}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
@@ -565,9 +645,14 @@ export function VisitorRegistrationForm({
                   name="expectedArrivalTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Entry Time <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel className="text-xs">
+                        Entry Time <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <TimePicker value={field.value || ''} onChange={field.onChange} />
+                        <TimePicker
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -581,7 +666,10 @@ export function VisitorRegistrationForm({
                     <FormItem>
                       <FormLabel className="text-xs">Exit Time</FormLabel>
                       <FormControl>
-                        <TimePicker value={field.value || ''} onChange={field.onChange} />
+                        <TimePicker
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
@@ -604,7 +692,7 @@ export function VisitorRegistrationForm({
                       placeholder="Additional notes or requirements..."
                       className="text-sm min-h-[120px] resize-y"
                       {...field}
-                      value={field.value || ''}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -618,7 +706,7 @@ export function VisitorRegistrationForm({
             mode={mode}
             isSubmitting={isSubmitting}
             onCancel={handleCancel}
-            submitText={mode === 'edit' ? 'Update' : 'Register'}
+            submitText={mode === "edit" ? "Update" : "Register"}
           />
         </form>
       </Form>

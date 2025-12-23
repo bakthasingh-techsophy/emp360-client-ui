@@ -78,6 +78,40 @@ export function PolicyLibrary() {
         case 'mandatory':
           filtered = filtered.filter((p) => p.mandatory === (filter.value === 'true'));
           break;
+        case 'effectiveDate':
+          if (filter.value?.from) {
+            filtered = filtered.filter((p) => {
+              const effectiveDate = new Date(p.effectiveDate);
+              const fromDate = new Date(filter.value.from);
+              return effectiveDate >= fromDate;
+            });
+          }
+          if (filter.value?.to) {
+            filtered = filtered.filter((p) => {
+              const effectiveDate = new Date(p.effectiveDate);
+              const toDate = new Date(filter.value.to);
+              return effectiveDate <= toDate;
+            });
+          }
+          break;
+        case 'expiryDate':
+          if (filter.value?.from) {
+            filtered = filtered.filter((p) => {
+              if (!p.expiryDate) return false;
+              const expiryDate = new Date(p.expiryDate);
+              const fromDate = new Date(filter.value.from);
+              return expiryDate >= fromDate;
+            });
+          }
+          if (filter.value?.to) {
+            filtered = filtered.filter((p) => {
+              if (!p.expiryDate) return false;
+              const expiryDate = new Date(p.expiryDate);
+              const toDate = new Date(filter.value.to);
+              return expiryDate <= toDate;
+            });
+          }
+          break;
       }
     });
 
@@ -153,6 +187,16 @@ export function PolicyLibrary() {
       id: 'mandatory',
       label: 'Mandatory',
       type: 'boolean' as const,
+    },
+    {
+      id: 'effectiveDate',
+      label: 'Effective Date',
+      type: 'date' as const,
+    },
+    {
+      id: 'expiryDate',
+      label: 'Expiry Date',
+      type: 'date' as const,
     },
   ];
 

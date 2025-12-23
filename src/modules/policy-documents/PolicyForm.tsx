@@ -171,7 +171,7 @@ export function PolicyForm() {
 
       {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pb-24">
           {/* Basic Information */}
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-3">Basic Information</h3>

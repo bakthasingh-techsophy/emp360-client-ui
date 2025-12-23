@@ -9,19 +9,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Eye,
   Edit,
   Trash2,
-  MoreVertical,
   FileText,
   Calendar,
   User,
   AlertCircle,
   Download,
+  MoreVertical,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Policy } from '../types';
@@ -59,7 +59,7 @@ export function PolicyCard({
   const isExpired = policy.expiryDate && new Date(policy.expiryDate) < new Date();
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -80,20 +80,12 @@ export function PolicyCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onView(policy)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </DropdownMenuItem>
                 {onEdit && (
                   <DropdownMenuItem onClick={() => onEdit(policy)}>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => onView(policy)}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </DropdownMenuItem>
                 {onDelete && (
                   <>
                     <DropdownMenuSeparator />
@@ -112,23 +104,23 @@ export function PolicyCard({
         </div>
       </CardHeader>
 
-      <CardContent className="pb-3 space-y-3">
+      <CardContent className="pb-3 space-y-3 flex-1">
         {/* Badges */}
         <div className="flex flex-wrap gap-2">
-          <Badge className={POLICY_CATEGORY_COLORS[policy.category]}>
+          <Badge className={`${POLICY_CATEGORY_COLORS[policy.category]} pointer-events-none`}>
             {POLICY_CATEGORY_LABELS[policy.category]}
           </Badge>
-          <Badge className={POLICY_STATUS_COLORS[policy.status]}>
+          <Badge className={`${POLICY_STATUS_COLORS[policy.status]} pointer-events-none`}>
             {POLICY_STATUS_LABELS[policy.status]}
           </Badge>
           {policy.mandatory && (
-            <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400">
+            <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400 pointer-events-none">
               <AlertCircle className="h-3 w-3 mr-1" />
               Mandatory
             </Badge>
           )}
           {isExpired && (
-            <Badge variant="destructive">
+            <Badge variant="destructive" className="pointer-events-none">
               Expired
             </Badge>
           )}
@@ -172,40 +164,26 @@ export function PolicyCard({
       </CardContent>
 
       <CardFooter className="pt-3 border-t">
-        {isAdmin ? (
-          <div className="flex gap-2 w-full">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onView(policy)}
-              className="flex-1"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
-            </Button>
-            {onEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(policy)}
-                className="flex-1"
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-            )}
-          </div>
-        ) : (
+        <div className="flex justify-end items-center w-full gap-2">
           <Button
-            variant="default"
-            size="sm"
+            variant="ghost"
+            size="icon"
             onClick={() => onView(policy)}
-            className="w-full"
+            className="h-8 w-8"
+            title="Download"
           >
-            <Eye className="h-4 w-4 mr-2" />
-            View Policy
+            <Download className="h-4 w-4" />
           </Button>
-        )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onView(policy)}
+            className="h-8 w-8"
+            title="View"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
