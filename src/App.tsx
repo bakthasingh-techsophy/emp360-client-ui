@@ -77,7 +77,7 @@ import { TasksTimesheets } from './modules/projects/TasksTimesheets';
 import { ProjectAttendance } from './modules/projects/ProjectAttendance';
 
 // Visitor & Room Management modules
-import { VisitorManagement } from './modules/visitor-room/VisitorManagement';
+import { VisitorManagement } from './modules/visitor-management';
 import { RoomBooking } from './modules/visitor-room/RoomBooking';
 
 // Administration & Security modules
