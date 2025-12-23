@@ -9,6 +9,7 @@ import {
   Eye, Edit, CheckCircle, XCircle, UserCheck, UserX,
   MoreHorizontal
 } from 'lucide-react';
+import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +24,7 @@ import { PageLayout } from '@/components/PageLayout';
 import { DataTable } from '@/components/common/DataTable/DataTable';
 import { DataTableRef } from '@/components/common/DataTable/types';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { VisitorStatsCards } from './components/VisitorStatsCards';
 import { ViewVisitorModal } from './components/ViewVisitorModal';
 import { VisitorRegistrationForm } from './components/VisitorRegistrationForm';
@@ -55,6 +57,21 @@ export function VisitorManagement() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'name', 'phone', 'company', 'purpose', 'hostEmployeeName', 'expectedArrivalDate', 'status', 'checkInOut', 'registrationType', 'actions'
   ]);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string | ReactNode;
+    action: () => void;
+    variant?: 'default' | 'destructive';
+    confirmText?: string;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    action: () => {},
+  });
 
   // Pagination
   const [pageIndex, setPageIndex] = useState(0);
@@ -192,30 +209,97 @@ export function VisitorManagement() {
   };
 
   const handleApprove = (visitor: Visitor) => {
-    console?.log('Approve visitor:', visitor?.id);
-    // API call here
+    setConfirmDialog({
+      open: true,
+      title: 'Approve Visitor',
+      description: `Are you sure you want to approve ${visitor.name}? They will be allowed to check-in.`,
+      confirmText: 'Approve',
+      variant: 'default',
+      action: () => {
+        console?.log('Approve visitor:', visitor?.id);
+        // API call here
+      },
+    });
   };
 
   const handleReject = (visitor: Visitor) => {
-    console?.log('Reject visitor:', visitor?.id);
-    // API call here
+    setConfirmDialog({
+      open: true,
+      title: 'Reject Visitor',
+      description: `Are you sure you want to reject ${visitor.name}? This action will prevent them from checking in.`,
+      confirmText: 'Reject',
+      variant: 'destructive',
+      action: () => {
+        console?.log('Reject visitor:', visitor?.id);
+        // API call here
+      },
+    });
   };
 
   const handleCheckIn = (visitor: Visitor) => {
-    console?.log('Check-in visitor:', visitor?.id);
-    // API call here
+    setConfirmDialog({
+      open: true,
+      title: 'Check-In Visitor',
+      description: (
+        <div className="space-y-2">
+          <p>Confirm check-in for <strong>{visitor.name}</strong></p>
+          <div className="text-xs space-y-1 bg-muted/50 p-3 rounded-md">
+            <div><strong>Email:</strong> {visitor.email}</div>
+            <div><strong>Phone:</strong> {visitor.phone}</div>
+            {visitor.company && <div><strong>Company:</strong> {visitor.company}</div>}
+            <div><strong>Purpose:</strong> {PURPOSE_LABELS[visitor.purpose]}</div>
+          </div>
+        </div>
+      ),
+      confirmText: 'Check In',
+      variant: 'default',
+      action: () => {
+        console?.log('Check-in visitor:', visitor?.id);
+        // API call here
+      },
+    });
   };
 
   const handleCheckOut = (visitor: Visitor) => {
-    console?.log('Check-out visitor:', visitor?.id);
-    // API call here
+    setConfirmDialog({
+      open: true,
+      title: 'Check-Out Visitor',
+      description: (
+        <div className="space-y-2">
+          <p>Confirm check-out for <strong>{visitor.name}</strong></p>
+          {visitor.checkInTime && (
+            <div className="text-xs text-muted-foreground">
+              Checked in at: {format(new Date(visitor.checkInTime), 'MMM dd, yyyy hh:mm a')}
+            </div>
+          )}
+        </div>
+      ),
+      confirmText: 'Check Out',
+      variant: 'default',
+      action: () => {
+        console?.log('Check-out visitor:', visitor?.id);
+        // API call here
+      },
+    });
   };
 
   const handleDelete = (visitor: Visitor) => {
-    if (confirm(`Are you sure you want to delete visitor ${visitor?.name}?`)) {
-      console?.log('Delete visitor:', visitor?.id);
-      // API call here
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Visitor',
+      description: (
+        <div className="space-y-2">
+          <p>Are you sure you want to delete <strong>{visitor.name}</strong>?</p>
+          <p className="text-destructive text-xs">This action cannot be undone. All visitor data will be permanently removed.</p>
+        </div>
+      ),
+      confirmText: 'Delete',
+      variant: 'destructive',
+      action: () => {
+        console?.log('Delete visitor:', visitor?.id);
+        // API call here
+      },
+    });
   };
 
   // Table columns
@@ -580,6 +664,19 @@ export function VisitorManagement() {
           setSelectedVisitor(null);
         }}
         onEdit={handleEdit}
+        onCheckIn={handleCheckIn}
+        onCheckOut={handleCheckOut}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        onConfirm={confirmDialog.action}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        variant={confirmDialog.variant}
       />
     </>
   );
