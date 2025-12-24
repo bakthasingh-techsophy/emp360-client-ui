@@ -22,8 +22,9 @@ import {
   MapPin,
   Clock,
   TrendingUp,
+  CalendarX,
 } from 'lucide-react';
-import { Room } from '../types';
+import { Room, RoomBooking } from '../types';
 import {
   ROOM_STATUS_COLORS,
   ROOM_STATUS_LABELS,
@@ -33,9 +34,12 @@ import {
   AMENITY_ICONS,
 } from '../constants';
 import { mockCompanies } from '../mockData';
+import { getUpcomingBlockedDates, getRoomCurrentStatus } from '../utils/availability';
+import { format } from 'date-fns';
 
 interface RoomCardProps {
   room: Room;
+  bookings: RoomBooking[];
   onBook: (room: Room) => void;
   onView: (room: Room) => void;
   onEdit?: (room: Room) => void;
@@ -45,12 +49,20 @@ interface RoomCardProps {
 
 export function RoomCard({
   room,
+  bookings,
   onBook,
   onView,
   onEdit,
   onDelete,
   isAdmin = false,
 }: RoomCardProps) {
+  // Get dynamic room status
+  const currentStatus = getRoomCurrentStatus(room, bookings);
+  const displayStatus = currentStatus === 'upcoming' ? 'available' : currentStatus;
+  
+  // Get upcoming blocked dates (limit to 2 for card preview)
+  const upcomingBlocked = getUpcomingBlockedDates(room, bookings, 2);
+
   // Get primary amenities (top 4)
   const primaryAmenities = Object.entries(room.amenities)
     .filter(([, value]) => value === true)
@@ -71,15 +83,15 @@ export function RoomCard({
     <Card className="hover:shadow-lg transition-shadow flex flex-col h-full overflow-hidden">
       {/* Room Image */}
       {room.imageUrl && (
-        <div className="relative h-48 w-full overflow-hidden">
+          <div className="relative h-48 w-full overflow-hidden">
           <img
             src={room.imageUrl}
             alt={room.name}
             className="w-full h-full object-cover"
           />
           <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
-            <Badge className={`${ROOM_STATUS_COLORS[room.status]} pointer-events-none`}>
-              {ROOM_STATUS_LABELS[room.status]}
+            <Badge className={`${ROOM_STATUS_COLORS[displayStatus]} pointer-events-none`}>
+              {currentStatus === 'upcoming' ? 'Booked Soon' : ROOM_STATUS_LABELS[displayStatus]}
             </Badge>
             {isAdmin && (
               <DropdownMenu>
@@ -200,6 +212,31 @@ export function RoomCard({
             <span className="font-medium">Managed by:</span> {ownerCompany.name}
           </div>
         )}
+
+        {/* Upcoming Blocked Dates Preview */}
+        {upcomingBlocked.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+              <CalendarX className="h-3 w-3" />
+              Upcoming Bookings
+            </p>
+            <div className="space-y-1">
+              {upcomingBlocked.map(({ date, bookingsCount }) => (
+                <div key={date} className="text-xs text-muted-foreground">
+                  {format(new Date(date), 'MMM d')} - {bookingsCount} {bookingsCount === 1 ? 'booking' : 'bookings'}
+                </div>
+              ))}
+            </div>
+            {upcomingBlocked.length >= 2 && (
+              <button
+                onClick={() => onView(room)}
+                className="text-xs text-primary hover:underline mt-1"
+              >
+                View all dates
+              </button>
+            )}
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="pt-3 border-t">
@@ -218,10 +255,10 @@ export function RoomCard({
             variant="default"
             size="sm"
             onClick={() => onBook(room)}
-            disabled={room.status !== 'available'}
+            disabled={room.status === 'maintenance' || room.status === 'inactive'}
             className="flex-1"
           >
-            {room.status === 'available' ? 'Book Now' : ROOM_STATUS_LABELS[room.status]}
+            {currentStatus === 'available' || currentStatus === 'upcoming' ? 'Book Now' : ROOM_STATUS_LABELS[displayStatus]}
           </Button>
         </div>
       </CardFooter>

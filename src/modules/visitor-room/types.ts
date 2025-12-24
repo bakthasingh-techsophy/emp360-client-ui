@@ -54,8 +54,9 @@ export interface Room {
   sharedWithCompanies: string[]; // Other companies that can book this room
   
   // Images & Visual
-  imageUrl?: string;
+  imageUrl?: string; // Primary image (backward compatibility)
   thumbnailUrl?: string;
+  images?: string[]; // Multiple images for carousel
   
   // Metadata
   createdAt: string;
@@ -163,6 +164,8 @@ export interface RoomFormData {
   // Images
   imageUrl?: string;
   imageFile?: File; // For upload option
+  images?: string[]; // Multiple images
+  imageFiles?: File[]; // For multiple upload option
 }
 
 /**

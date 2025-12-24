@@ -64,6 +64,11 @@ export const mockRooms: Room[] = [
     ownerCompanyId: 'comp-001',
     sharedWithCompanies: ['comp-002', 'comp-003'],
     imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c',
+    images: [
+      'https://images.unsplash.com/photo-1497366216548-37526070297c',
+      'https://images.unsplash.com/photo-1497366811353-6870744d04b2',
+      'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
+    ],
     createdAt: '2024-01-15T08:00:00Z',
     updatedAt: '2024-12-20T10:30:00Z',
     createdBy: 'user-001',
@@ -96,6 +101,10 @@ export const mockRooms: Room[] = [
     ownerCompanyId: 'comp-001',
     sharedWithCompanies: ['comp-002'],
     imageUrl: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2',
+    images: [
+      'https://images.unsplash.com/photo-1497366811353-6870744d04b2',
+      'https://images.unsplash.com/photo-1431540015161-0bf868a2d407',
+    ],
     createdAt: '2024-02-10T09:00:00Z',
     updatedAt: '2024-12-18T14:00:00Z',
     createdBy: 'user-001',
@@ -126,6 +135,9 @@ export const mockRooms: Room[] = [
     ownerCompanyId: 'comp-001',
     sharedWithCompanies: [],
     imageUrl: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
+    images: [
+      'https://images.unsplash.com/photo-1497366754035-f200968a6e72',
+    ],
     createdAt: '2024-03-05T10:00:00Z',
     updatedAt: '2024-12-23T09:00:00Z',
     createdBy: 'user-001',
@@ -303,16 +315,65 @@ export const mockRooms: Room[] = [
  * Mock Bookings (showing cross-company bookings)
  */
 export const mockBookings: RoomBooking[] = [
+  // Today's bookings - Single 30-minute slot
   {
     id: 'booking-001',
+    roomId: 'room-001',
+    roomName: 'Innovation Hub',
+    title: 'Morning Briefing',
+    description: 'Quick team briefing to start the day',
+    purpose: 'Team Meeting',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T09:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T09:30:00Z',
+    date: new Date().toISOString().split('T')[0],
+    recurrence: 'none',
+    numberOfAttendees: 8,
+    bookedBy: 'user-001',
+    bookedByName: 'John Admin',
+    bookedByEmail: 'john.admin@techcorp.com',
+    bookedByCompanyId: 'comp-001',
+    bookedByCompanyName: 'TechCorp Solutions',
+    hasExternalGuests: false,
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Today's bookings - 2 consecutive slots (1 hour)
+  {
+    id: 'booking-002',
+    roomId: 'room-001',
+    roomName: 'Innovation Hub',
+    title: 'Product Demo Session',
+    description: 'Demo of new features for stakeholders',
+    purpose: 'Presentation',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T11:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T12:00:00Z',
+    date: new Date().toISOString().split('T')[0],
+    recurrence: 'none',
+    numberOfAttendees: 12,
+    bookedBy: 'user-002',
+    bookedByName: 'Mike Developer',
+    bookedByEmail: 'mike@techcorp.com',
+    bookedByCompanyId: 'comp-001',
+    bookedByCompanyName: 'TechCorp Solutions',
+    hasExternalGuests: false,
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Today's bookings - 4 consecutive slots (2 hours) - long meeting
+  {
+    id: 'booking-003',
     roomId: 'room-001',
     roomName: 'Innovation Hub',
     title: 'Q4 Strategy Planning',
     description: 'Quarterly strategic planning session with all department heads',
     purpose: 'Board Meeting',
-    startDateTime: '2024-12-23T10:00:00Z',
-    endDateTime: '2024-12-23T12:00:00Z',
-    date: '2024-12-23',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T14:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T16:00:00Z',
+    date: new Date().toISOString().split('T')[0],
     recurrence: 'none',
     numberOfAttendees: 15,
     bookedBy: 'user-001',
@@ -323,49 +384,26 @@ export const mockBookings: RoomBooking[] = [
     hasExternalGuests: false,
     status: 'confirmed',
     notifyAttendees: true,
-    createdAt: '2024-12-15T09:00:00Z',
-    updatedAt: '2024-12-15T09:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
+  // Daily recurring - Room 002 (Quick Connect)
   {
-    id: 'booking-002',
+    id: 'booking-004',
     roomId: 'room-002',
     roomName: 'Creative Studio',
-    title: 'Design Review - Project Phoenix',
-    description: 'Review and feedback session for Phoenix project designs',
-    purpose: 'Design Review',
-    startDateTime: '2024-12-23T14:00:00Z',
-    endDateTime: '2024-12-23T16:00:00Z',
-    date: '2024-12-23',
-    recurrence: 'none',
-    numberOfAttendees: 8,
-    bookedBy: 'user-005',
-    bookedByName: 'Sarah Designer',
-    bookedByEmail: 'sarah@designhub.com',
-    bookedByCompanyId: 'comp-002',
-    bookedByCompanyName: 'DesignHub Agency',
-    hostName: 'Sarah Designer',
-    hostEmail: 'sarah@designhub.com',
-    hasExternalGuests: true,
-    externalGuestCount: 2,
-    externalGuestCompanies: ['Client XYZ Corp'],
-    setupRequirements: 'Please arrange chairs in U-shape',
-    status: 'confirmed',
-    notifyAttendees: true,
-    createdAt: '2024-12-18T11:00:00Z',
-    updatedAt: '2024-12-18T11:00:00Z',
-  },
-  {
-    id: 'booking-003',
-    roomId: 'room-003',
-    roomName: 'Quick Connect',
     title: 'Daily Standup - Dev Team',
     description: 'Daily synchronization meeting for development team',
     purpose: 'Team Meeting',
-    startDateTime: '2024-12-23T09:00:00Z',
-    endDateTime: '2024-12-23T09:30:00Z',
-    date: '2024-12-23',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T09:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T09:30:00Z',
+    date: new Date().toISOString().split('T')[0],
     recurrence: 'daily',
-    recurrenceEndDate: '2024-12-31',
+    recurrenceEndDate: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 14);
+      return date.toISOString().split('T')[0];
+    })(),
     numberOfAttendees: 6,
     bookedBy: 'user-002',
     bookedByName: 'Mike Developer',
@@ -375,20 +413,92 @@ export const mockBookings: RoomBooking[] = [
     hasExternalGuests: false,
     status: 'confirmed',
     notifyAttendees: false,
-    createdAt: '2024-12-01T08:00:00Z',
-    updatedAt: '2024-12-01T08:00:00Z',
-    checkedInAt: '2024-12-23T08:58:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
+  // Weekly recurring - Room 003
   {
-    id: 'booking-004',
+    id: 'booking-005',
+    roomId: 'room-003',
+    roomName: 'Quick Connect',
+    title: 'Weekly Team Sync',
+    description: 'Weekly synchronization and planning for the team',
+    purpose: 'Team Meeting',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T10:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T11:00:00Z',
+    date: new Date().toISOString().split('T')[0],
+    recurrence: 'weekly',
+    recurrenceEndDate: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 60);
+      return date.toISOString().split('T')[0];
+    })(),
+    numberOfAttendees: 10,
+    bookedBy: 'user-001',
+    bookedByName: 'John Admin',
+    bookedByEmail: 'john.admin@techcorp.com',
+    bookedByCompanyId: 'comp-001',
+    bookedByCompanyName: 'TechCorp Solutions',
+    hasExternalGuests: false,
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Monthly recurring - Room 004
+  {
+    id: 'booking-006',
+    roomId: 'room-004',
+    roomName: 'Executive Boardroom',
+    title: 'Monthly All-Hands Meeting',
+    description: 'Company-wide monthly update and Q&A session',
+    purpose: 'Company Meeting',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T15:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T16:30:00Z',
+    date: new Date().toISOString().split('T')[0],
+    recurrence: 'monthly',
+    recurrenceEndDate: (() => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + 6);
+      return date.toISOString().split('T')[0];
+    })(),
+    numberOfAttendees: 50,
+    bookedBy: 'user-003',
+    bookedByName: 'Emily CFO',
+    bookedByEmail: 'emily.cfo@techcorp.com',
+    bookedByCompanyId: 'comp-001',
+    bookedByCompanyName: 'TechCorp Solutions',
+    hasExternalGuests: false,
+    cateringRequired: true,
+    cateringDetails: 'Coffee and snacks for all attendees',
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Tomorrow's bookings - Multi-slot with external guests
+  {
+    id: 'booking-007',
     roomId: 'room-004',
     roomName: 'Executive Boardroom',
     title: 'Investor Presentation',
     description: 'Q4 results presentation to potential investors',
     purpose: 'Presentation',
-    startDateTime: '2024-12-24T11:00:00Z',
-    endDateTime: '2024-12-24T13:00:00Z',
-    date: '2024-12-24',
+    startDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0] + 'T11:00:00Z';
+    })(),
+    endDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0] + 'T13:00:00Z';
+    })(),
+    date: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0];
+    })(),
     recurrence: 'none',
     numberOfAttendees: 12,
     bookedBy: 'user-003',
@@ -404,19 +514,61 @@ export const mockBookings: RoomBooking[] = [
     setupRequirements: 'Boardroom style, presentation screen setup',
     status: 'confirmed',
     notifyAttendees: true,
-    createdAt: '2024-12-10T14:00:00Z',
-    updatedAt: '2024-12-10T14:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
+  // Different company booking - Room 002
   {
-    id: 'booking-005',
+    id: 'booking-008',
+    roomId: 'room-002',
+    roomName: 'Creative Studio',
+    title: 'Design Review - Project Phoenix',
+    description: 'Review and feedback session for Phoenix project designs',
+    purpose: 'Design Review',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T14:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T16:00:00Z',
+    date: new Date().toISOString().split('T')[0],
+    recurrence: 'none',
+    numberOfAttendees: 8,
+    bookedBy: 'user-005',
+    bookedByName: 'Sarah Designer',
+    bookedByEmail: 'sarah@designhub.com',
+    bookedByCompanyId: 'comp-002',
+    bookedByCompanyName: 'DesignHub Agency',
+    hostName: 'Sarah Designer',
+    hostEmail: 'sarah@designhub.com',
+    hasExternalGuests: true,
+    externalGuestCount: 2,
+    externalGuestCompanies: ['Client XYZ Corp'],
+    setupRequirements: 'Please arrange chairs in U-shape',
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Long workshop - 4 hours with catering
+  {
+    id: 'booking-009',
     roomId: 'room-006',
     roomName: 'Collaboration Zone',
     title: 'Marketing Campaign Workshop',
     description: 'Brainstorming and planning for Q1 2025 marketing campaigns',
     purpose: 'Workshop',
-    startDateTime: '2024-12-23T13:00:00Z',
-    endDateTime: '2024-12-23T17:00:00Z',
-    date: '2024-12-23',
+    startDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 2);
+      return date.toISOString().split('T')[0] + 'T13:00:00Z';
+    })(),
+    endDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 2);
+      return date.toISOString().split('T')[0] + 'T17:00:00Z';
+    })(),
+    date: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 2);
+      return date.toISOString().split('T')[0];
+    })(),
     recurrence: 'none',
     numberOfAttendees: 10,
     bookedBy: 'user-007',
@@ -429,19 +581,32 @@ export const mockBookings: RoomBooking[] = [
     cateringDetails: 'Snacks and beverages for afternoon session',
     status: 'confirmed',
     notifyAttendees: true,
-    createdAt: '2024-12-16T10:00:00Z',
-    updatedAt: '2024-12-16T10:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
+  // Pending booking
   {
-    id: 'booking-006',
+    id: 'booking-010',
     roomId: 'room-001',
     roomName: 'Innovation Hub',
     title: 'Client Onboarding Meeting',
     description: 'Onboarding session for new enterprise client',
     purpose: 'Client Meeting',
-    startDateTime: '2024-12-24T14:00:00Z',
-    endDateTime: '2024-12-24T16:00:00Z',
-    date: '2024-12-24',
+    startDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 3);
+      return date.toISOString().split('T')[0] + 'T14:00:00Z';
+    })(),
+    endDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 3);
+      return date.toISOString().split('T')[0] + 'T16:00:00Z';
+    })(),
+    date: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 3);
+      return date.toISOString().split('T')[0];
+    })(),
     recurrence: 'none',
     numberOfAttendees: 12,
     bookedBy: 'user-004',
@@ -458,19 +623,20 @@ export const mockBookings: RoomBooking[] = [
     specialRequests: 'Please ensure room is set up 30 minutes early',
     status: 'pending',
     notifyAttendees: true,
-    createdAt: '2024-12-20T15:00:00Z',
-    updatedAt: '2024-12-20T15:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
+  // One-on-one meeting
   {
-    id: 'booking-007',
+    id: 'booking-011',
     roomId: 'room-008',
     roomName: 'Focus Pod',
     title: 'Performance Review - John Doe',
     description: 'Annual performance review meeting',
     purpose: 'One-on-One',
-    startDateTime: '2024-12-23T15:00:00Z',
-    endDateTime: '2024-12-23T16:00:00Z',
-    date: '2024-12-23',
+    startDateTime: new Date().toISOString().split('T')[0] + 'T15:00:00Z',
+    endDateTime: new Date().toISOString().split('T')[0] + 'T16:00:00Z',
+    date: new Date().toISOString().split('T')[0],
     recurrence: 'none',
     numberOfAttendees: 2,
     bookedBy: 'user-006',
@@ -481,7 +647,45 @@ export const mockBookings: RoomBooking[] = [
     hasExternalGuests: false,
     status: 'confirmed',
     notifyAttendees: false,
-    createdAt: '2024-12-22T09:00:00Z',
-    updatedAt: '2024-12-22T09:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // Interview - Room 007
+  {
+    id: 'booking-012',
+    roomId: 'room-007',
+    roomName: 'Training Room',
+    title: 'Technical Interview - Senior Developer',
+    description: 'Technical interview for senior developer position',
+    purpose: 'Interview',
+    startDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0] + 'T10:00:00Z';
+    })(),
+    endDateTime: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0] + 'T11:30:00Z';
+    })(),
+    date: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0];
+    })(),
+    recurrence: 'none',
+    numberOfAttendees: 4,
+    bookedBy: 'user-006',
+    bookedByName: 'HR Manager',
+    bookedByEmail: 'hr@techcorp.com',
+    bookedByCompanyId: 'comp-001',
+    bookedByCompanyName: 'TechCorp Solutions',
+    hasExternalGuests: true,
+    externalGuestCount: 1,
+    setupRequirements: 'Whiteboard and coding setup required',
+    status: 'confirmed',
+    notifyAttendees: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];

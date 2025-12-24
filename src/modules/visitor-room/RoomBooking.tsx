@@ -10,6 +10,7 @@ import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { RoomStatsCards } from './components/RoomStatsCards';
 import { RoomCard } from './components/RoomCard';
+import { RoomDetailsModal } from './components/RoomDetailsModal';
 import { Room, RoomStats } from './types';
 import { mockRooms, mockBookings } from './mockData';
 import { Building2 } from 'lucide-react';
@@ -23,6 +24,8 @@ export function RoomBooking() {
   const [loading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -120,15 +123,13 @@ export function RoomBooking() {
   };
 
   const handleView = (room: Room) => {
-    // Navigate to room details/booking page
-    console.log('View room:', room.id);
-    // TODO: Implement room details view with booking calendar
+    setSelectedRoom(room);
+    setDetailsModalOpen(true);
   };
 
   const handleBook = (room: Room) => {
-    // Navigate to booking form
-    console.log('Book room:', room.id);
-    // TODO: Implement booking form
+    // Navigate to booking page with room ID
+    navigate(`/room-booking-form?roomId=${room.id}`);
   };
 
   const handleDelete = (room: Room) => {
@@ -272,6 +273,7 @@ export function RoomBooking() {
                 <RoomCard
                   key={room.id}
                   room={room}
+                  bookings={mockBookings}
                   onBook={handleBook}
                   onView={handleView}
                   onEdit={isAdmin ? handleEdit : undefined}
@@ -283,6 +285,14 @@ export function RoomBooking() {
           )}
         </div>
       </PageLayout>
+
+      {/* Room Details Modal */}
+      <RoomDetailsModal
+        room={selectedRoom}
+        bookings={mockBookings}
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+      />
 
       {/* Confirmation Dialog */}
       <ConfirmationDialog
