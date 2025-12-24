@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Form,
   FormControl,
@@ -30,10 +31,14 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FormActionBar } from '@/components/common/FormActionBar';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload, Link as LinkIcon } from 'lucide-react';
 import { Room } from './types';
-import { mockRooms, mockCompanies } from './mockData';
-import { ROOM_TYPE_LABELS, DAY_LABELS, AMENITY_LABELS, DEFAULT_AVAILABILITY } from './constants';
+import { mockRooms } from './mockData';
+import { ROOM_TYPE_LABELS, DAY_LABELS, AMENITY_LABELS, DEFAULT_AVAILABILITY, DEFAULT_AMENITIES } from './constants';
+
+interface RoomFormProps {
+  availableAmenities?: string[]; // Configurable amenities from admin settings
+}
 
 // Form validation schema
 const roomFormSchema = z.object({
@@ -45,41 +50,22 @@ const roomFormSchema = z.object({
   building: z.string().optional(),
   location: z.string().min(1, 'Location is required'),
   
-  // Amenities
-  projector: z.boolean().default(false),
-  whiteboard: z.boolean().default(false),
-  videoConference: z.boolean().default(false),
-  audioSystem: z.boolean().default(false),
-  wifi: z.boolean().default(false),
-  television: z.boolean().default(false),
-  airConditioning: z.boolean().default(false),
-  phoneConference: z.boolean().default(false),
-  smartBoard: z.boolean().default(false),
-  refreshments: z.boolean().default(false),
-  
-  // Sharing
-  sharedWithCompanies: z.array(z.string()).default([]),
-  
-  // Pricing
-  hourlyRate: z.number().min(0).optional(),
-  halfDayRate: z.number().min(0).optional(),
-  fullDayRate: z.number().min(0).optional(),
+  // Amenities (dynamic)
+  amenities: z.record(z.boolean()).default({}),
   
   // Availability
   availableFrom: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format'),
   availableTo: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format'),
   availableDays: z.array(z.number()).min(1, 'Select at least one day'),
-  minBookingDuration: z.number().min(15, 'Minimum booking must be at least 15 minutes'),
-  maxBookingDuration: z.number().min(30, 'Maximum booking must be at least 30 minutes'),
-  bufferTime: z.number().min(0, 'Buffer time cannot be negative'),
   
   // Images
   imageUrl: z.string().url().optional().or(z.literal('')),
+  imageUploadType: z.enum(['url', 'upload']).default('url'),
 });
 
 type RoomFormValues = z.infer<typeof roomFormSchema>;
 
-export function RoomForm() {
+export function RoomForm({ availableAmenities = DEFAULT_AMENITIES }: RoomFormProps = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = (searchParams.get('mode') as 'create' | 'edit') || 'create';
@@ -87,10 +73,20 @@ export function RoomForm() {
 
   const [room, setRoom] = useState<Room | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageUploadType, setImageUploadType] = useState<'url' | 'upload'>('url');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Get available companies for sharing (exclude owner company)
-  const currentCompanyId = 'comp-001'; // In real app, get from auth context
-  const availableCompanies = mockCompanies.filter((c) => c.id !== currentCompanyId);
+  // Initialize amenities default values
+  const getInitialAmenities = () => {
+    const amenities: Record<string, boolean> = {};
+    availableAmenities.forEach((amenity) => {
+      amenities[amenity] = false;
+    });
+    // Set wifi and airConditioning to true by default
+    if (amenities.wifi !== undefined) amenities.wifi = true;
+    if (amenities.airConditioning !== undefined) amenities.airConditioning = true;
+    return amenities;
+  };
 
   // Form setup
   const form = useForm<RoomFormValues>({
@@ -103,27 +99,12 @@ export function RoomForm() {
       floor: '',
       building: '',
       location: '',
-      projector: false,
-      whiteboard: false,
-      videoConference: false,
-      audioSystem: false,
-      wifi: true,
-      television: false,
-      airConditioning: true,
-      phoneConference: false,
-      smartBoard: false,
-      refreshments: false,
-      sharedWithCompanies: [],
-      hourlyRate: undefined,
-      halfDayRate: undefined,
-      fullDayRate: undefined,
+      amenities: getInitialAmenities(),
       availableFrom: DEFAULT_AVAILABILITY.availableFrom,
       availableTo: DEFAULT_AVAILABILITY.availableTo,
       availableDays: DEFAULT_AVAILABILITY.availableDays,
-      minBookingDuration: DEFAULT_AVAILABILITY.minBookingDuration,
-      maxBookingDuration: DEFAULT_AVAILABILITY.maxBookingDuration,
-      bufferTime: DEFAULT_AVAILABILITY.bufferTime,
       imageUrl: '',
+      imageUploadType: 'url',
     },
   });
 
@@ -134,6 +115,12 @@ export function RoomForm() {
       if (foundRoom) {
         setRoom(foundRoom);
         
+        // Convert room amenities to form format
+        const amenitiesFormData: Record<string, boolean> = {};
+        availableAmenities.forEach((amenity) => {
+          amenitiesFormData[amenity] = foundRoom.amenities[amenity as keyof typeof foundRoom.amenities] || false;
+        });
+        
         // Populate form with room data
         form.reset({
           name: foundRoom.name,
@@ -143,31 +130,16 @@ export function RoomForm() {
           floor: foundRoom.floor,
           building: foundRoom.building || '',
           location: foundRoom.location,
-          projector: foundRoom.amenities.projector || false,
-          whiteboard: foundRoom.amenities.whiteboard || false,
-          videoConference: foundRoom.amenities.videoConference || false,
-          audioSystem: foundRoom.amenities.audioSystem || false,
-          wifi: foundRoom.amenities.wifi || false,
-          television: foundRoom.amenities.television || false,
-          airConditioning: foundRoom.amenities.airConditioning || false,
-          phoneConference: foundRoom.amenities.phoneConference || false,
-          smartBoard: foundRoom.amenities.smartBoard || false,
-          refreshments: foundRoom.amenities.refreshments || false,
-          sharedWithCompanies: foundRoom.sharedWithCompanies,
-          hourlyRate: foundRoom.hourlyRate,
-          halfDayRate: foundRoom.halfDayRate,
-          fullDayRate: foundRoom.fullDayRate,
+          amenities: amenitiesFormData,
           availableFrom: foundRoom.availableFrom,
           availableTo: foundRoom.availableTo,
           availableDays: foundRoom.availableDays,
-          minBookingDuration: foundRoom.minBookingDuration,
-          maxBookingDuration: foundRoom.maxBookingDuration,
-          bufferTime: foundRoom.bufferTime,
           imageUrl: foundRoom.imageUrl || '',
+          imageUploadType: 'url',
         });
       }
     }
-  }, [mode, roomId, form]);
+  }, [mode, roomId, form, availableAmenities]);
 
   // Handlers
   const handleSubmit = async (data: RoomFormValues) => {
@@ -175,6 +147,14 @@ export function RoomForm() {
     
     try {
       console.log('Submitting room:', data);
+      
+      // Handle image upload if file is selected
+      if (selectedFile) {
+        console.log('Uploading file:', selectedFile.name);
+        // TODO: Implement file upload to server
+        // const uploadedUrl = await uploadImage(selectedFile);
+        // data.imageUrl = uploadedUrl;
+      }
       
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -190,6 +170,26 @@ export function RoomForm() {
 
   const handleCancel = () => {
     navigate('/room-management');
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      setSelectedFile(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      form.setValue('imageUrl', previewUrl);
+    }
   };
 
   return (
@@ -391,13 +391,16 @@ export function RoomForm() {
           {/* Amenities */}
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-3">Amenities</h3>
+            <FormDescription className="text-xs mb-3">
+              Available amenities are configured by the administrator
+            </FormDescription>
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(AMENITY_LABELS).map(([key, label]) => (
+              {availableAmenities.map((amenity) => (
                 <FormField
-                  key={key}
+                  key={amenity}
                   control={form.control}
-                  name={key as any}
+                  name={`amenities.${amenity}` as any}
                   render={({ field }) => (
                     <FormItem className="flex items-center space-x-2 space-y-0">
                       <FormControl>
@@ -407,134 +410,12 @@ export function RoomForm() {
                         />
                       </FormControl>
                       <FormLabel className="text-xs font-normal cursor-pointer">
-                        {label}
+                        {AMENITY_LABELS[amenity] || amenity}
                       </FormLabel>
                     </FormItem>
                   )}
                 />
               ))}
-            </div>
-          </Card>
-
-          {/* Sharing & Collaboration */}
-          <Card className="p-4">
-            <h3 className="text-sm font-medium mb-3">Sharing & Collaboration</h3>
-            
-            <FormField
-              control={form.control}
-              name="sharedWithCompanies"
-              render={() => (
-                <FormItem>
-                  <FormLabel className="text-xs">Share with Companies</FormLabel>
-                  <FormDescription className="text-xs mb-2">
-                    Allow other companies in your network to book this room
-                  </FormDescription>
-                  <div className="space-y-2">
-                    {availableCompanies.map((company) => (
-                      <FormField
-                        key={company.id}
-                        control={form.control}
-                        name="sharedWithCompanies"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(company.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, company.id])
-                                    : field.onChange(
-                                        field.value?.filter((id) => id !== company.id)
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-xs font-normal cursor-pointer">
-                              {company.name}
-                              {company.subscriptionType === 'shared' && (
-                                <span className="text-muted-foreground ml-1">
-                                  (Shared subscription)
-                                </span>
-                              )}
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-          </Card>
-
-          {/* Pricing (Optional) */}
-          <Card className="p-4">
-            <h3 className="text-sm font-medium mb-3">Pricing (Optional)</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="hourlyRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Hourly Rate ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="text-sm"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="halfDayRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Half-Day Rate ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="text-sm"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="fullDayRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Full-Day Rate ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="text-sm"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
             </div>
           </Card>
 
@@ -634,78 +515,6 @@ export function RoomForm() {
                   </FormItem>
                 )}
               />
-
-              {/* Booking Duration Limits */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="minBookingDuration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        Min. Booking (minutes) <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="30"
-                          className="text-sm"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="maxBookingDuration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        Max. Booking (minutes) <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="480"
-                          className="text-sm"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bufferTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        Buffer Time (minutes) <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="15"
-                          className="text-sm"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs">
-                        Time between bookings for setup/cleaning
-                      </FormDescription>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
           </Card>
 
@@ -713,26 +522,87 @@ export function RoomForm() {
           <Card className="p-4">
             <h3 className="text-sm font-medium mb-3">Room Image (Optional)</h3>
             
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Image URL</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://example.com/image.jpg"
-                      className="text-sm"
-                      {...field}
+            {/* Image Upload Type Selection */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant={imageUploadType === 'url' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setImageUploadType('url')}
+                className="flex items-center gap-2"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Image URL
+              </Button>
+              <Button
+                type="button"
+                variant={imageUploadType === 'upload' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setImageUploadType('upload')}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Image
+              </Button>
+            </div>
+
+            {imageUploadType === 'url' ? (
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Image URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://example.com/image.jpg"
+                        className="text-sm"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Provide a URL to an image of the room
+                    </FormDescription>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium mb-2 block">Upload Image</label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Accepted formats: JPG, PNG, GIF (max 5MB)
+                  </p>
+                </div>
+                
+                {selectedFile && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Badge variant="secondary">{selectedFile.name}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      ({(selectedFile.size / 1024).toFixed(2)} KB)
+                    </span>
+                  </div>
+                )}
+                
+                {form.watch('imageUrl') && imageUploadType === 'upload' && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium mb-2">Preview:</p>
+                    <img
+                      src={form.watch('imageUrl')}
+                      alt="Preview"
+                      className="max-w-xs h-32 object-cover rounded border"
                     />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Provide a URL to an image of the room
-                  </FormDescription>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Form Action Bar */}

@@ -57,11 +57,6 @@ export interface Room {
   imageUrl?: string;
   thumbnailUrl?: string;
   
-  // Pricing (optional)
-  hourlyRate?: number;
-  halfDayRate?: number;
-  fullDayRate?: number;
-  
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -72,9 +67,6 @@ export interface Room {
   availableFrom: string; // Time in HH:mm format (e.g., "08:00")
   availableTo: string; // Time in HH:mm format (e.g., "18:00")
   availableDays: number[]; // 0-6 (Sunday-Saturday)
-  minBookingDuration: number; // Minutes
-  maxBookingDuration: number; // Minutes
-  bufferTime: number; // Minutes between bookings for cleaning/setup
   
   // Statistics
   totalBookings?: number;
@@ -160,36 +152,17 @@ export interface RoomFormData {
   building?: string;
   location: string;
   
-  // Amenities
-  projector?: boolean;
-  whiteboard?: boolean;
-  videoConference?: boolean;
-  audioSystem?: boolean;
-  wifi?: boolean;
-  television?: boolean;
-  airConditioning?: boolean;
-  phoneConference?: boolean;
-  smartBoard?: boolean;
-  refreshments?: boolean;
-  
-  // Sharing
-  sharedWithCompanies: string[];
-  
-  // Pricing
-  hourlyRate?: number;
-  halfDayRate?: number;
-  fullDayRate?: number;
+  // Amenities (dynamic based on configuration)
+  amenities: Record<string, boolean>;
   
   // Availability
   availableFrom: string;
   availableTo: string;
   availableDays: number[];
-  minBookingDuration: number;
-  maxBookingDuration: number;
-  bufferTime: number;
   
   // Images
   imageUrl?: string;
+  imageFile?: File; // For upload option
 }
 
 /**

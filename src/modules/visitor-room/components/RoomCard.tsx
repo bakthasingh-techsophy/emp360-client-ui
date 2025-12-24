@@ -21,7 +21,6 @@ import {
   Users,
   MapPin,
   Clock,
-  DollarSign,
   TrendingUp,
 } from 'lucide-react';
 import { Room } from '../types';
@@ -149,12 +148,6 @@ export function RoomCard({
             <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             <span className="text-muted-foreground truncate">{room.floor}</span>
           </div>
-          {room.hourlyRate && (
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="text-muted-foreground">${room.hourlyRate}/hr</span>
-            </div>
-          )}
           {room.utilizationRate !== undefined && (
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3 w-3 text-muted-foreground flex-shrink-0" />

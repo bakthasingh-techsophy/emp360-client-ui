@@ -149,10 +149,23 @@ export const DEFAULT_AVAILABILITY = {
   availableFrom: '08:00',
   availableTo: '18:00',
   availableDays: [1, 2, 3, 4, 5], // Monday to Friday
-  minBookingDuration: 30, // 30 minutes
-  maxBookingDuration: 480, // 8 hours
-  bufferTime: 15, // 15 minutes
 };
+
+/**
+ * Default amenities configuration (can be overridden by admin settings)
+ */
+export const DEFAULT_AMENITIES = [
+  'projector',
+  'whiteboard',
+  'videoConference',
+  'audioSystem',
+  'wifi',
+  'television',
+  'airConditioning',
+  'phoneConference',
+  'smartBoard',
+  'refreshments',
+];
 
 /**
  * Purpose options for bookings
