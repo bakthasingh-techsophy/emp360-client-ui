@@ -133,7 +133,7 @@ export function ImageCarousel({
 
       {/* Fullscreen Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-5xl w-full p-0">
+        <DialogContent className="max-w-5xl w-full p-0" hideClose>
           <DialogHeader className="p-6 pb-0">
             <div className="flex items-center justify-between">
               <DialogTitle>

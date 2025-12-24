@@ -1,23 +1,26 @@
 /**
- * Room Booking Main Page
- * Comprehensive room management system with multi-company support
+ * Room Browse Page
+ * Browse and search for available rooms to book
  */
 
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
+import { Button } from '@/components/ui/button';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { RoomStatsCards } from './components/RoomStatsCards';
 import { RoomCard } from './components/RoomCard';
 import { RoomDetailsModal } from './components/RoomDetailsModal';
-import { Room, RoomStats } from './types';
+import { Room } from './types';
 import { mockRooms, mockBookings } from './mockData';
-import { Building2 } from 'lucide-react';
+import { Building2, ArrowLeft } from 'lucide-react';
 import { ReactNode } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-export function RoomBooking() {
+export function RoomBrowse() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
 
   // State
   const [rooms] = useState<Room[]>(mockRooms);
@@ -26,6 +29,19 @@ export function RoomBooking() {
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Show success message if redirected from booking
+  useEffect(() => {
+    if (searchParams.get('bookingSuccess') === 'true') {
+      toast({
+        title: 'Booking Successful',
+        description: 'Your room has been booked successfully!',
+        variant: 'default',
+      });
+      // Clear the query param
+      navigate('/room-management/browse', { replace: true });
+    }
+  }, [searchParams, navigate, toast]);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -44,23 +60,6 @@ export function RoomBooking() {
 
   // Mock user role - in real app, get from auth context
   const isAdmin = true;
-
-  // Calculate stats
-  const stats: RoomStats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayBookings = mockBookings.filter((b) => b.date === today && b.status === 'confirmed');
-    
-    return {
-      totalRooms: rooms.length,
-      availableRooms: rooms.filter((r) => r.status === 'available').length,
-      occupiedRooms: rooms.filter((r) => r.status === 'occupied').length,
-      totalBookingsToday: todayBookings.length,
-      upcomingBookings: mockBookings.filter((b) => b.status === 'confirmed').length,
-      averageUtilization: Math.round(
-        rooms.reduce((sum, r) => sum + (r.utilizationRate || 0), 0) / rooms.length
-      ),
-    };
-  }, [rooms]);
 
   // Filter and search rooms
   const filteredRooms = useMemo(() => {
@@ -115,11 +114,11 @@ export function RoomBooking() {
 
   // Handlers
   const handleAddRoom = () => {
-    navigate('/room-form?mode=create');
+    navigate('/room-management/room-form?mode=create');
   };
 
-  const handleEdit = (room: Room) => {
-    navigate(`/room-form?mode=edit&id=${room.id}`);
+  const handleEditRoom = (room: Room) => {
+    navigate(`/room-management/room-form?mode=edit&id=${room.id}`);
   };
 
   const handleView = (room: Room) => {
@@ -129,7 +128,7 @@ export function RoomBooking() {
 
   const handleBook = (room: Room) => {
     // Navigate to booking page with room ID
-    navigate(`/room-booking-form?roomId=${room.id}`);
+    navigate(`/room-management/booking-form?roomId=${room.id}`);
   };
 
   const handleDelete = (room: Room) => {
@@ -213,19 +212,26 @@ export function RoomBooking() {
     <>
       <PageLayout>
         <div className="space-y-6">
-          {/* Page Header */}
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Building2 className="h-8 w-8" />
-              Room Management
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage meeting rooms, view bookings, and collaborate across companies
-            </p>
+          {/* Page Header with Back Button */}
+          <div className="flex items-start gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate('/room-management')}
+              className="mt-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Building2 className="h-8 w-8" />
+                Browse Rooms
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Browse available rooms and make bookings
+              </p>
+            </div>
           </div>
-
-          {/* Stats Cards */}
-          <RoomStatsCards stats={stats} />
 
           {/* Toolbar */}
           <GenericToolbar
@@ -276,7 +282,7 @@ export function RoomBooking() {
                   bookings={mockBookings}
                   onBook={handleBook}
                   onView={handleView}
-                  onEdit={isAdmin ? handleEdit : undefined}
+                  onEdit={isAdmin ? handleEditRoom : undefined}
                   onDelete={isAdmin ? handleDelete : undefined}
                   isAdmin={isAdmin}
                 />

@@ -119,10 +119,10 @@ export function BookingPage() {
       if (foundRoom) {
         setRoom(foundRoom);
       } else {
-        navigate('/room-management');
+        navigate('/room-management/browse');
       }
     } else {
-      navigate('/room-management');
+      navigate('/room-management/browse');
     }
   }, [roomId, navigate]);
 
@@ -306,7 +306,7 @@ export function BookingPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
       
-      navigate('/room-management?bookingSuccess=true');
+      navigate('/room-management/browse?bookingSuccess=true');
     } catch (error) {
       console.error('Error creating booking:', error);
     } finally {
@@ -341,7 +341,7 @@ export function BookingPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/room-management')}
+              onClick={() => navigate(-1)}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -956,7 +956,7 @@ export function BookingPage() {
                 </Card>
 
                 <FormActionBar
-                  onCancel={() => navigate('/room-management')}
+                  onCancel={() => navigate('/room-management/browse')}
                   isSubmitting={isSubmitting}
                   submitText="Confirm Booking"
                 />

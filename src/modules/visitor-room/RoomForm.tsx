@@ -160,7 +160,7 @@ export function RoomForm({ availableAmenities = DEFAULT_AMENITIES }: RoomFormPro
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
       // Navigate back to room list
-      navigate('/room-management');
+      navigate('/room-management/browse');
     } catch (error) {
       console.error('Error submitting room:', error);
     } finally {
@@ -169,7 +169,7 @@ export function RoomForm({ availableAmenities = DEFAULT_AMENITIES }: RoomFormPro
   };
 
   const handleCancel = () => {
-    navigate('/room-management');
+    navigate('/room-management/browse');
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

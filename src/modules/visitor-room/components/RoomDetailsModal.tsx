@@ -66,17 +66,17 @@ export function RoomDetailsModal({
   const handleBookRoom = () => {
     onOpenChange(false);
     // Navigate to booking page with room ID
-    navigate(`/room-booking-form?roomId=${room.id}`);
+    navigate(`/room-management/booking-form?roomId=${room.id}`);
   };
 
   const handleViewFullCalendar = () => {
     onOpenChange(false);
-    navigate(`/room-booking-form?roomId=${room.id}&view=calendar`);
+    navigate(`/room-management/booking-form?roomId=${room.id}&view=calendar`);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" hideClose>
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">

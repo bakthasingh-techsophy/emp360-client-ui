@@ -79,9 +79,10 @@ import { ProjectAttendance } from './modules/projects/ProjectAttendance';
 
 // Visitor & Room Management modules
 import { VisitorManagement } from './modules/visitor-management';
-import { RoomBooking } from './modules/visitor-room/RoomBooking';
+import { RoomBrowse } from './modules/visitor-room/RoomBrowse';
 import { RoomForm } from './modules/visitor-room/RoomForm';
 import { BookingPage } from './modules/visitor-room/BookingPage';
+import { RoomManagement } from './modules/visitor-room';
 
 // Administration & Security modules
 import { UserManagement } from './modules/administration/UserManagement';
@@ -182,11 +183,19 @@ function App() {
                 <Route path="/tasks-timesheets" element={<TasksTimesheets />} />
                 <Route path="/project-attendance" element={<ProjectAttendance />} />
 
-                {/* Visitor & Room Management routes - Flat paths */}
+                {/* Visitor & Room Management routes */}
                 <Route path="/visitor-management" element={<VisitorManagement />} />
-                <Route path="/room-management" element={<RoomBooking />} />
-                <Route path="/room-form" element={<RoomForm />} />
-                <Route path="/room-booking-form" element={<BookingPage />} />
+                
+                {/* Room Management Routes - Role-based entry point */}
+                {/* Default route shows appropriate dashboard based on role */}
+                <Route path="/room-management" element={<RoomManagement />} />
+                
+                {/* Shared sub-routes for all roles */}
+                <Route path="/room-management/browse" element={<RoomBrowse />} />
+                <Route path="/room-management/booking-form" element={<BookingPage />} />
+                
+                {/* Admin-only routes */}
+                <Route path="/room-management/room-form" element={<RoomForm />} />
 
                 {/* Administration & Security routes - Flat paths */}
                 <Route path="/user-management" element={<UserManagement />} />
