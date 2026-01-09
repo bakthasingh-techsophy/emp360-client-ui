@@ -107,7 +107,36 @@ export function ExpenseForm() {
 
   const handleSaveDraft = () => {
     setIsSaving(true);
-    console.log("Saving draft...", { headerData, lineItems, documents });
+    
+    // Build expense object matching Expense type
+    const expenseData = {
+      type: headerData.type,
+      description: headerData.description,
+      // Raising for data
+      ...(raisingFor === 'employee' && {
+        raisedById: selectedEmployeeId,
+        // Note: raisedByName would come from API/user context
+      }),
+      ...(raisingFor === 'temporary-person' && {
+        isTemporaryPerson: true,
+        temporaryPersonName,
+        temporaryPersonPhone,
+        temporaryPersonEmail,
+      }),
+      // Line items for expense type
+      ...(headerData.type === 'expense' && {
+        lineItems: lineItems.map(item => ({
+          ...item,
+          attachments: [], // Would be populated from documents
+        })),
+      }),
+      // Amount
+      amount: calculateTotal(),
+      currency: 'USD',
+      status: 'draft' as const,
+    };
+    
+    console.log("Saving draft...", expenseData);
     setTimeout(() => {
       setIsSaving(false);
       navigate("/expense-management");
@@ -117,11 +146,36 @@ export function ExpenseForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    console.log("Submitting expense claim...", {
-      headerData,
-      lineItems,
-      documents,
-    });
+    
+    // Build expense object matching Expense type
+    const expenseData = {
+      type: headerData.type,
+      description: headerData.description,
+      // Raising for data
+      ...(raisingFor === 'employee' && {
+        raisedById: selectedEmployeeId,
+        // Note: raisedByName would come from API/user context
+      }),
+      ...(raisingFor === 'temporary-person' && {
+        isTemporaryPerson: true,
+        temporaryPersonName,
+        temporaryPersonPhone,
+        temporaryPersonEmail,
+      }),
+      // Line items for expense type
+      ...(headerData.type === 'expense' && {
+        lineItems: lineItems.map(item => ({
+          ...item,
+          attachments: [], // Would be populated from documents
+        })),
+      }),
+      // Amount
+      amount: calculateTotal(),
+      currency: 'USD',
+      status: 'pending' as const, // Submitted for approval
+    };
+    
+    console.log("Submitting expense claim...", expenseData);
     setTimeout(() => {
       setIsSaving(false);
       navigate("/expense-management");
