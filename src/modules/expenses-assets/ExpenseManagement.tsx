@@ -1,11 +1,11 @@
-import { DummyPage } from '@/components/common/DummyPage';
+/**
+ * Expense Management Module
+ * Simplified view with tabs for All/Pending/Approved/Rejected/Cancelled expenses
+ */
+
+import { ExpenseList } from './ExpenseList';
 
 export function ExpenseManagement() {
-  return (
-    <DummyPage
-      title="Expense Management"
-      description="Manage employee expense claims, approvals, and reimbursement processing."
-      category="Expenses, Travel & Assets"
-    />
-  );
+  return <ExpenseList />;
 }
+

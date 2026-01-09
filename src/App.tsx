@@ -62,6 +62,7 @@ import { ManagerApprovals } from './modules/self-service/ManagerApprovals';
 
 // Expenses, Travel & Assets modules
 import { ExpenseManagement } from './modules/expenses-assets/ExpenseManagement';
+import { ExpenseForm } from './modules/expenses-assets/ExpenseForm';
 import { TravelRequests } from './modules/expenses-assets/TravelRequests';
 import { AdvancesSettlements } from './modules/expenses-assets/AdvancesSettlements';
 import { AssetManagement } from './modules/expenses-assets/AssetManagement';
@@ -168,6 +169,8 @@ function App() {
 
                 {/* Expenses, Travel & Assets routes - Flat paths */}
                 <Route path="/expense-management" element={<ExpenseManagement />} />
+                <Route path="/expense-management/new" element={<ExpenseForm />} />
+                <Route path="/expense-management/edit/:id" element={<ExpenseForm />} />
                 <Route path="/travel-requests" element={<TravelRequests />} />
                 <Route path="/advances-settlements" element={<AdvancesSettlements />} />
                 <Route path="/asset-management" element={<AssetManagement />} />
