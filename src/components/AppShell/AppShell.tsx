@@ -62,6 +62,8 @@ export interface AppShellProps {
   logo?: ReactNode;
   /** Brand name */
   brandName?: string;
+  /** Brand subtitle (optional) */
+  brandSubtitle?: string;
   /** Page content */
   children: ReactNode;
   /** Loading indicator (optional) */
@@ -139,6 +141,7 @@ export function AppShell({
   headerContent,
   logo,
   brandName = 'App',
+  brandSubtitle,
   children,
   loadingBar,
   collapsed: controlledCollapsed,
@@ -258,6 +261,7 @@ export function AppShell({
           collapsed={collapsed}
           logo={logo}
           brandName={brandName}
+          brandSubtitle={brandSubtitle}
           onToggleSidebar={handleToggleSidebar}
           onCloseMobileMenu={handleCloseMobileMenu}
           onOpenMenuPicker={() => setMenuPickerOpen(true)}
@@ -351,6 +355,7 @@ interface AppShellSidebarProps {
   collapsed: boolean;
   logo?: ReactNode;
   brandName: string;
+  brandSubtitle?: string;
   onToggleSidebar: () => void;
   onCloseMobileMenu: () => void;
   onOpenMenuPicker: () => void;
@@ -369,6 +374,7 @@ function AppShellSidebar({
   collapsed,
   logo,
   brandName,
+  brandSubtitle,
   onToggleSidebar,
   onCloseMobileMenu,
   onOpenMenuPicker,
@@ -460,16 +466,20 @@ function AppShellSidebar({
         key={item.id}
         variant={isActive ? 'default' : 'ghost'}
         className={cn(
-          'w-full justify-start gap-3 h-9 px-3',
-          isActive && 'shadow-sm',
-          !collapsed && 'text-sm font-normal'
+          'w-full justify-start gap-3 h-10 px-3',
+          isActive && 'shadow-sm font-medium',
+          !collapsed && 'text-sm font-normal',
+          collapsed && 'justify-center'
         )}
         onClick={() => {
           onCloseMobileMenu();
           onNavigate?.(item);
         }}
       >
-        <item.icon className="h-4 w-4 flex-shrink-0" />
+        <item.icon className={cn(
+          "h-[18px] w-[18px] flex-shrink-0",
+          collapsed && "h-5 w-5"
+        )} />
         {!collapsed && <span className="truncate text-left flex-1">{item.label}</span>}
       </Button>
     );
@@ -478,28 +488,37 @@ function AppShellSidebar({
   return (
     <div className="flex h-full flex-col">
       {/* Sidebar Header */}
-      <div className="flex h-16 items-center gap-2 border-b px-3">
+      <div className="flex h-16 items-center gap-2.5 border-b px-3 py-3">
         {/* Menu Picker Icon - Left side */}
         {useMenuPicker && !collapsed && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onOpenMenuPicker}
-            className="flex-shrink-0 h-9 w-9"
+            className="flex-shrink-0 h-8 w-8"
             title="More menus"
           >
             <Grid3x3 className="h-4 w-4" />
           </Button>
         )}
         
-        {/* Logo - Always show when present */}
-        {logo && <div className="flex-shrink-0">{logo}</div>}
+        {/* Logo - Center when collapsed, left when expanded */}
+        {logo && (
+          <div className={cn(
+            "flex-shrink-0",
+            collapsed && "mx-auto"
+          )}>
+            {logo}
+          </div>
+        )}
         
         {/* Brand Name */}
         {!collapsed && (
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-base font-semibold truncate">{brandName}</span>
-            <span className="text-xs text-muted-foreground truncate">HRMS Platform</span>
+            <span className="text-sm font-semibold truncate leading-tight">{brandName}</span>
+            {brandSubtitle && (
+              <span className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">{brandSubtitle}</span>
+            )}
           </div>
         )}
         
@@ -508,17 +527,17 @@ function AppShellSidebar({
           variant="ghost"
           size="icon"
           onClick={onCloseMobileMenu}
-          className="lg:hidden flex-shrink-0 h-9 w-9"
+          className="lg:hidden flex-shrink-0 h-8 w-8"
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-2 overflow-y-auto overscroll-contain custom-scrollbar">
+      <nav className="flex-1 p-3 overflow-y-auto overscroll-contain custom-scrollbar">
         {/* Pinned/Flat Menu Items (New Outlook-style approach) */}
         {displayMenuItems.length > 0 ? (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {displayMenuItems.map((item) => {
               // Check permission
               if (item.permission && !item.permission()) {
@@ -598,19 +617,19 @@ function AppShellSidebar({
 
       {/* Collapse Button (Desktop Only) */}
       {showCollapseButton && (
-        <div className="p-2 hidden lg:block border-t">
+        <div className="p-3 hidden lg:block border-t">
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggleSidebar}
-            className="w-full justify-start gap-2 h-9 px-2"
+            className="w-full justify-center gap-2 h-9"
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (
               <>
                 <ChevronLeft className="h-4 w-4" />
-                <span className="text-xs">Collapse</span>
+                <span className="text-xs font-medium">Collapse</span>
               </>
             )}
           </Button>

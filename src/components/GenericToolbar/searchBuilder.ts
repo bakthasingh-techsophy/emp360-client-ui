@@ -246,3 +246,36 @@ function buildFilterValue(operator: string, value: any): FieldFilterValue {
   return value;
 }
 
+/**
+ * Example usage in table components:
+ * 
+ * const searchRequest = buildUniversalSearchRequest(
+ *   activeFilters,
+ *   searchTerm,
+ *   ['firstName', 'lastName', 'email', 'phone']
+ * );
+ * 
+ * refreshUsers(searchRequest, selectedStudioScope);
+ * 
+ * Example output matching backend expectations:
+ * {
+ *   searchText: "john",
+ *   searchFields: ["firstName", "lastName", "email"],
+ *   filters: {
+ *     and: {
+ *       status: { op: "eq", value: "active" },
+ *       role: { op: "in", values: ["admin", "trainer"] },
+ *       tags: { op: "all", values: ["premium", "verified"] },
+ *       age: { op: "gte", value: 18 },
+ *       name: { op: "regex", pattern: "john", options: "i" },
+ *       isActive: { op: "exists", value: true }
+ *     }
+ *   },
+ *   dateFilter: {
+ *     type: "between",
+ *     field: "joinDate",
+ *     startDate: "2024-01-01T00:00:00Z",
+ *     endDate: "2024-12-31T23:59:59Z"
+ *   }
+ * }
+ */

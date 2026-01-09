@@ -1,4 +1,5 @@
 import { ComparisonOp, CollectionOp, DateFilterType } from '@/types/search';
+import { FilterControllerConfig } from './useFilterController';
 
 export type FilterFieldType = 
   | 'text'
@@ -103,6 +104,9 @@ export interface ToolbarConfig {
   availableFilters?: AvailableFilter[];
   activeFilters?: ActiveFilter[];
   onFiltersChange?: (filters: ActiveFilter[]) => void;
+  // External filter controllers (for tabs, custom components, etc.)
+  // These filters will be excluded from regular filter UI and counts
+  externalFilterControllers?: FilterControllerConfig[];
   
   customActions?: ToolbarAction[];
   

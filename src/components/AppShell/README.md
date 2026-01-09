@@ -1,8 +1,5 @@
 # AppShell Component
 
-> **📍 Important**: This folder contains **REUSABLE** components only. 
-> For application-specific layout implementations, see `/src/layout/` folder.
-
 A **fully reusable application skeleton** component that provides a complete layout structure with sidebar navigation, top header/toolbar, and content area. Perfect for admin dashboards, SaaS applications, and any project requiring consistent layout across multiple pages.
 
 ## Features

@@ -9,9 +9,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar';
 import { DataTable } from '@/components/common/DataTable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, Edit, X } from 'lucide-react';
 import { mockExpenses } from './data/mockData';
 import { Expense } from './types/expense.types';
@@ -19,20 +19,16 @@ import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types
 import { EXPENSE_STATUS_LABELS, EXPENSE_STATUS_COLORS } from './constants/expense.constants';
 import { format } from 'date-fns';
 
+
 export function ExpenseList() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [activeTab, setActiveTab] = useState('all');
 
   // Filter expenses by tab
   const allExpenses = mockExpenses;
-  const pendingExpenses = allExpenses.filter(e => 
-    ['submitted', 'level1_approved', 'level2_approved'].includes(e.status)
-  );
-  const approvedExpenses = allExpenses.filter(e => 
-    ['level3_approved', 'paid'].includes(e.status)
-  );
+  const pendingExpenses = allExpenses.filter(e => e.status === 'pending');
+  const approvedExpenses = allExpenses.filter(e => e.status === 'approved');
   const rejectedExpenses = allExpenses.filter(e => e.status === 'rejected');
   const cancelledExpenses = allExpenses.filter(e => e.status === 'cancelled');
 
@@ -48,35 +44,6 @@ export function ExpenseList() {
   };
 
   const currentExpenses = getCurrentExpenses();
-
-  // Convert activeFilters to record
-  const filters = activeFilters.reduce((acc, filter) => {
-    acc[filter.id] = filter.value;
-    return acc;
-  }, {} as Record<string, unknown>);
-
-  // Apply filters
-  const filteredExpenses = currentExpenses.filter(expense => {
-    if (searchQuery && !expense.description.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (filters.category && !expense.lineItems.some(item => item.category === filters.category)) {
-      return false;
-    }
-    if (filters.amountMin && expense.amount < Number(filters.amountMin)) {
-      return false;
-    }
-    if (filters.amountMax && expense.amount > Number(filters.amountMax)) {
-      return false;
-    }
-    if (filters.dateFrom && new Date(expense.createdAt) < new Date(filters.dateFrom as string)) {
-      return false;
-    }
-    if (filters.dateTo && new Date(expense.createdAt) > new Date(filters.dateTo as string)) {
-      return false;
-    }
-    return true;
-  });
 
   // Filter fields
   const filterFields: AvailableFilter[] = [
@@ -202,52 +169,44 @@ export function ExpenseList() {
     },
   ];
 
-  const toolbar = (
-    <GenericToolbar
-      searchPlaceholder="Search expenses..."
-      onSearchChange={setSearchQuery}
-      showFilters={true}
-      availableFilters={filterFields}
-      activeFilters={activeFilters}
-      onFiltersChange={setActiveFilters}
-      showExport={true}
-      onExportAll={() => console.log('Export all')}
-      showAddButton={true}
-      addButtonLabel="New Expense"
-      onAdd={() => navigate('/expense-management/new')}
-    />
-  );
-
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Expense Management</h1>
-          <p className="text-muted-foreground mt-2">Track and manage expense submissions</p>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
+              <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
+              <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>
+              <TabsTrigger value="cancelled">Cancelled ({cancelledExpenses.length})</TabsTrigger>
+            </TabsList>
+            <Button onClick={() => navigate('/expense-management/new')}>
+              New Expense
+            </Button>
+          </div>
+
+          <TabsContent value={activeTab} className="space-y-4">
+            <GenericToolbar
+              showFilters={true}
+              availableFilters={filterFields}
+              activeFilters={activeFilters}
+              onFiltersChange={setActiveFilters}
+              showExport={true}
+              onExportAll={() => console.log('Export all')}
+            />
+
+        <div className="mt-4">
+          <DataTable
+            data={currentExpenses}
+            columns={columns}
+            loading={false}
+            emptyState={{
+              title: 'No expenses found',
+              description: 'Try adjusting your filters or create a new expense',
+            }}
+          />
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
-            <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled ({cancelledExpenses.length})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-6">
-            {toolbar}
-            <div className="mt-4">
-              <DataTable
-                data={filteredExpenses}
-                columns={columns}
-                loading={false}
-                emptyState={{
-                  title: 'No expenses found',
-                  description: 'Try adjusting your filters or create a new expense',
-                }}
-              />
-            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ToolbarConfig, ActiveFilter, DEFAULT_OPERATORS, FilterOperator } from './types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -52,6 +52,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
   availableFilters = [],
   activeFilters = [],
   onFiltersChange,
+  externalFilterControllers = [],
   customActions = [],
   showBulkActions = false,
   bulkActions = [],
@@ -71,6 +72,18 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
   const [pendingFilters, setPendingFilters] = useState<ActiveFilter[]>(activeFilters || []);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Calculate external filter IDs (filters managed by external components like tabs)
+  // These filters should be completely excluded from regular filter UI and counts
+  const externalFilterIds = useMemo(() => {
+    const ids = new Set<string>();
+    externalFilterControllers.forEach(controller => {
+      controller.representedFilters.forEach(rf => {
+        ids.add(rf.filterId);
+      });
+    });
+    return ids;
+  }, [externalFilterControllers]);
 
   // Handle filter mode change and reset operators to default when switching to basic
   const handleFilterModeChange = (mode: 'basic' | 'advanced') => {
@@ -247,12 +260,16 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
     onFiltersChange?.([]);
   };
 
-  // Get filters that are not yet active
+  // Get filters that are not yet active (exclude currently active AND external filters)
   const availableFiltersToAdd = availableFilters.filter(
-    (af) => !pendingFilters.some((active) => active.filterId === af.id)
+    (af) => !pendingFilters.some((active) => active.filterId === af.id) && !externalFilterIds.has(af.id)
   );
 
+  // Count active filters (exclude external filters managed by tabs/custom components)
   const activeFilterCount = (activeFilters || []).filter((f) => {
+    // Exclude external filters (managed by tabs, custom components, etc.)
+    if (externalFilterIds.has(f.filterId)) return false;
+    
     // For date filters with 'today' operator, no value needed
     if (f.operator === 'today') return true;
     
@@ -481,7 +498,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
                   Apply Filters
                 </Button>
               )}
-              {pendingFilters.length > 0 && (
+              {(activeFilters || []).length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -500,7 +517,9 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
             <>
               <Separator />
               <div className="space-y-3">
-                {pendingFilters.map((activeFilter) => {
+                {pendingFilters
+                  .filter(activeFilter => !externalFilterIds.has(activeFilter.filterId)) // Exclude external filters
+                  .map((activeFilter) => {
                   const filterDef = availableFilters.find((f) => f.id === activeFilter.filterId);
                   if (!filterDef) return null;
 
