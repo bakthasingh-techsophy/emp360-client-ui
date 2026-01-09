@@ -57,8 +57,7 @@ export function ExpenseList() {
 
   // Apply filters
   const filteredExpenses = currentExpenses.filter(expense => {
-    if (searchQuery && !expense.claimTitle.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !expense.purpose.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !expense.description.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     if (filters.category && !expense.lineItems.some(item => item.category === filters.category)) {
@@ -70,10 +69,10 @@ export function ExpenseList() {
     if (filters.amountMax && expense.amount > Number(filters.amountMax)) {
       return false;
     }
-    if (filters.dateFrom && new Date(expense.fromDate) < new Date(filters.dateFrom as string)) {
+    if (filters.dateFrom && new Date(expense.createdAt) < new Date(filters.dateFrom as string)) {
       return false;
     }
-    if (filters.dateTo && new Date(expense.toDate) > new Date(filters.dateTo as string)) {
+    if (filters.dateTo && new Date(expense.createdAt) > new Date(filters.dateTo as string)) {
       return false;
     }
     return true;
@@ -124,13 +123,13 @@ export function ExpenseList() {
   // Table columns
   const columns: ColumnDef<Expense>[] = [
     {
-      accessorKey: 'claimTitle',
+      accessorKey: 'description',
       header: 'Claim Details',
       cell: ({ row }) => (
         <div>
-          <div className="font-medium">{row.original.claimTitle}</div>
+          <div className="font-medium">{row.original.type === 'advance' ? 'Advance Request' : 'Expense Claim'}</div>
           <div className="text-xs text-muted-foreground line-clamp-1">
-            {row.original.purpose}
+            {row.original.description}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             {row.original.lineItems.length} {row.original.lineItems.length === 1 ? 'item' : 'items'}
@@ -148,14 +147,11 @@ export function ExpenseList() {
       ),
     },
     {
-      accessorKey: 'fromDate',
-      header: 'Period',
+      accessorKey: 'createdAt',
+      header: 'Created Date',
       cell: ({ row }) => (
         <div className="text-sm">
-          {format(new Date(row.original.fromDate), 'MMM dd, yyyy')}
-          <div className="text-xs text-muted-foreground">
-            to {format(new Date(row.original.toDate), 'MMM dd, yyyy')}
-          </div>
+          {format(new Date(row.original.createdAt), 'MMM dd, yyyy')}
         </div>
       ),
     },

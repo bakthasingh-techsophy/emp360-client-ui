@@ -1,58 +1,81 @@
 /**
  * Expense Claim Form Component
- * Create or edit expense claim with date range and multiple line items
+ * Create or edit expense claim or advance request with multiple line items
  */
 
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { PageLayout } from '@/components/PageLayout';
-import { FormActionBar } from '@/components/common/FormActionBar';
-import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { mockExpenses } from './data/mockData';
-import { ExpenseCategory, PaymentMethod, ExpenseLineItem } from './types/expense.types';
-import { EXPENSE_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from './constants/expense.constants';
+import { useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { PageLayout } from "@/components/PageLayout";
+import { FormActionBar } from "@/components/common/FormActionBar";
+import {
+  EditableItemsTable,
+  TableColumn,
+} from "@/components/common/EditableItemsTable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormHeader } from "@/components/common/FormHeader";
+import { mockExpenses } from "./data/mockData";
+import {
+  ExpenseCategory,
+  ExpenseLineItem,
+  ExpenseType,
+} from "./types/expense.types";
+import { EXPENSE_CATEGORY_LABELS } from "./constants/expense.constants";
 
 export function ExpenseForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = !!id;
 
+  // Get type from URL params, default to 'expense'
+  const claimType: ExpenseType =
+    (searchParams.get("type") as ExpenseType) || "expense";
+
   // Find expense if editing
-  const existingExpense = isEdit ? mockExpenses.find(e => e.id === id) : null;
+  const existingExpense = isEdit ? mockExpenses.find((e) => e.id === id) : null;
 
   // Header form data
-  const [headerData, setHeaderData] = useState({
-    claimTitle: existingExpense?.claimTitle || '',
-    fromDate: existingExpense?.fromDate ? new Date(existingExpense.fromDate) : undefined,
-    toDate: existingExpense?.toDate ? new Date(existingExpense.toDate) : undefined,
-    purpose: existingExpense?.purpose || '',
-    paymentMethod: existingExpense?.paymentMethod || ('card' as PaymentMethod),
-    notes: existingExpense?.notes || '',
+  const [headerData, setHeaderData] = useState<{
+    type: ExpenseType;
+    description: string;
+  }>({
+    type: (existingExpense?.type || claimType) as ExpenseType,
+    description: existingExpense?.description || "",
   });
+
+  // Raising for options
+  const [raisingFor, setRaisingFor] = useState<
+    "myself" | "employee" | "temporary-person"
+  >("myself");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [temporaryPersonName, setTemporaryPersonName] = useState<string>("");
+  const [temporaryPersonPhone, setTemporaryPersonPhone] = useState<string>("");
+  const [temporaryPersonEmail, setTemporaryPersonEmail] = useState<string>("");
+  const [advanceAmount, setAdvanceAmount] = useState<string>("");
 
   // Line items
   const [lineItems, setLineItems] = useState<Partial<ExpenseLineItem>[]>(
     existingExpense?.lineItems || [
       {
         id: `temp-${Date.now()}`,
-        category: 'travel' as ExpenseCategory,
-        description: '',
+        category: "travel" as ExpenseCategory,
+        description: "",
         amount: 0,
-        expenseDate: '',
-        merchantName: '',
-        receiptNumber: '',
-        notes: '',
+        fromDate: "",
+        toDate: "",
+        notes: "",
         attachments: [],
       },
     ]
@@ -64,11 +87,11 @@ export function ExpenseForm() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleHeaderChange = (field: string, value: unknown) => {
-    setHeaderData(prev => ({ ...prev, [field]: value }));
+    setHeaderData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDocumentsChange = (index: number, files: File[]) => {
-    setDocuments(prev => ({ ...prev, [index]: files }));
+    setDocuments((prev) => ({ ...prev, [index]: files }));
   };
 
   const getDocuments = (index: number): File[] => {
@@ -76,292 +99,389 @@ export function ExpenseForm() {
   };
 
   const calculateTotal = () => {
+    if (headerData.type === "advance") {
+      return parseFloat(advanceAmount) || 0;
+    }
     return lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   };
 
   const handleSaveDraft = () => {
     setIsSaving(true);
-    console.log('Saving draft...', { headerData, lineItems, documents });
+    console.log("Saving draft...", { headerData, lineItems, documents });
     setTimeout(() => {
       setIsSaving(false);
-      navigate('/expense-management');
+      navigate("/expense-management");
     }, 1000);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    console.log('Submitting expense claim...', { headerData, lineItems, documents });
+    console.log("Submitting expense claim...", {
+      headerData,
+      lineItems,
+      documents,
+    });
     setTimeout(() => {
       setIsSaving(false);
-      navigate('/expense-management');
+      navigate("/expense-management");
     }, 1000);
   };
 
   const handleCancel = () => {
-    navigate('/expense-management');
+    navigate("/expense-management");
   };
 
   // Define columns for the editable table
   const lineItemColumns: TableColumn<Partial<ExpenseLineItem>>[] = [
     {
-      key: 'category',
-      header: 'Category',
-      type: 'select',
+      key: "category",
+      header: "Category",
+      type: "select",
       required: true,
-      width: '160px',
-      options: Object.entries(EXPENSE_CATEGORY_LABELS).map(([value, label]) => ({
-        label,
-        value,
-      })),
+      align: "left",
+      options: Object.entries(EXPENSE_CATEGORY_LABELS).map(
+        ([value, label]) => ({
+          label,
+          value,
+        })
+      ),
     },
     {
-      key: 'expenseDate',
-      header: 'Date',
-      type: 'date',
+      key: "description",
+      header: "Description",
+      type: "text",
       required: true,
-      width: '150px',
-      min: headerData.fromDate ? format(headerData.fromDate, 'yyyy-MM-dd') : undefined,
-      max: headerData.toDate ? format(headerData.toDate, 'yyyy-MM-dd') : undefined,
+      minWidth: "200px",
+      flex: 1,
+      placeholder: "e.g., Flight from LAX to JFK",
+      align: "left",
     },
     {
-      key: 'description',
-      header: 'Description',
-      type: 'text',
+      key: "fromDate",
+      header: "From Date",
+      type: "date",
       required: true,
-      placeholder: 'e.g., Flight from LAX to JFK',
+      minWidth: "150px",
+      align: "center",
+      placeholder: "Start date",
     },
     {
-      key: 'amount',
-      header: 'Amount',
-      type: 'number',
+      key: "toDate",
+      header: "To Date",
+      type: "date",
       required: true,
-      width: '120px',
+      minWidth: "150px",
+      align: "center",
+      placeholder: "End date",
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      type: "number",
+      required: true,
+      align: "center",
       min: 0,
       step: 0.01,
-      placeholder: '0.00',
+      placeholder: "0.00",
     },
     {
-      key: 'merchantName',
-      header: 'Merchant',
-      type: 'text',
-      width: '150px',
-      placeholder: 'Optional',
-    },
-    {
-      key: 'receiptNumber',
-      header: 'Receipt #',
-      type: 'text',
-      width: '120px',
-      placeholder: 'Optional',
-    },
-    {
-      key: 'documents',
-      header: 'Documents',
-      type: 'documents',
-      width: '130px',
+      key: "documents",
+      header: "Documents",
+      type: "documents",
+      minWidth: "130px",
+      align: "center",
     },
   ];
 
   const emptyLineItem: Partial<ExpenseLineItem> = {
     id: `temp-${Date.now()}`,
-    category: 'travel' as ExpenseCategory,
-    description: '',
+    category: "travel" as ExpenseCategory,
+    description: "",
     amount: 0,
-    expenseDate: '',
-    merchantName: '',
-    receiptNumber: '',
-    notes: '',
+    fromDate: "",
+    toDate: "",
+    notes: "",
     attachments: [],
   };
 
-  const toolbar = (
-    <div className="flex items-center gap-4">
-      <Button variant="ghost" size="sm" onClick={handleCancel}>
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Expenses
-      </Button>
-    </div>
-  );
+  const getFormTitle = () => {
+    if (isEdit) {
+      return headerData.type === "advance"
+        ? "Edit Advance Request"
+        : "Edit Expense Claim";
+    }
+    return headerData.type === "advance"
+      ? "New Advance Request"
+      : "New Expense Claim";
+  };
+
+  const getFormDescription = () => {
+    if (isEdit) {
+      return headerData.type === "advance"
+        ? "Update your advance request details"
+        : "Update your expense claim details";
+    }
+    return headerData.type === "advance"
+      ? "Request advance payment for upcoming expenses"
+      : "Submit expenses from your business trip or activities";
+  };
 
   return (
-    <PageLayout toolbar={toolbar}>
-      <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6 pb-24">
-        <div>
-          <h1 className="text-3xl font-bold">{isEdit ? 'Edit Expense Claim' : 'New Expense Claim'}</h1>
-          <p className="text-muted-foreground mt-2">
-            {isEdit ? 'Update your expense claim details' : 'Submit expenses from your business trip or activities'}
-          </p>
-        </div>
-
-        {/* Claim Header */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Claim Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Claim Title */}
-            <div className="space-y-2">
-              <Label htmlFor="claimTitle">Claim Title *</Label>
-              <Input
-                id="claimTitle"
-                placeholder="E.g., Business trip to NYC, Q4 Client Meetings"
-                value={headerData.claimTitle}
-                onChange={(e) => handleHeaderChange('claimTitle', e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Date Range */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>From Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !headerData.fromDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {headerData.fromDate ? format(headerData.fromDate, 'PPP') : 'Pick start date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={headerData.fromDate}
-                      onSelect={(date) => handleHeaderChange('fromDate', date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>To Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !headerData.toDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {headerData.toDate ? format(headerData.toDate, 'PPP') : 'Pick end date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={headerData.toDate}
-                      onSelect={(date) => handleHeaderChange('toDate', date)}
-                      disabled={(date) => headerData.fromDate ? date < headerData.fromDate : false}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Purpose */}
-            <div className="space-y-2">
-              <Label htmlFor="purpose">Purpose *</Label>
-              <Textarea
-                id="purpose"
-                placeholder="Describe the business purpose for these expenses..."
-                value={headerData.purpose}
-                onChange={(e) => handleHeaderChange('purpose', e.target.value)}
-                rows={3}
-                required
-              />
-            </div>
-
-            {/* Payment Method */}
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Primary Payment Method *</Label>
-              <Select
-                value={headerData.paymentMethod}
-                onValueChange={(value) => handleHeaderChange('paymentMethod', value)}
-              >
-                <SelectTrigger id="paymentMethod">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Overall Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional information about this claim..."
-                value={headerData.notes}
-                onChange={(e) => handleHeaderChange('notes', e.target.value)}
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Line Items */}
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Expense Items</CardTitle>
+    <PageLayout>
+      <div className="flex justify-center px-2 sm:px-4 lg:px-6">
+        <div className="w-full max-w-[min(100%,1400px)] space-y-6 pb-24">
+          <FormHeader
+            title={getFormTitle()}
+            description={getFormDescription()}
+            onBack={handleCancel}
+          />
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* General Information */}
+            <Card>
+            <CardHeader>
+              <CardTitle>General Information</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Add all expenses from your trip. Edit cells directly in the table.
+                Provide overall details about this{" "}
+                {headerData.type === "expense"
+                  ? "expense claim"
+                  : "advance request"}
               </p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <EditableItemsTable
-              columns={lineItemColumns}
-              items={lineItems}
-              onChange={setLineItems}
-              emptyItemTemplate={emptyLineItem}
-              minItems={1}
-              maxItems={50}
-              onDocumentsChange={handleDocumentsChange}
-              getDocuments={getDocuments}
-            />
-
-            {/* Total */}
-            <div className="flex justify-end pt-4 border-t">
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Total Claim Amount</div>
-                <div className="text-2xl font-bold">${calculateTotal().toFixed(2)}</div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Raising For */}
+              <div className="space-y-3">
+                <Label>
+                  Raising this{" "}
+                  {headerData.type === "expense" ? "claim" : "request"} for *
+                </Label>
+                <RadioGroup
+                  value={raisingFor}
+                  onValueChange={(value) =>
+                    setRaisingFor(
+                      value as "myself" | "employee" | "temporary-person"
+                    )
+                  }
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="myself" id="myself" />
+                    <Label
+                      htmlFor="myself"
+                      className="font-normal cursor-pointer"
+                    >
+                      Myself
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="employee" id="employee" />
+                    <Label
+                      htmlFor="employee"
+                      className="font-normal cursor-pointer"
+                    >
+                      Another Employee
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="temporary-person"
+                      id="temporary-person"
+                    />
+                    <Label
+                      htmlFor="temporary-person"
+                      className="font-normal cursor-pointer"
+                    >
+                      Temporary/External Person
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Form Action Bar */}
-        <FormActionBar
-          mode={isEdit ? 'edit' : 'create'}
-          isSubmitting={isSaving}
-          onCancel={handleCancel}
-          submitText="Submit for Approval"
-          leftContent={
-            <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
-              Save as Draft
-            </Button>
-          }
-        />
-      </form>
+              {/* Employee Selection */}
+              {raisingFor === "employee" && (
+                <div className="space-y-2">
+                  <Label htmlFor="employee-select">Select Employee *</Label>
+                  <Select
+                    value={selectedEmployeeId}
+                    onValueChange={setSelectedEmployeeId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user-001">
+                        John Doe - Engineering
+                      </SelectItem>
+                      <SelectItem value="user-002">
+                        Jane Smith - Marketing
+                      </SelectItem>
+                      <SelectItem value="user-003">
+                        Mike Johnson - Engineering
+                      </SelectItem>
+                      <SelectItem value="user-004">
+                        Sarah Williams - Marketing
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select the employee for whom you are raising this{" "}
+                    {headerData.type === "expense" ? "claim" : "request"}
+                  </p>
+                </div>
+              )}
+
+              {/* Temporary Person Details */}
+              {raisingFor === "temporary-person" && (
+                <div className="space-y-4 p-4 bg-accent/50 rounded-lg">
+                  <p className="text-sm font-medium">Person Details</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="temp-name">Full Name *</Label>
+                    <Input
+                      id="temp-name"
+                      value={temporaryPersonName}
+                      onChange={(e) => setTemporaryPersonName(e.target.value)}
+                      placeholder="Enter full name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="temp-phone">Phone Number</Label>
+                    <Input
+                      id="temp-phone"
+                      type="tel"
+                      value={temporaryPersonPhone}
+                      onChange={(e) => setTemporaryPersonPhone(e.target.value)}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="temp-email">Email Address</Label>
+                    <Input
+                      id="temp-email"
+                      type="email"
+                      value={temporaryPersonEmail}
+                      onChange={(e) => setTemporaryPersonEmail(e.target.value)}
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    * At least phone number or email is required
+                  </p>
+                </div>
+              )}
+
+              {/* Claim Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Claim Description *</Label>
+                <Textarea
+                  id="description"
+                  value={headerData.description}
+                  onChange={(e) =>
+                    handleHeaderChange("description", e.target.value)
+                  }
+                  placeholder={
+                    headerData.type === "expense"
+                      ? "e.g., Business trip to San Francisco for client meeting"
+                      : "e.g., Advance for upcoming conference in New York"
+                  }
+                  rows={3}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Provide a brief summary of the purpose for this{" "}
+                  {headerData.type === "expense" ? "claim" : "advance"}
+                </p>
+              </div>
+
+              {/* Advance Amount (only for advance type) */}
+              {headerData.type === "advance" && (
+                <div className="space-y-2">
+                  <Label htmlFor="advance-amount">Advance Amount ($) *</Label>
+                  <Input
+                    id="advance-amount"
+                    type="number"
+                    step="0.01"
+                    value={advanceAmount}
+                    onChange={(e) => setAdvanceAmount(e.target.value)}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Line Items - Only for expense type */}
+          {headerData.type === "expense" && (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Expense Items</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Add all expenses from your trip. Edit cells directly in the
+                    table.
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <EditableItemsTable
+                  columns={lineItemColumns}
+                  items={lineItems}
+                  onChange={setLineItems}
+                  emptyItemTemplate={emptyLineItem}
+                  minItems={1}
+                  maxItems={50}
+                  onDocumentsChange={handleDocumentsChange}
+                  getDocuments={getDocuments}
+                />
+
+                {/* Total */}
+                <div className="flex justify-end pt-4 border-t">
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">
+                      Total Claim Amount
+                    </div>
+                    <div className="text-2xl font-bold">
+                      ${calculateTotal().toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Total Amount Display */}
+          {calculateTotal() > 0 && (
+            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
+              <span className="font-semibold">
+                Total {headerData.type === "advance" ? "Advance" : "Claim"}{" "}
+                Amount
+              </span>
+              <span className="text-2xl font-bold text-primary">
+                ${calculateTotal().toFixed(2)}
+              </span>
+            </div>
+          )}
+
+          {/* Form Action Bar */}
+          <FormActionBar
+            mode={isEdit ? "edit" : "create"}
+            isSubmitting={isSaving}
+            onCancel={handleCancel}
+            submitText="Submit for Approval"
+            leftContent={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+              >
+                Save as Draft
+              </Button>
+            }
+          />
+        </form>
+        </div>
+      </div>
     </PageLayout>
   );
 }

@@ -5,12 +5,12 @@
 
 // ==================== Enums ====================
 
+export type ExpenseType = 'expense' | 'advance';
+
 export type ExpenseStatus = 
   | 'draft'           // Created but not submitted
-  | 'submitted'       // Submitted, awaiting Level 1 approval
-  | 'level1_approved' // Approved by Manager
-  | 'level2_approved' // Approved by Business Management
-  | 'level3_approved' // Approved by Finance (ready for payment)
+  | 'pending'         // Submitted, awaiting approval
+  | 'approved'        // Fully approved (ready for payment)
   | 'paid'           // Payment confirmed
   | 'rejected'       // Rejected at any level
   | 'cancelled';     // Cancelled by employee
@@ -53,9 +53,8 @@ export interface ExpenseLineItem {
   category: ExpenseCategory;
   description: string;
   amount: number;
-  expenseDate: string; // ISO date string
-  merchantName?: string;
-  receiptNumber?: string;
+  fromDate: string; // ISO date string - start date of expense
+  toDate: string; // ISO date string - end date of expense
   attachments: ExpenseAttachment[];
   notes?: string;
 }
@@ -64,31 +63,38 @@ export interface Expense {
   id: string;
   expenseNumber: string; // e.g., "EXP-2024-001"
   
+  // Type of claim
+  type: ExpenseType; // 'expense' or 'advance'
+  
   // Employee details
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
   department: string;
   
-  // Claim header details
-  claimTitle: string; // e.g., "Business trip to NYC"
-  fromDate: string; // Start date of expense period
-  toDate: string; // End date of expense period
-  purpose: string; // Purpose/reason for expenses
+  // Raised by details (for claims raised on behalf)
+  raisedById?: string;
+  raisedByName?: string;
+  
+  // Temporary person details (if applicable)
+  isTemporaryPerson?: boolean;
+  temporaryPersonName?: string;
+  temporaryPersonPhone?: string;
+  temporaryPersonEmail?: string;
+  
+  // Claim details
+  description: string; // Main description/purpose
   
   // Line items - multiple expenses in one claim
   lineItems: ExpenseLineItem[];
   
   // Calculated totals
-  amount: number; // Total amount (sum of line items)
+  amount: number; // Total amount (sum of line items or advance amount)
   currency: string;
-  
-  // Payment details
-  paymentMethod: PaymentMethod;
   
   // Status and workflow
   status: ExpenseStatus;
-  currentLevel: ApprovalLevel | null; // Current approval level
+  currentApprovalLevel: number; // Numeric approval level (1, 2, 3)
   
   // Approval history
   approvalHistory: ApprovalRecord[];

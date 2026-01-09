@@ -9,20 +9,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Paperclip } from 'lucide-react';
-import { DocumentUploadModal } from '../DocumentUploadModal';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Plus, Trash2, Paperclip, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { DocumentUploadModal } from './DocumentUploadModal';
 
 export interface TableColumn<T = any> {
   key: string;
   header: string;
   type: 'text' | 'number' | 'date' | 'select' | 'documents';
   width?: string;
+  minWidth?: string; // Minimum width for the column
+  maxWidth?: string; // Maximum width for the column
+  flex?: number; // Flex grow factor (e.g., 1 for flex-1)
   required?: boolean;
   placeholder?: string;
   options?: { label: string; value: string }[]; // For select type
   min?: number | string; // For number/date type (string for date inputs)
   max?: number | string;
   step?: number;
+  align?: 'left' | 'center' | 'right'; // Text alignment for header and cell
   render?: (value: any, item: T) => React.ReactNode; // Custom render function
   validate?: (value: any) => string | null; // Custom validation
 }
@@ -121,7 +129,7 @@ export function EditableItemsTable<T extends Record<string, any>>({
           value={value || ''}
           onValueChange={(newValue) => handleCellChange(index, column.key, newValue)}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger className="h-8 text-sm w-full">
             <SelectValue placeholder={column.placeholder || 'Select...'} />
           </SelectTrigger>
           <SelectContent>
@@ -135,7 +143,40 @@ export function EditableItemsTable<T extends Record<string, any>>({
       );
     }
 
-    // Input columns (text, number, date)
+    // Date column with shadcn date picker
+    if (column.type === 'date') {
+      const dateValue = value ? new Date(value) : undefined;
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                'h-8 text-sm w-full justify-start text-left font-normal',
+                !dateValue && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {dateValue ? format(dateValue, 'MMM dd, yyyy') : column.placeholder || 'Pick a date'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateValue}
+              onSelect={(date) => {
+                const dateString = date ? format(date, 'yyyy-MM-dd') : '';
+                handleCellChange(index, column.key, dateString);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      );
+    }
+
+    // Input columns (text, number)
     return (
       <Input
         type={column.type}
@@ -148,7 +189,10 @@ export function EditableItemsTable<T extends Record<string, any>>({
         min={column.min}
         max={column.max}
         step={column.step}
-        className="h-8 text-sm"
+        className={cn(
+          'h-8 text-sm',
+          column.type === 'number' && 'w-24'
+        )}
         required={column.required}
       />
     );
@@ -164,8 +208,16 @@ export function EditableItemsTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <TableHead
                   key={column.key}
-                  style={{ width: column.width }}
-                  className="text-left"
+                  style={{ 
+                    width: column.flex ? undefined : (column.width || '1%'),
+                    minWidth: column.minWidth,
+                    maxWidth: column.maxWidth
+                  }}
+                  className={cn(
+                    column.align === 'center' && 'text-center',
+                    column.align === 'right' && 'text-right',
+                    !column.align && 'text-left'
+                  )}
                 >
                   {column.header}
                   {column.required && <span className="text-red-500 ml-1">*</span>}
@@ -201,7 +253,19 @@ export function EditableItemsTable<T extends Record<string, any>>({
                     {index + 1}
                   </TableCell>
                   {columns.map((column) => (
-                    <TableCell key={column.key}>
+                    <TableCell 
+                      key={column.key}
+                      style={{ 
+                        width: column.flex ? undefined : '1%',
+                        minWidth: column.minWidth,
+                        maxWidth: column.maxWidth
+                      }}
+                      className={cn(
+                        column.align === 'center' && 'text-center',
+                        column.align === 'right' && 'text-right',
+                        !column.align && 'text-left'
+                      )}
+                    >
                       {renderCell(column, item, index)}
                     </TableCell>
                   ))}

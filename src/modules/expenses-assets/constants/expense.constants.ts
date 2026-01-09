@@ -2,9 +2,14 @@
  * Expense Management Constants
  */
 
-import { ExpenseCategory, ExpenseStatus, PaymentMethod, ApprovalLevel } from '../types/expense.types';
+import { ExpenseCategory, ExpenseStatus, PaymentMethod, ExpenseType } from '../types/expense.types';
 
 // ==================== Labels ====================
+
+export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
+  expense: 'Expense Claim',
+  advance: 'Advance Request',
+};
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   travel: 'Travel',
@@ -21,10 +26,8 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 
 export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
   draft: 'Draft',
-  submitted: 'Submitted',
-  level1_approved: 'Manager Approved',
-  level2_approved: 'Business Approved',
-  level3_approved: 'Finance Approved',
+  pending: 'Pending Approval',
+  approved: 'Approved',
   paid: 'Paid',
   rejected: 'Rejected',
   cancelled: 'Cancelled',
@@ -38,21 +41,13 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   digital_wallet: 'Digital Wallet',
 };
 
-export const APPROVAL_LEVEL_LABELS: Record<ApprovalLevel, string> = {
-  level1: 'Manager Approval',
-  level2: 'Business Management',
-  level3: 'Finance Approval',
-};
-
 // ==================== Colors ====================
 
 export const EXPENSE_STATUS_COLORS: Record<ExpenseStatus, string> = {
   draft: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  level1_approved: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
-  level2_approved: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-  level3_approved: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  paid: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
