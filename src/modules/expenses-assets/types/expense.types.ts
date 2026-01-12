@@ -199,7 +199,21 @@ export interface ExpenseStats {
 
 // ==================== Form Data ====================
 
+// Parent form data for entire expense/advance request
 export interface ExpenseFormData {
+  // General Information
+  type: ExpenseType;
+  employeeName: string;
+  employeeEmail: string;
+  department: string;
+  description: string;
+  
+  // Line Items
+  lineItems: ExpenseLineItem[];
+}
+
+// Single line item form data (legacy, kept for compatibility)
+export interface ExpenseLineItemFormData {
   category: ExpenseCategory;
   description: string;
   amount: number;
