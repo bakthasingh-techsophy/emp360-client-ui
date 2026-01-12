@@ -70,6 +70,7 @@ export interface Expense {
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
+  employeePhone: string;
   department: string;
   
   // Raised by details (for claims raised on behalf)
@@ -104,6 +105,7 @@ export interface Expense {
   updatedAt: string;
   submittedAt?: string;
   completedAt?: string;
+  paidAt?: string;
   
   // Additional metadata
   tags?: string[];

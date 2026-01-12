@@ -12,12 +12,12 @@ import {
 // ==================== Mock Users ====================
 
 export const mockUsers = [
-  { id: 'user-001', name: 'John Doe', email: 'john.doe@company.com', role: 'employee' as UserRole, department: 'Engineering' },
-  { id: 'user-002', name: 'Jane Smith', email: 'jane.smith@company.com', role: 'employee' as UserRole, department: 'Marketing' },
-  { id: 'user-003', name: 'Mike Johnson', email: 'mike.j@company.com', role: 'manager' as UserRole, department: 'Engineering' },
-  { id: 'user-004', name: 'Sarah Williams', email: 'sarah.w@company.com', role: 'manager' as UserRole, department: 'Marketing' },
-  { id: 'user-005', name: 'Robert Brown', email: 'robert.b@company.com', role: 'business_head' as UserRole, department: 'Operations' },
-  { id: 'user-006', name: 'Emily Davis', email: 'emily.d@company.com', role: 'finance' as UserRole, department: 'Finance' },
+  { id: 'user-001', name: 'John Doe', email: 'john.doe@company.com', phone: '+1 (555) 123-4567', role: 'employee' as UserRole, department: 'Engineering' },
+  { id: 'user-002', name: 'Jane Smith', email: 'jane.smith@company.com', phone: '+1 (555) 234-5678', role: 'employee' as UserRole, department: 'Marketing' },
+  { id: 'user-003', name: 'Mike Johnson', email: 'mike.j@company.com', phone: '+1 (555) 345-6789', role: 'manager' as UserRole, department: 'Engineering' },
+  { id: 'user-004', name: 'Sarah Williams', email: 'sarah.w@company.com', phone: '+1 (555) 456-7890', role: 'manager' as UserRole, department: 'Marketing' },
+  { id: 'user-005', name: 'Robert Brown', email: 'robert.b@company.com', phone: '+1 (555) 567-8901', role: 'business_head' as UserRole, department: 'Operations' },
+  { id: 'user-006', name: 'Emily Davis', email: 'emily.d@company.com', phone: '+1 (555) 678-9012', role: 'finance' as UserRole, department: 'Finance' },
 ];
 
 // Current logged-in user (can be changed for testing different roles)
@@ -116,6 +116,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Business trip to San Francisco for client meeting and product demonstration with TechCorp SF office',
     lineItems: [
@@ -169,6 +170,7 @@ export const mockExpenses: Expense[] = [
     updatedAt: '2024-12-20T10:00:00Z',
     submittedAt: '2024-12-14T10:00:00Z',
     completedAt: '2024-12-20T10:00:00Z',
+    paidAt: '2024-12-30T10:00:00Z',
     tags: ['travel', 'client-meeting'],
     isUrgent: false,
   },
@@ -181,6 +183,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Conference attendance at Tech Summit 2024 in Austin, TX for professional development',
     lineItems: [
@@ -242,6 +245,7 @@ export const mockExpenses: Expense[] = [
     createdAt: '2024-12-01T09:00:00Z',
     updatedAt: '2024-12-22T14:30:00Z',
     submittedAt: '2024-12-20T16:00:00Z',
+    paidAt: '2025-01-05T11:30:00Z',
     isUrgent: false,
   },
 
@@ -253,6 +257,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
     employeeEmail: 'jane.smith@company.com',
+    employeePhone: '+1 (555) 234-5678',
     department: 'Marketing',
     description: 'Weekly client meals and entertainment during December campaign planning week',
     lineItems: [
@@ -307,6 +312,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Laptop purchase for work - Personal equipment',
     lineItems: [
@@ -342,6 +348,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Team building lunch that was cancelled - Non-refundable deposit',
     lineItems: [
@@ -377,6 +384,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Restocking office supplies for the team - Q4 purchases',
     lineItems: [
@@ -419,6 +427,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
     employeeEmail: 'jane.smith@company.com',
+    employeePhone: '+1 (555) 234-5678',
     department: 'Marketing',
     description: 'Annual renewal of essential marketing tools and software licenses',
     lineItems: [
@@ -462,6 +471,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Local transportation for multiple client site visits across the city',
     lineItems: [
@@ -525,6 +535,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
     employeeEmail: 'jane.smith@company.com',
+    employeePhone: '+1 (555) 234-5678',
     department: 'Marketing',
     description: 'Online certification course for advanced marketing analytics - Google Analytics certification',
     lineItems: [
@@ -559,6 +570,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Ergonomic equipment for remote work setup - home office',
     lineItems: [
@@ -602,6 +614,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
     employeeEmail: 'jane.smith@company.com',
+    employeePhone: '+1 (555) 234-5678',
     department: 'Marketing',
     description: 'Office supplies - submitted twice by mistake (duplicate)',
     lineItems: [
@@ -636,6 +649,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-001',
     employeeName: 'John Doe',
     employeeEmail: 'john.doe@company.com',
+    employeePhone: '+1 (555) 123-4567',
     department: 'Engineering',
     description: 'Advance payment for upcoming DevConf 2025 trip - conference travel',
     lineItems: [
@@ -681,6 +695,7 @@ export const mockExpenses: Expense[] = [
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
     employeeEmail: 'jane.smith@company.com',
+    employeePhone: '+1 (555) 234-5678',
     department: 'Marketing',
     description: 'Advance for client meeting in Boston - travel expenses',
     lineItems: [
@@ -723,6 +738,7 @@ export const mockExpenses: Expense[] = [
     createdAt: '2025-01-08T14:00:00Z',
     updatedAt: '2025-01-09T09:00:00Z',
     submittedAt: '2025-01-08T15:00:00Z',
+    paidAt: '2025-01-10T14:00:00Z',
     tags: ['advance'],
     isUrgent: false,
   },

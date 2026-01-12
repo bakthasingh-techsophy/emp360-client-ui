@@ -266,7 +266,7 @@ function DataTableInner<TData, TFilters = any>(
       {renderHeader && renderHeader()}
 
       {/* Table */}
-      <div className="relative w-full">
+      <div className="relative w-full overflow-x-auto">
         <Table noWrapper aria-label={ariaLabel}>
           <TableHeader className="bg-background border-b">
             {table.getHeaderGroups().map((headerGroup) => (
