@@ -71,7 +71,7 @@ export function ExpenseApprovalPage() {
     setLineItems(updatedItems);
   };
 
-  const getDocuments = (itemIndex: number): File[] => {
+  const getDocuments = (_itemIndex: number): File[] => {
     // Return empty array as we're storing as ExpenseAttachment objects
     return [];
   };

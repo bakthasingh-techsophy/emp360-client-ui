@@ -28,22 +28,19 @@ export function EmployeeExpenseList() {
         ? Math.floor((new Date().getTime() - new Date(exp.submittedAt || exp.createdAt).getTime()) / (1000 * 60 * 60 * 24))
         : 0,
       canEdit: exp.status === 'draft',
-      canCancel: exp.status === 'submitted' || exp.status === 'level1_approved' || exp.status === 'level2_approved',
-      nextApproverName: exp.status === 'submitted' ? 'Manager' 
-        : exp.status === 'level1_approved' ? 'Business Management'
-        : exp.status === 'level2_approved' ? 'Finance'
-        : undefined,
+      canCancel: exp.status === 'pending',
+      nextApproverName: exp.status === 'pending' ? 'Manager' : undefined,
     })) as ExpenseListItem[];
 
   // Calculate stats
   const stats: ExpenseStats = {
     total: userExpenses.length,
-    pending: userExpenses.filter(e => ['submitted', 'level1_approved', 'level2_approved'].includes(e.status)).length,
-    approved: userExpenses.filter(e => ['level1_approved', 'level2_approved', 'level3_approved'].includes(e.status)).length,
+    pending: userExpenses.filter(e => e.status === 'pending').length,
+    approved: userExpenses.filter(e => e.status === 'approved').length,
     rejected: userExpenses.filter(e => e.status === 'rejected').length,
     paid: userExpenses.filter(e => e.status === 'paid').length,
     totalAmount: userExpenses.reduce((sum, e) => sum + e.amount, 0),
-    pendingAmount: userExpenses.filter(e => ['submitted', 'level1_approved', 'level2_approved'].includes(e.status)).reduce((sum, e) => sum + e.amount, 0),
+    pendingAmount: userExpenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0),
     paidAmount: userExpenses.filter(e => e.status === 'paid').reduce((sum, e) => sum + e.amount, 0),
   };
 
@@ -56,12 +53,11 @@ export function EmployeeExpenseList() {
       options: [
         { label: 'All', value: '' },
         { label: 'Draft', value: 'draft' },
-        { label: 'Submitted', value: 'submitted' },
-        { label: 'Approved (L1)', value: 'level1_approved' },
-        { label: 'Approved (L2)', value: 'level2_approved' },
-        { label: 'Approved (L3)', value: 'level3_approved' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Approved', value: 'approved' },
         { label: 'Rejected', value: 'rejected' },
         { label: 'Paid', value: 'paid' },
+        { label: 'Cancelled', value: 'cancelled' },
       ],
     },
     {
@@ -102,8 +98,8 @@ export function EmployeeExpenseList() {
 
   // Apply filters
   let filteredExpenses = userExpenses.filter(expense => {
-    if (searchQuery && !expense.claimTitle.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !expense.purpose.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !expense.expenseNumber.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !expense.description.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     if (filters.status && expense.status !== filters.status) {
@@ -112,10 +108,10 @@ export function EmployeeExpenseList() {
     if (filters.category && !expense.lineItems.some(item => item.category === filters.category)) {
       return false;
     }
-    if (filters.dateFrom && new Date(expense.fromDate) < new Date(filters.dateFrom as string)) {
+    if (filters.dateFrom && expense.lineItems.length > 0 && new Date(expense.lineItems[0].fromDate) < new Date(filters.dateFrom as string)) {
       return false;
     }
-    if (filters.dateTo && new Date(expense.toDate) > new Date(filters.dateTo as string)) {
+    if (filters.dateTo && expense.lineItems.length > 0 && new Date(expense.lineItems[expense.lineItems.length - 1].toDate) > new Date(filters.dateTo as string)) {
       return false;
     }
     return true;

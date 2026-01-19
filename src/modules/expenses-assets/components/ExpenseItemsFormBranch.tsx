@@ -97,7 +97,7 @@ export function ExpenseItemsFormBranch({ form }: ExpenseItemsFormBranchProps) {
     setValue('lineItems', updatedItems, { shouldValidate: true });
   };
 
-  const getDocuments = (itemIndex: number): File[] => {
+  const getDocuments = (_itemIndex: number): File[] => {
     // Return empty array as we're storing as ExpenseAttachment objects
     // The EditableItemsTable will handle the display
     return [];
