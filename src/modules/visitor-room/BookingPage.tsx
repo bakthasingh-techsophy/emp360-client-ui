@@ -34,7 +34,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { FormActionBar } from '@/components/common/FormActionBar';
+import { FormActionBar } from '@/components/common/FormActionBar/FormActionBar';
 import {
   ArrowLeft,
   Calendar as CalendarIcon,

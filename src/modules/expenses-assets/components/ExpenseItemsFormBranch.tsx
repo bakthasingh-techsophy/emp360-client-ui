@@ -67,10 +67,40 @@ export function ExpenseItemsFormBranch({ form }: ExpenseItemsFormBranchProps) {
       align: 'right',
       minWidth: '120px',
     },
+    {
+      key: 'attachments',
+      header: 'Documents',
+      type: 'documents',
+      minWidth: '120px',
+    },
   ];
 
   const handleItemsChange = (items: ExpenseLineItem[]) => {
     setValue('lineItems', items, { shouldValidate: true });
+  };
+
+  const handleDocumentsChange = (itemIndex: number, files: File[]) => {
+    const updatedItems = [...lineItems];
+    // Convert File objects to ExpenseAttachment format
+    const newAttachments = files.map(file => ({
+      id: `doc-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      url: URL.createObjectURL(file),
+      type: file.type,
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
+    }));
+    updatedItems[itemIndex] = {
+      ...updatedItems[itemIndex],
+      attachments: newAttachments,
+    };
+    setValue('lineItems', updatedItems, { shouldValidate: true });
+  };
+
+  const getDocuments = (itemIndex: number): File[] => {
+    // Return empty array as we're storing as ExpenseAttachment objects
+    // The EditableItemsTable will handle the display
+    return [];
   };
 
   const createEmptyItem = (): ExpenseLineItem => ({
@@ -97,6 +127,8 @@ export function ExpenseItemsFormBranch({ form }: ExpenseItemsFormBranchProps) {
           onChange={handleItemsChange as any}
           emptyItemTemplate={createEmptyItem() as any}
           minItems={1}
+          onDocumentsChange={handleDocumentsChange}
+          getDocuments={getDocuments}
         />
       </CardContent>
     </Card>

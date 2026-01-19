@@ -26,9 +26,10 @@ import { useState } from 'react';
 interface ExpenseTableProps {
   data: Expense[];
   loading?: boolean;
+  visibleColumns?: string[];
 }
 
-export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
+export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseTableProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -45,6 +46,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
 
   const columns: ColumnDef<Expense>[] = [
     {
+      id: 'employeeId',
       accessorKey: 'employeeId',
       header: 'Employee ID',
       cell: ({ row }) => (
@@ -52,6 +54,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'employeeName',
       accessorKey: 'employeeName',
       header: 'Name',
       cell: ({ row }) => (
@@ -62,6 +65,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'employeeEmail',
       accessorKey: 'employeeEmail',
       header: 'Contact Info',
       cell: ({ row }) => (
@@ -92,6 +96,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'description',
       accessorKey: 'description',
       header: 'Request Details',
       cell: ({ row }) => (
@@ -107,6 +112,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'amount',
       accessorKey: 'amount',
       header: () => <div className="text-center">Amount</div>,
       cell: ({ row }) => (
@@ -116,6 +122,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'paidAt',
       accessorKey: 'paidAt',
       header: () => <div className="text-center">Paid At</div>,
       cell: ({ row }) => {
@@ -130,6 +137,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       },
     },
     {
+      id: 'createdAt',
       accessorKey: 'createdAt',
       header: () => <div className="text-center">Claimed Date</div>,
       cell: ({ row }) => (
@@ -139,6 +147,7 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
       ),
     },
     {
+      id: 'status',
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => {
@@ -174,24 +183,14 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
               <Eye className="h-4 w-4" />
             </Button>
 
-            {/* Approve button - always visible, disabled when not pending */}
+            {/* Take Action button - always visible, disabled when not pending */}
             <Button
               size="sm"
               variant="default"
               disabled={!isPending}
-              onClick={() => console.log('Approve', expense.id)}
+              onClick={() => navigate(`/expense-management/approve/${expense.id}`)}
             >
-              Approve
-            </Button>
-
-            {/* Reject button - always visible, disabled when not pending */}
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!isPending}
-              onClick={() => console.log('Reject', expense.id)}
-            >
-              Reject
+              Take Action
             </Button>
 
             {/* More actions dropdown - always visible */}
@@ -230,11 +229,16 @@ export function ExpenseTable({ data, loading = false }: ExpenseTableProps) {
     },
   ];
 
+  // Filter columns based on visibility
+  const visibleColumnsData = visibleColumns 
+    ? columns.filter(col => col.id && visibleColumns.includes(col.id))
+    : columns;
+
   return (
     <>
       <DataTable
         data={data}
-        columns={columns}
+        columns={visibleColumnsData}
         loading={loading}
         emptyState={{
           title: 'No expenses found',

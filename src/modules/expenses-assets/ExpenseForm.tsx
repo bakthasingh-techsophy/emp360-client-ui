@@ -13,7 +13,7 @@ import { ExpenseItemsFormBranch } from "./components/ExpenseItemsFormBranch";
 import { mockExpenses } from "./data/mockData";
 import { ExpenseFormData, ExpenseType } from "./types/expense.types";
 import { format } from "date-fns";
-import { FormActionBar } from "@/components/common/FormActionBar";
+import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 
 export function ExpenseForm() {
   const navigate = useNavigate();

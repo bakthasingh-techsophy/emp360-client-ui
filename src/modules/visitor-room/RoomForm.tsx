@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FormActionBar } from '@/components/common/FormActionBar';
+import { FormActionBar } from '@/components/common/FormActionBar/FormActionBar';
 import { ArrowLeft, Upload, Link as LinkIcon } from 'lucide-react';
 import { Room } from './types';
 import { mockRooms } from './mockData';

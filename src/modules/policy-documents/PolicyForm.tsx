@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FormActionBar } from '@/components/common/FormActionBar';
+import { FormActionBar } from '@/components/common/FormActionBar/FormActionBar';
 import { format } from 'date-fns';
 import { 
   CalendarIcon, 

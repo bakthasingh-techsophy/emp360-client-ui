@@ -18,6 +18,23 @@ export function ExpenseList() {
   const navigate = useNavigate();
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Column visibility configuration
+  const allColumns = [
+    { id: 'employeeId', label: 'Employee ID' },
+    { id: 'employeeName', label: 'Name' },
+    { id: 'employeeEmail', label: 'Contact Info' },
+    { id: 'description', label: 'Request Details' },
+    { id: 'amount', label: 'Amount' },
+    { id: 'paidAt', label: 'Paid At' },
+    { id: 'createdAt', label: 'Claimed Date' },
+    { id: 'status', label: 'Status' },
+    { id: 'actions', label: 'Actions' },
+  ];
+  
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(
+    allColumns.map(col => col.id)
+  );
 
   // Filter expenses by tab
   const allExpenses = mockExpenses;
@@ -106,10 +123,18 @@ export function ExpenseList() {
               onFiltersChange={setActiveFilters}
               showExport={true}
               onExportAll={() => console.log('Export all')}
+              showConfigureView={true}
+              allColumns={allColumns}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={setVisibleColumns}
             />
 
         <div className="mt-4">
-          <ExpenseTable data={currentExpenses} loading={false} />
+          <ExpenseTable 
+            data={currentExpenses} 
+            loading={false}
+            visibleColumns={visibleColumns}
+          />
         </div>
           </TabsContent>
         </Tabs>

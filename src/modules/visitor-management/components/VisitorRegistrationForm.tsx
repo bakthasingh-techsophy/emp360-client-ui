@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { FormActionBar } from "@/components/common/FormActionBar";
+import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { TimePicker } from "./TimePicker";
 import { PURPOSE_OPTIONS } from "../constants";
 import { mockEmployees, mockVisitors } from "../mockData";
