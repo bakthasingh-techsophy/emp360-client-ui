@@ -32,7 +32,9 @@ export function IntimationList() {
   // Filter intimations by tab
   const allIntimations = mockIntimations;
   const draftIntimations = allIntimations.filter(i => i.status === 'draft');
-  const submittedIntimations = allIntimations.filter(i => i.status === 'submitted');
+  const submittedIntimations = allIntimations.filter(i => i.status === 'submitted' || i.status === 'pending_approval');
+  const approvedIntimations = allIntimations.filter(i => i.status === 'approved');
+  const rejectedIntimations = allIntimations.filter(i => i.status === 'rejected');
   const acknowledgedIntimations = allIntimations.filter(i => i.status === 'acknowledged');
   const cancelledIntimations = allIntimations.filter(i => i.status === 'cancelled');
 
@@ -41,6 +43,8 @@ export function IntimationList() {
     switch (activeTab) {
       case 'draft': return draftIntimations;
       case 'submitted': return submittedIntimations;
+      case 'approved': return approvedIntimations;
+      case 'rejected': return rejectedIntimations;
       case 'acknowledged': return acknowledgedIntimations;
       case 'cancelled': return cancelledIntimations;
       default: return allIntimations;
@@ -79,7 +83,9 @@ export function IntimationList() {
         <TabsList>
           <TabsTrigger value="all">All ({allIntimations.length})</TabsTrigger>
           <TabsTrigger value="draft">Draft ({draftIntimations.length})</TabsTrigger>
-          <TabsTrigger value="submitted">Submitted ({submittedIntimations.length})</TabsTrigger>
+          <TabsTrigger value="submitted">Pending ({submittedIntimations.length})</TabsTrigger>
+          <TabsTrigger value="approved">Approved ({approvedIntimations.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Rejected ({rejectedIntimations.length})</TabsTrigger>
           <TabsTrigger value="acknowledged">Acknowledged ({acknowledgedIntimations.length})</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled ({cancelledIntimations.length})</TabsTrigger>
         </TabsList>

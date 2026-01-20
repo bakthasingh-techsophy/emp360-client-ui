@@ -65,6 +65,7 @@ import { ExpenseManagement } from './modules/expenses-assets/ExpenseManagement';
 import { ExpenseForm } from './modules/expenses-assets/ExpenseForm';
 import { ExpenseApprovalPage } from './modules/expenses-assets/ExpenseApprovalPage';
 import { IntimationForm } from './modules/expenses-assets/IntimationForm';
+import { IntimationApprovalPage } from './modules/expenses-assets/IntimationApprovalPage';
 import { TravelRequests } from './modules/expenses-assets/TravelRequests';
 import { AdvancesSettlements } from './modules/expenses-assets/AdvancesSettlements';
 import { AssetManagement } from './modules/expenses-assets/AssetManagement';
@@ -175,6 +176,8 @@ function App() {
                 <Route path="/expense-management/edit/:id" element={<ExpenseForm />} />
                 <Route path="/expense-management/approve/:id" element={<ExpenseApprovalPage />} />
                 <Route path="/expense-management/intimation/new" element={<IntimationForm />} />
+                <Route path="/expense-management/intimation/edit/:id" element={<IntimationForm />} />
+                <Route path="/expense-management/intimation/approve/:id" element={<IntimationApprovalPage />} />
                 <Route path="/travel-requests" element={<TravelRequests />} />
                 <Route path="/advances-settlements" element={<AdvancesSettlements />} />
                 <Route path="/asset-management" element={<AssetManagement />} />

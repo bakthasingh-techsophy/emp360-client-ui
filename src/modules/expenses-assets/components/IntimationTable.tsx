@@ -47,10 +47,13 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
   const getStatusBadgeVariant = (status: IntimationStatus): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
       case 'submitted':
+      case 'pending_approval':
         return 'secondary';
       case 'acknowledged':
+      case 'approved':
         return 'default';
       case 'cancelled':
+      case 'rejected':
         return 'destructive';
       case 'draft':
       default:
@@ -62,6 +65,9 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
     const labels: Record<IntimationStatus, string> = {
       draft: 'Draft',
       submitted: 'Submitted',
+      pending_approval: 'Pending Approval',
+      approved: 'Approved',
+      rejected: 'Rejected',
       acknowledged: 'Acknowledged',
       cancelled: 'Cancelled',
     };
@@ -182,6 +188,7 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
         const intimation = row.original;
         const canEdit = intimation.status === 'draft';
         const canDelete = intimation.status === 'draft';
+        const isPendingApproval = intimation.status === 'pending_approval' || intimation.status === 'submitted';
 
         return (
           <div className="flex items-center justify-center gap-2">
@@ -190,9 +197,21 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
               size="sm"
               onClick={() => handleView(intimation)}
               className="h-8 w-8 p-0"
+              title="View"
             >
               <Eye className="h-4 w-4" />
             </Button>
+
+            {/* Take Action button - visible for pending approvals */}
+            <Button
+              size="sm"
+              variant="default"
+              disabled={!isPendingApproval}
+              onClick={() => navigate(`/expense-management/intimation/approve/${intimation.id}`)}
+            >
+              Take Action
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

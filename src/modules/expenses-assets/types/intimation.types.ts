@@ -10,8 +10,27 @@ export type IntimationType = 'travel' | 'other';
 export type IntimationStatus = 
   | 'draft'
   | 'submitted'
+  | 'pending_approval' // Single or multi-level approval in progress
+  | 'approved'
+  | 'rejected'
   | 'acknowledged'
   | 'cancelled';
+
+// Approval action types
+export type ApprovalAction = 'approve' | 'reject';
+
+// Approval history entry
+export interface ApprovalHistoryEntry {
+  id: string;
+  level: string; // e.g., 'level1', 'level2'
+  approverId: string;
+  approverName: string;
+  approverRole: string;
+  action: ApprovalAction;
+  comments?: string;
+  timestamp: string;
+  adjustedEstimatedCost?: number; // If approver modifies estimated cost
+}
 
 // ==================== Journey Related ====================
 
@@ -65,9 +84,16 @@ export interface Intimation {
   // Status and workflow
   status: IntimationStatus;
   
+  // Approval workflow
+  currentApprovalLevel?: string; // e.g., 'level1', 'level2'
+  approvalHistory?: ApprovalHistoryEntry[];
+  approverComments?: string; // Current approver's comments
+  
   // Timestamps
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
   acknowledgedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
 }
