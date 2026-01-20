@@ -48,6 +48,8 @@ export interface EditableItemsTableProps<T = any> {
   showAddButton?: boolean; // Show add button in header
   allowRemove?: boolean; // Allow removing items
   allowAdd?: boolean; // Allow adding items
+  errors?: Record<number, Record<string, string>>; // Validation errors by row index and column key
+  onValidate?: (items: T[]) => Record<number, Record<string, string>>; // Optional validation function
 }
 
 export function EditableItemsTable<T extends Record<string, any>>({
@@ -63,6 +65,8 @@ export function EditableItemsTable<T extends Record<string, any>>({
   showAddButton = true,
   allowRemove = true,
   allowAdd = true,
+  errors = {},
+  onValidate,
 }: EditableItemsTableProps<T>) {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -82,6 +86,10 @@ export function EditableItemsTable<T extends Record<string, any>>({
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [key]: value };
     onChange(newItems);
+    // Trigger validation if provided
+    if (onValidate) {
+      onValidate(newItems);
+    }
   };
 
   const handleOpenDocuments = (index: number) => {
@@ -124,12 +132,16 @@ export function EditableItemsTable<T extends Record<string, any>>({
 
     // Select column
     if (column.type === 'select') {
+      const hasError = errors[index]?.[column.key];
       return (
         <Select
           value={value || ''}
           onValueChange={(newValue) => handleCellChange(index, column.key, newValue)}
         >
-          <SelectTrigger className="h-8 text-sm w-full">
+          <SelectTrigger className={cn(
+            "h-8 text-sm w-full",
+            hasError && 'border-red-500 focus:ring-red-500'
+          )}>
             <SelectValue placeholder={column.placeholder || 'Select...'} />
           </SelectTrigger>
           <SelectContent>
@@ -146,6 +158,7 @@ export function EditableItemsTable<T extends Record<string, any>>({
     // Date column with shadcn date picker
     if (column.type === 'date') {
       const dateValue = value ? new Date(value) : undefined;
+      const hasError = errors[index]?.[column.key];
       return (
         <Popover>
           <PopoverTrigger asChild>
@@ -154,7 +167,8 @@ export function EditableItemsTable<T extends Record<string, any>>({
               variant="outline"
               className={cn(
                 'h-8 text-sm w-full justify-start text-left font-normal',
-                !dateValue && 'text-muted-foreground'
+                !dateValue && 'text-muted-foreground',
+                hasError && 'border-red-500 focus-visible:ring-red-500'
               )}
             >
               <CalendarIcon className="mr-2 h-3.5 w-3.5" />
@@ -177,6 +191,7 @@ export function EditableItemsTable<T extends Record<string, any>>({
     }
 
     // Input columns (text, number)
+    const hasError = errors[index]?.[column.key];
     return (
       <Input
         type={column.type}
@@ -191,7 +206,8 @@ export function EditableItemsTable<T extends Record<string, any>>({
         step={column.step}
         className={cn(
           'h-8 text-sm',
-          column.type === 'number' && 'w-24'
+          column.type === 'number' && 'w-24',
+          hasError && 'border-red-500 focus-visible:ring-red-500'
         )}
         required={column.required}
       />

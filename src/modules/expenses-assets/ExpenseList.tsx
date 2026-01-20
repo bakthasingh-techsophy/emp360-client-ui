@@ -12,11 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockExpenses } from './data/mockData';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { ExpenseTable } from './components/ExpenseTable';
+import { IntimationList } from './IntimationList';
+import { Bell, Plus } from 'lucide-react';
 
 
 export function ExpenseList() {
   const navigate = useNavigate();
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [parentTab, setParentTab] = useState('expenses');
   const [activeTab, setActiveTab] = useState('all');
   
   // Column visibility configuration
@@ -97,45 +100,67 @@ export function ExpenseList() {
       type: 'date',
     },
   ];
-
   return (
     <PageLayout>
       <div className="space-y-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={parentTab} onValueChange={setParentTab} className="space-y-4">
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
-              <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
-              <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>
-              <TabsTrigger value="cancelled">Cancelled ({cancelledExpenses.length})</TabsTrigger>
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="intimations">Intimations</TabsTrigger>
             </TabsList>
-            <Button onClick={() => navigate('/expense-management/new')}>
-              New Expense
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/expense-management/intimation/new')}
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                New Intimation
+              </Button>
+              <Button onClick={() => navigate('/expense-management/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Expense
+              </Button>
+            </div>
           </div>
 
-          <TabsContent value={activeTab} className="space-y-4">
-            <GenericToolbar
-              showFilters={true}
-              availableFilters={filterFields}
-              activeFilters={activeFilters}
-              onFiltersChange={setActiveFilters}
-              showExport={true}
-              onExportAll={() => console.log('Export all')}
-              showConfigureView={true}
-              allColumns={allColumns}
-              visibleColumns={visibleColumns}
-              onVisibleColumnsChange={setVisibleColumns}
-            />
+          <TabsContent value="expenses" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
+                <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
+                <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>
+                <TabsTrigger value="cancelled">Cancelled ({cancelledExpenses.length})</TabsTrigger>
+              </TabsList>
 
-        <div className="mt-4">
-          <ExpenseTable 
-            data={currentExpenses} 
-            loading={false}
-            visibleColumns={visibleColumns}
-          />
-        </div>
+              <TabsContent value={activeTab} className="space-y-4">
+                <GenericToolbar
+                  showFilters={true}
+                  availableFilters={filterFields}
+                  activeFilters={activeFilters}
+                  onFiltersChange={setActiveFilters}
+                  showExport={true}
+                  onExportAll={() => console.log('Export all')}
+                  showConfigureView={true}
+                  allColumns={allColumns}
+                  visibleColumns={visibleColumns}
+                  onVisibleColumnsChange={setVisibleColumns}
+                />
+
+                <div className="mt-4">
+                  <ExpenseTable 
+                    data={currentExpenses} 
+                    loading={false}
+                    visibleColumns={visibleColumns}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="intimations" className="space-y-4">
+            <IntimationList />
           </TabsContent>
         </Tabs>
       </div>
