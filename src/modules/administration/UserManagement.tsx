@@ -24,6 +24,7 @@ import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { mockUsers } from './data/mockData';
 import { User, UserStatus } from './types/user.types';
+import { EmployeeViewModal } from './components/EmployeeViewModal';
 
 export function UserManagement() {
   const tableRef = useRef<DataTableRef>(null);
@@ -47,6 +48,8 @@ export function UserManagement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0);
@@ -456,8 +459,8 @@ export function UserManagement() {
   };
 
   const handleViewUser = (user: User) => {
-    console.log('View user:', user);
-    // Navigate to user details page
+    setSelectedUser(user);
+    setViewModalOpen(true);
   };
 
   const handleEditUser = (user: User) => {
@@ -626,6 +629,20 @@ export function UserManagement() {
           description: 'No users match your current filters. Try adjusting your search or filters.',
         }}
         onRowClick={selectionMode ? undefined : (user) => handleViewUser(user)}
+      />
+
+      {/* Employee View Modal */}
+      <EmployeeViewModal
+        employee={selectedUser}
+        open={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onEdit={(user) => {
+          setViewModalOpen(false);
+          handleEditUser(user);
+        }}
       />
     </PageLayout>
   );
