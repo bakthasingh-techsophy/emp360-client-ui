@@ -57,6 +57,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
   showBulkActions = false,
   bulkActions = [],
   selectedCount = 0,
+  selectedIds = [],
   onToggleSelection,
   selectionMode = false,
   showAddButton = false,
@@ -640,7 +641,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
                         key={action.id}
                         variant={action.variant || 'outline'}
                         size="sm"
-                        onClick={() => action.onClick?.([])}
+                        onClick={() => action.onClick?.(selectedIds)}
                         className="gap-2"
                       >
                         {action.icon}
@@ -665,7 +666,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
                           {action.options.map((option) => (
                             <DropdownMenuItem
                               key={option.id}
-                              onClick={() => option.onClick([])}
+                              onClick={() => option.onClick(selectedIds)}
                             >
                               {option.icon}
                               <span className={option.icon ? 'ml-2' : ''}>

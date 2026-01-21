@@ -90,6 +90,7 @@ import { RoomManagement } from './modules/visitor-room';
 
 // Administration & Security modules
 import { UserManagement } from './modules/administration/UserManagement';
+import { EmployeeOnboarding } from './modules/administration/EmployeeOnboarding';
 import { RolePermissions } from './modules/administration/RolePermissions';
 import { AuditLogs } from './modules/administration/AuditLogs';
 import { Integrations } from './modules/administration/Integrations';
@@ -209,6 +210,7 @@ function App() {
 
                 {/* Administration & Security routes - Flat paths */}
                 <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/employee-onboarding" element={<EmployeeOnboarding />} />
                 <Route path="/role-permissions" element={<RolePermissions />} />
                 <Route path="/audit-logs" element={<AuditLogs />} />
                 <Route path="/integrations" element={<Integrations />} />

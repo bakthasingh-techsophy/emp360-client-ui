@@ -114,6 +114,7 @@ export interface ToolbarConfig {
   showBulkActions?: boolean;
   bulkActions?: BulkAction[];
   selectedCount?: number;
+  selectedIds?: string[];
   onToggleSelection?: () => void;
   selectionMode?: boolean;
   
