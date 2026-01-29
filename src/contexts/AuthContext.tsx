@@ -1,5 +1,7 @@
 // src/contexts/AuthContext.tsx
 import StorageKeys from "@/constants/storageConstants";
+import { useToast } from "@/hooks/use-toast";
+import { apiLogin } from "@/services/authService";
 import { getStorageItem, removeStorageItem, setStorageItem } from "@/store/localStorage";
 import { DemoUser, demoUsers } from "@/types/mockData";
 import type { ApiResponse } from "@/types/responses";
@@ -60,6 +62,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
+  
   // demo users (encrypted)
   const [users, setUsers] = useState<DemoUser[]>(() => {
     try {
@@ -84,97 +88,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  // Authenticate user - TODO: Replace with real API when available
+  // Authenticate user with Keycloak
   const login = async (username: string, password: string): Promise<ApiResponse<any>> => {
     try {
-      // ============ REAL API LOGIN (commented out for now) ============
-      // Uncomment this section when backend API is ready
-      /*
-      const response = await apiLogin(username, password, "default");
+      // ============ REAL API LOGIN - Keycloak Integration ============
+      // Call Keycloak authentication endpoint
+      const response = await apiLogin(username, password, "test-realm");
+      
       if (!response.success) {
+        // Show error toast with descriptive message
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: response.message,
+        });
         return response;
       }
 
-      // Extract auth payload
+      // Extract auth payload from Keycloak response
       const authData = response.data;
 
-      // Decode or build user info (you might replace with real user info from backend)
+      // Create authenticated user object
+      // Note: Username is used as ID (can be enhanced to fetch full user details from backend later)
       const authenticatedUser: User = {
         id: username,
         name: username,
-        email: username,
-        role: "org-admin", // default role; replace when backend gives role
+        email: `${username}@company.com`, // Can be fetched from backend user service
+        role: "org-admin", // Default role; should be fetched from backend
       };
 
-      // Save to state
+      // Save user to state
       setUser(authenticatedUser);
 
-      // Persist encrypted user and session
+      // Persist encrypted user to localStorage
       setStorageItem(StorageKeys.USER, authenticatedUser);
+
+      // Create session payload with token and expiry information
       const sessionPayload: SessionPayload = {
         token: authData.access_token,
         tokenType: authData.token_type,
-        expiresAt: Date.now() + authData.expires_in * 1000,
+        expiresAt: Date.now() + authData.expires_in * 1000, // Convert seconds to milliseconds
         refreshToken: authData.refresh_token,
-        refreshExpiresAt: Date.now() + authData.refresh_expires_in * 1000,
+        refreshExpiresAt: Date.now() + authData.refresh_expires_in * 1000, // Convert seconds to milliseconds
         userId: username,
       };
+
+      // Persist encrypted session to localStorage
       setStorageItem(StorageKeys.SESSION, sessionPayload);
 
-      return response;
-      */
-
-      // ============ DUMMY LOGIN (for development/testing) ============
-      // Remove this section when switching to real API
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Basic validation (accept any non-empty username/password)
-      if (!username || !password) {
-        return { 
-          success: false, 
-          message: "Username and password are required", 
-          data: null, 
-          code: "VALIDATION_ERROR" 
-        };
-      }
-
-      // Create dummy user
-      const authenticatedUser: User = {
-        id: `user-${Date.now()}`,
-        name: username,
-        email: `${username}@example.com`,
-        role: "org-admin", // Change role as needed: "org-owner" | "org-admin"
+      return {
+        success: true,
+        message: "Login successful",
+        data: sessionPayload,
+        code: "SUCCESS",
       };
-
-      // Create dummy session with fake tokens
-      const sessionPayload: SessionPayload = {
-        token: `dummy_access_token_${Date.now()}`,
-        tokenType: "Bearer",
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours from now
-        refreshToken: `dummy_refresh_token_${Date.now()}`,
-        refreshExpiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days from now
-        userId: authenticatedUser.id,
-      };
-
-      // Save to state
-      setUser(authenticatedUser);
-
-      // Persist encrypted user and session to localStorage
-      setStorageItem(StorageKeys.USER, authenticatedUser);
-      setStorageItem(StorageKeys.SESSION, sessionPayload);
-
-      return { 
-        success: true, 
-        message: "Login successful", 
-        data: sessionPayload, 
-        code: "SUCCESS" 
-      };
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Login failed. Please try again.";
-      return { success: false, message: errorMessage, data: null, code: "ERROR" };
+      
+      // Show error toast
+      toast({
+        variant: "destructive",
+        title: "Login Error",
+        description: errorMessage,
+      });
+      
+      return { 
+        success: false, 
+        message: errorMessage, 
+        data: null, 
+        code: "ERROR" 
+      };
     }
   };
 

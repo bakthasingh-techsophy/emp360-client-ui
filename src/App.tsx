@@ -5,6 +5,7 @@ import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
+import { UserManagementProvider } from './contexts/UserManagementContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -106,8 +107,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <LayoutProvider>
-          <BrowserRouter>
+        <UserManagementProvider>
+          <LayoutProvider>
+            <BrowserRouter>
             <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
@@ -230,8 +232,9 @@ function App() {
           </BrowserRouter>
           <Toaster />
         </LayoutProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </UserManagementProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 }
 

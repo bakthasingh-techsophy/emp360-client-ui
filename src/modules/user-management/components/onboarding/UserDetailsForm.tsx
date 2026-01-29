@@ -8,10 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserDetailsForm } from '../../types/onboarding.types';
+import { UserDetails } from '../../types/onboarding.types';
 
 interface UserDetailsFormProps {
-  form: UseFormReturn<UserDetailsForm>;
+  form: UseFormReturn<UserDetails>;
 }
 
 export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {

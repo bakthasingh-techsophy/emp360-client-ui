@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { DocumentPoolForm, DocumentItem } from '../../types/onboarding.types';
+import { DocumentPool, DocumentItem } from '../../types/onboarding.types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -16,7 +16,7 @@ import { FileText, Link as LinkIcon, Trash2, Upload, Download } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 
 interface DocumentPoolFormProps {
-  form: UseFormReturn<DocumentPoolForm>;
+  form: UseFormReturn<DocumentPool>;
 }
 
 export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {

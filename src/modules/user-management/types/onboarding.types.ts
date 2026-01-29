@@ -3,7 +3,7 @@
  */
 
 // User Details - Basic registration (simplified, all editable)
-export interface UserDetailsForm {
+export interface UserDetails {
   employeeId: string;
   firstName: string;
   lastName: string;
@@ -12,8 +12,13 @@ export interface UserDetailsForm {
   status: 'active' | 'inactive' | 'on-leave';
 }
 
+// User Details Carrier - DTO for API submission (extends UserDetails)
+export interface UserDetailsCarrier extends UserDetails {
+  createdAt: string;
+}
+
 // Job Details - Professional work information
-export interface JobDetailsForm {
+export interface JobDetails {
   employeeId: string;
   officialEmail: string;
   primaryPhone: string;
@@ -39,7 +44,7 @@ export interface EmergencyContact {
 }
 
 // General Details - Personal information
-export interface GeneralDetailsForm {
+export interface GeneralDetails {
   firstName: string;
   lastName: string;
   employeeId: string;
@@ -63,7 +68,7 @@ export interface GeneralDetailsForm {
 }
 
 // Banking Details
-export interface BankingDetailsForm {
+export interface BankingDetails {
   accountHolderName: string;
   accountNumber: string;
   ifscCode: string;
@@ -82,7 +87,7 @@ export interface EmploymentHistoryItem {
   tenure: string;
 }
 
-export interface EmploymentHistoryForm {
+export interface EmploymentHistory {
   items: EmploymentHistoryItem[];
   viewMode: 'timeline' | 'edit';
 }
@@ -113,7 +118,7 @@ export interface DocumentItem {
   uploadedDate: string;
 }
 
-export interface DocumentPoolForm {
+export interface DocumentPool {
   documents: DocumentItem[];
 }
 

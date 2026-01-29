@@ -14,12 +14,12 @@
  */
 
 import { UseFormReturn } from 'react-hook-form';
-import { BankingDetailsForm } from '../../types/onboarding.types';
+import { BankingDetails } from '../../types/onboarding.types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface BankingDetailsFormProps {
-  form: UseFormReturn<BankingDetailsForm>;
+  form: UseFormReturn<BankingDetails>;
 }
 
 export function BankingDetailsFormComponent({ form }: BankingDetailsFormProps) {

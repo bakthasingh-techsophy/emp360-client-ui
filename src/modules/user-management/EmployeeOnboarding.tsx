@@ -15,15 +15,16 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { FormActionBar } from '@/components/common/FormActionBar';
 import { PageLayout } from '@/components/PageLayout';
 import {
-  UserDetailsForm,
-  JobDetailsForm,
-  GeneralDetailsForm,
-  BankingDetailsForm,
-  EmploymentHistoryForm,
+  UserDetails,
+  JobDetails,
+  GeneralDetails,
+  BankingDetails,
+  EmploymentHistory,
   SkillsSetForm,
-  DocumentPoolForm,
+  DocumentPool,
   PromotionHistoryForm,
   OnboardingTab,
+  UserDetailsCarrier,
 } from './types/onboarding.types';
 import { UserDetailsFormComponent } from './components/onboarding/UserDetailsForm';
 import { JobDetailsFormComponent } from './components/onboarding/JobDetailsForm';
@@ -36,11 +37,13 @@ import { PromotionHistoryFormComponent } from './components/onboarding/Promotion
 import { OnboardingTabsNavigation } from './components/onboarding/OnboardingTabsNavigation';
 import { mockUsers } from './data/mockData';
 import { useToast } from '@/hooks/use-toast';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 
 export function EmployeeOnboarding() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { createUserDetails, isLoading } = useUserManagement();
   
   // Determine mode and employee ID from URL params
   const mode = searchParams.get('mode') === 'edit' ? 'edit' : 'create';
@@ -50,11 +53,10 @@ export function EmployeeOnboarding() {
   const [activeTab, setActiveTab] = useState('user-details');
   const [isUserCreated, setIsUserCreated] = useState(mode === 'edit'); // Edit mode = user already exists
   const [userId, setUserId] = useState<string | null>(employeeId);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(mode === 'edit');
+  const [isInitialLoading] = useState(mode === 'edit');
 
   // Form instances for each tab
-  const userDetailsForm = useForm<UserDetailsForm>({
+  const userDetailsForm = useForm<UserDetails>({
     defaultValues: {
       employeeId: '',
       firstName: '',
@@ -65,7 +67,7 @@ export function EmployeeOnboarding() {
     },
   });
 
-  const jobDetailsForm = useForm<JobDetailsForm>({
+  const jobDetailsForm = useForm<JobDetails>({
     defaultValues: {
       employeeId: '',
       officialEmail: '',
@@ -84,7 +86,7 @@ export function EmployeeOnboarding() {
     },
   });
 
-  const generalDetailsForm = useForm<GeneralDetailsForm>({
+  const generalDetailsForm = useForm<GeneralDetails>({
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -109,7 +111,7 @@ export function EmployeeOnboarding() {
     },
   });
 
-  const bankingDetailsForm = useForm<BankingDetailsForm>({
+  const bankingDetailsForm = useForm<BankingDetails>({
     defaultValues: {
       accountHolderName: '',
       accountNumber: '',
@@ -119,7 +121,7 @@ export function EmployeeOnboarding() {
     },
   });
 
-  const employmentHistoryForm = useForm<EmploymentHistoryForm>({
+  const employmentHistoryForm = useForm<EmploymentHistory>({
     defaultValues: {
       items: [],
       viewMode: 'timeline',
@@ -133,7 +135,7 @@ export function EmployeeOnboarding() {
     },
   });
 
-  const documentPoolForm = useForm<DocumentPoolForm>({
+  const documentPoolForm = useForm<DocumentPool>({
     defaultValues: {
       documents: [],
     },
@@ -148,8 +150,6 @@ export function EmployeeOnboarding() {
   // Load user data in edit mode
   useEffect(() => {
     if (mode === 'edit' && employeeId) {
-      setIsLoading(true);
-      
       // Simulate API call - fetch from mock data
       setTimeout(() => {
         const user = mockUsers.find(u => u.id === employeeId || u.employeeId === employeeId);
@@ -204,8 +204,6 @@ export function EmployeeOnboarding() {
           });
           setSearchParams({});
         }
-        
-        setIsLoading(false);
       }, 500);
     }
   }, [mode, employeeId]);
@@ -287,9 +285,6 @@ export function EmployeeOnboarding() {
   ];
 
   // Note: getCurrentForm() was removed to avoid TypeScript union type complexity issues
-  // Instead, we directly access the specific form in handleSubmit based on activeTab
-
-
   // Handle form submission for current tab
   const handleSubmit = async () => {
     // List of forms that have validation implemented
@@ -311,66 +306,56 @@ export function EmployeeOnboarding() {
     
     if (!isValid) return;
 
-    setIsSubmitting(true);
-
     try {
-      // Get form data based on active tab
-      let formData: any;
-      switch (activeTab) {
-        case 'user-details':
-          formData = userDetailsForm.getValues();
-          break;
-        case 'job-details':
-          formData = jobDetailsForm.getValues();
-          break;
-        case 'general-details':
-          formData = generalDetailsForm.getValues();
-          break;
-        case 'banking-details':
-          formData = bankingDetailsForm.getValues();
-          break;
-        case 'employment-history':
-          formData = employmentHistoryForm.getValues();
-          break;
-        case 'skills-set':
-          formData = skillsSetForm.getValues();
-          break;
-        case 'document-pool':
-          formData = documentPoolForm.getValues();
-          break;
-        case 'promotion-history':
-          formData = promotionHistoryForm.getValues();
-          break;
-        default:
-          return;
-      }
-      
       if (activeTab === 'user-details' && mode === 'create') {
-        // Create new user
-        console.log('Creating user:', formData);
+        // Create new user using context API
+        const formData = userDetailsForm.getValues();
+        const carrier: UserDetailsCarrier = {
+          ...formData,
+          createdAt: new Date().toISOString(),
+        };
+
+        const result = await createUserDetails(carrier, 'default');
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock user ID from backend
-        const newUserId = `USR-${Date.now()}`;
-        const newEmployeeId = (formData as UserDetailsForm).employeeId;
-        
-        setUserId(newUserId);
-        setIsUserCreated(true);
-        
-        toast({
-          title: 'Employee created successfully',
-          description: `Employee ID: ${newEmployeeId}`,
-        });
-        
-        // Switch to edit mode for this user
-        setSearchParams({ mode: 'edit', id: newUserId });
-        
-        // Move to next tab
-        setActiveTab('general-details');
+        if (result) {
+          setUserId(result.employeeId);
+          setIsUserCreated(true);
+          
+          // Switch to edit mode for this user
+          setSearchParams({ mode: 'edit', id: result.employeeId });
+          
+          // Move to next tab
+          setActiveTab('general-details');
+        }
       } else {
         // Update existing user data (edit mode or other tabs)
+        let formData: any;
+        switch (activeTab) {
+          case 'job-details':
+            formData = jobDetailsForm.getValues();
+            break;
+          case 'general-details':
+            formData = generalDetailsForm.getValues();
+            break;
+          case 'banking-details':
+            formData = bankingDetailsForm.getValues();
+            break;
+          case 'employment-history':
+            formData = employmentHistoryForm.getValues();
+            break;
+          case 'skills-set':
+            formData = skillsSetForm.getValues();
+            break;
+          case 'document-pool':
+            formData = documentPoolForm.getValues();
+            break;
+          case 'promotion-history':
+            formData = promotionHistoryForm.getValues();
+            break;
+          default:
+            return;
+        }
+
         console.log(`Updating ${activeTab} for user ${userId}:`, formData);
         
         // Simulate API call
@@ -380,8 +365,6 @@ export function EmployeeOnboarding() {
           title: 'Changes saved',
           description: `${activeTab.replace('-', ' ')} updated successfully`,
         });
-        
-        // Stay on current tab in edit mode (user can switch manually)
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -390,8 +373,6 @@ export function EmployeeOnboarding() {
         description: 'Failed to save changes',
         variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -405,17 +386,17 @@ export function EmployeeOnboarding() {
     if (mode === 'create' && activeTab === 'user-details') {
       return {
         submitLabel: 'Create Employee & Continue',
-        submitDisabled: isSubmitting,
+        submitDisabled: isLoading,
       };
     }
     
     return {
       submitLabel: 'Save Changes',
-      submitDisabled: isSubmitting,
+      submitDisabled: isLoading,
     };
   };
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <PageLayout>
         <div className="flex items-center justify-center h-96">
@@ -623,7 +604,7 @@ export function EmployeeOnboarding() {
             onClick: handleSubmit,
             variant: 'default',
             disabled: getActionBarConfig().submitDisabled,
-            loading: isSubmitting,
+            loading: isLoading,
             type: 'button',
           },
         ]}

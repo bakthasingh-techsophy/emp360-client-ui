@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { JobDetailsForm } from '../../types/onboarding.types';
+import { JobDetails } from '../../types/onboarding.types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -35,7 +35,7 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface JobDetailsFormProps {
-  form: UseFormReturn<JobDetailsForm>;
+  form: UseFormReturn<JobDetails>;
 }
 
 // Mock data for dropdowns

@@ -1,31 +1,81 @@
 import { ApiResponse, AuthData } from "@/types/responses";
-import { apiRequest } from "./utils";
+import wretch from "wretch";
+import { AUTH_GATEWAY } from "./utils";
 
-export const apiLogin = async (username: string, password: string, tenant: string): Promise<ApiResponse<AuthData>> => {
+/**
+ * Login API - Integrates with Keycloak authentication server
+ * 
+ * Authenticates user against the Keycloak realm using password grant type
+ * Endpoint: /realms/{realm}/protocol/openid-connect/token
+ * 
+ * @param username - User username (e.g., EMP001)
+ * @param password - User password
+ * @param realm - Keycloak realm name (default: test-realm, will be made dynamic later)
+ * @returns Promise<ApiResponse<AuthData>> - Contains access_token, refresh_token, etc.
+ */
+export const apiLogin = async (
+  username: string,
+  password: string,
+  realm: string = 'test-realm'
+): Promise<ApiResponse<AuthData>> => {
   try {
-    return await apiRequest<AuthData>({
-      method: 'POST',
-      endpoint: '/user-management/v1/auth/login',
-      tenant,
-      body: { username, password }
-    });
-  } catch (error: unknown) {
-    // Return error response instead of throwing
-    // This allows the UI to handle authentication failures gracefully
+    // Construct the Keycloak token endpoint
+    const keycloakTokenUrl = `${AUTH_GATEWAY}/realms/${realm}/protocol/openid-connect/token`;
 
-    // Try to parse error.message as JSON (it contains ApiResponse)
+    // Prepare form data for Keycloak
+    const formData = new URLSearchParams();
+    formData.append('client_id', 'web-token-issuer');
+    formData.append('grant_type', 'password');
+    formData.append('username', username);
+    formData.append('password', password);
+
+    // Make request to Keycloak auth server
+    const response = await wretch(keycloakTokenUrl)
+      .headers({
+        'Content-Type': 'application/x-www-form-urlencoded',
+      })
+      .post(formData)
+      .badRequest(async (err) => {
+        const errorData = await err.response.json();
+        throw new Error(JSON.stringify(errorData));
+      })
+      .unauthorized(async (err) => {
+        const errorData = await err.response.json();
+        throw new Error(JSON.stringify(errorData));
+      })
+      .internalError(async (err) => {
+        const errorData = await err.response.json();
+        throw new Error(JSON.stringify(errorData));
+      })
+      .json<AuthData>();
+
+    // Success response
+    return {
+      success: true,
+      message: 'Login successful',
+      data: response,
+      code: 'SUCCESS',
+    };
+  } catch (error: unknown) {
+    // Handle authentication errors gracefully
     if (error instanceof Error) {
       try {
-        const parsedError = JSON.parse(error.message) as ApiResponse<AuthData>;
-        return parsedError;
+        // Try to parse error response from Keycloak
+        const errorData = JSON.parse(error.message);
+        return {
+          success: false,
+          message: errorData.error_description || errorData.error || 'Login failed',
+          data: {} as AuthData,
+          code: 'AUTH_ERROR',
+        };
       } catch (parseError) {
         // If parsing fails, return generic error
         return {
           success: false,
-          message: error.message,
+          message: error.message || 'Login request failed',
           data: {} as AuthData,
           code: 'ERROR',
-        } as ApiResponse<AuthData>;
+        };
       }
     }
 
@@ -35,6 +85,6 @@ export const apiLogin = async (username: string, password: string, tenant: strin
       message: 'Login request failed',
       data: {} as AuthData,
       code: 'ERROR',
-    } as ApiResponse<AuthData>;
+    };
   }
 };

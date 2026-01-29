@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EmploymentHistoryForm, EmploymentHistoryItem } from '../../types/onboarding.types';
+import { EmploymentHistory, EmploymentHistoryItem } from '../../types/onboarding.types';
 import { Button } from '@/components/ui/button';
 import { Timeline } from '@/components/timeline/Timeline';
 import { TimelineItem, TimelineTypeConfig } from '@/components/timeline/types';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EmploymentHistoryFormProps {
-  form: UseFormReturn<EmploymentHistoryForm>;
+  form: UseFormReturn<EmploymentHistory>;
 }
 
 export function EmploymentHistoryFormComponent({ form }: EmploymentHistoryFormProps) {
