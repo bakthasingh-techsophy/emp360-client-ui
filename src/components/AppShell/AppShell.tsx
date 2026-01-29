@@ -247,8 +247,7 @@ export function AppShell({
         className={cn(
           'fixed left-0 top-0 z-50 h-screen border-r bg-card',
           'transition-transform duration-300 ease-out',
-          'lg:translate-x-0 lg:transition-[width] lg:duration-200',
-          collapsed ? 'w-16' : 'w-64'
+          'lg:translate-x-0 lg:transition-[width] lg:duration-200'
         )}
         aria-label="Main navigation"
       >

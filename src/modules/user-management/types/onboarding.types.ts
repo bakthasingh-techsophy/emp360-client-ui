@@ -1,6 +1,5 @@
 /**
  * Types for Employee Onboarding Forms
- * Aligned with backend models
  */
 
 // User Details - Basic registration (simplified, all editable)
@@ -39,15 +38,15 @@ export interface EmergencyContact {
   phone: string;
 }
 
-// General Details - Personal information (aligned with backend)
+// General Details - Personal information
 export interface GeneralDetailsForm {
-  id?: string;
   firstName: string;
   lastName: string;
+  employeeId: string;
   officialEmail: string;
   phone: string;
   secondaryPhone: string;
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  gender: 'male' | 'female' | 'other';
   bloodGroup: string;
   panNumber: string;
   aadharNumber: string;
@@ -60,40 +59,27 @@ export interface GeneralDetailsForm {
   physicallyChallenged: boolean;
   passportNumber: string;
   passportExpiry: string;
-  maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED';
-  createdAt?: string;
-  updatedAt?: string;
+  maritalStatus: 'single' | 'married';
 }
 
-// Banking Details - Multiple accounts per employee (aligned with backend)
-export interface BankingDetailsItem {
-  id?: string;
-  employeeId: string;
+// Banking Details
+export interface BankingDetailsForm {
   accountHolderName: string;
   accountNumber: string;
   ifscCode: string;
   bankName: string;
   branchName: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
-export interface BankingDetailsForm {
-  items: BankingDetailsItem[];
-}
-
-// Employment History - Work experience (aligned with backend)
+// Employment History - Work experience
 export interface EmploymentHistoryItem {
-  id?: string;
-  employeeId: string;
+  id: string;
   companyName: string;
   role: string;
   location: string;
   startDate: string;
   endDate: string;
   tenure: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface EmploymentHistoryForm {
@@ -116,30 +102,26 @@ export interface SkillsSetForm {
   viewMode: 'view' | 'edit';
 }
 
-// Document Pool - Centralized document storage (aligned with backend)
+// Document Pool
 export interface DocumentItem {
-  id?: string;
-  employeeId: string;
+  id: string;
   name: string;
-  type: 'AADHAR' | 'PAN' | 'PASSPORT' | 'DRIVING_LICENSE' | 'OTHER';
+  type: 'url' | 'file';
   url?: string;
   fileName?: string;
   fileSize?: string;
   uploadedDate: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface DocumentPoolForm {
   documents: DocumentItem[];
 }
 
-// Event History - Career progression (aligned with backend)
+// Event History (formerly Promotion/Revision History)
 export interface EventHistoryItem {
-  id?: string;
-  employeeId: string;
+  id: string;
   date: string;
-  type: 'PROMOTION' | 'DEMOTION' | 'TRANSFER' | 'ROLE_CHANGE' | 'JOINING' | 'RESIGNATION' | 'OTHER';
+  type: 'promotion' | 'demotion' | 'transfer' | 'role-change' | 'joining' | 'resignation' | 'other';
   oldRole: string;
   newRole: string;
   oldDepartment?: string;
@@ -147,8 +129,6 @@ export interface EventHistoryItem {
   reason: string;
   effectiveDate: string;
   order: number; // For manual ordering
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface EventHistoryForm {

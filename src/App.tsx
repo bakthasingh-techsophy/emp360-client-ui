@@ -89,12 +89,12 @@ import { BookingPage } from './modules/visitor-room/BookingPage';
 import { RoomManagement } from './modules/visitor-room';
 
 // Administration & Security modules
-import { UserManagement } from './modules/administration/UserManagement';
-import { EmployeeOnboarding } from './modules/administration/EmployeeOnboarding';
-import { RolePermissions } from './modules/administration/RolePermissions';
-import { AuditLogs } from './modules/administration/AuditLogs';
-import { Integrations } from './modules/administration/Integrations';
-import { SystemSettings } from './modules/administration/SystemSettings';
+import { UserManagement } from './modules/user-management/UserManagement';
+import { EmployeeOnboarding } from './modules/user-management/EmployeeOnboarding';
+import { RolePermissions } from './modules/user-management/RolePermissions';
+import { AuditLogs } from './modules/user-management/AuditLogs';
+import { Integrations } from './modules/user-management/Integrations';
+import { SystemSettings } from './modules/user-management/SystemSettings';
 
 // Analytics & Dashboards modules
 import { HRDashboard } from './modules/analytics/HRDashboard';
