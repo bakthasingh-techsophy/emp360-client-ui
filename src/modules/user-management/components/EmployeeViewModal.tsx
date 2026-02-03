@@ -106,12 +106,10 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'default';
-      case 'inactive':
+      case 'INACTIVE':
         return 'secondary';
-      case 'on-leave':
-        return 'outline';
       default:
         return 'secondary';
     }

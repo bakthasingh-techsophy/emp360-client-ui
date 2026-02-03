@@ -3,15 +3,22 @@
  * Manages all user-related operations and provides centralized API access with built-in error/success notifications
  * 
  * Features:
- * - User Details CRUD operations (Create, Read, Update, Delete)
- * - Refresh/Search with pagination
+ * - User Details CRUD + Employee Onboarding
+ * - General Details, Job Details, Skills, Keycloak User Management
+ * - Employment & Event History Management
+ * - Employee Aggregate Management
  * - Automatic error toast notifications for all operations
  * - Success toast notifications for create, update, delete operations
  * - Single unified loading state for async operations
+ * - Auto token validation and tenant resolution
  */
 
 import { createContext, ReactNode, useContext, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { resolveAuth, isTokenExpired, removeStorageItem } from '@/store/localStorage';
+import StorageKeys from '@/constants/storageConstants';
+
+// User Details Service
 import {
   apiCreateUserDetails,
   apiGetUserDetailsById,
@@ -21,25 +28,156 @@ import {
   apiDeleteUserDetailsById,
   apiBulkDeleteUserDetailsByIds,
   apiBulkDeleteUserDetailsByFilters,
-  UpdatePayload,
 } from '@/services/userDetailsService';
+
+// User Management Service
+import { apiOnboardUser, apiUpdateUser } from '@/services/userManagementService';
+
+// Employee Aggregate Service
+import {
+  apiCreateEmployeeAggregate,
+  apiGetEmployeeAggregate,
+  apiUpdateEmployeeAggregate,
+  apiDeleteEmployeeAggregate,
+} from '@/services/employeeAggregateService';
+
+// Employment History Service
+import {
+  apiCreateEmploymentHistory,
+  apiGetEmploymentHistoryById,
+  apiUpdateEmploymentHistory,
+  apiSearchEmploymentHistory,
+  apiBulkUpdateEmploymentHistory,
+  apiDeleteEmploymentHistoryById,
+  apiBulkDeleteEmploymentHistoryByIds,
+  apiBulkDeleteEmploymentHistoryByFilters,
+  EmploymentHistoryItem,
+} from '@/services/employmentHistoryService';
+
+// Event History Service
+import {
+  apiCreateEventHistory,
+  apiGetEventHistoryById,
+  apiUpdateEventHistory,
+  apiSearchEventHistory,
+  apiBulkUpdateEventHistory,
+  apiDeleteEventHistoryById,
+  apiBulkDeleteEventHistoryByIds,
+  apiBulkDeleteEventHistoryByFilters,
+  EventHistoryItem,
+} from '@/services/eventHistoryService';
+
+// General Details Service
+import {
+  apiCreateGeneralDetails,
+  apiGetGeneralDetailsById,
+  apiUpdateGeneralDetails,
+  apiDeleteGeneralDetails,
+  GeneralDetailsItem,
+} from '@/services/generalDetailsService';
+
+// Job Details Service
+import {
+  apiCreateJobDetails,
+  apiGetJobDetailsById,
+  apiUpdateJobDetails,
+  apiDeleteJobDetails,
+  JobDetailsItem,
+} from '@/services/jobDetailsService';
+
+// Skill Items Service
+import {
+  apiCreateSkill,
+  apiGetSkillById,
+  apiUpdateSkill,
+  apiDeleteSkill,
+  SkillItem,
+} from '@/services/skillItemsService';
+
+// Keycloak User Service
+import {
+  apiCreateKeycloakUser,
+  apiGetKeycloakUserById,
+  apiUpdateKeycloakUser,
+  apiDeleteKeycloakUser,
+  KeycloakUserItem,
+} from '@/services/keycloakUserService';
+
+// Types
 import Pagination from '@/types/pagination';
 import UniversalSearchRequest from '@/types/search';
 import { UserDetails, UserDetailsCarrier } from '@/modules/user-management/types/onboarding.types';
 
 /**
+ * Generic update payload type
+ */
+export type UpdatePayload = Record<string, any>;
+
+/**
  * User Management Context Type Definition
  */
 interface UserManagementContextType {
-  // API Methods
-  createUserDetails: (carrier: UserDetailsCarrier, tenant: string, accessToken?: string) => Promise<UserDetails | null>;
-  getUserDetailsById: (id: string, tenant: string, accessToken?: string) => Promise<UserDetails | null>;
-  updateUserDetails: (id: string, payload: UpdatePayload, tenant: string, accessToken?: string) => Promise<UserDetails | null>;
-  refreshUsers: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number, tenant?: string, accessToken?: string) => Promise<Pagination<UserDetails> | null>;
-  bulkUpdateUserDetails: (filters: UniversalSearchRequest, updates: UpdatePayload, tenant: string, accessToken?: string) => Promise<boolean>;
-  deleteUserDetailsById: (id: string, tenant: string, accessToken?: string) => Promise<boolean>;
-  bulkDeleteUserDetailsByIds: (ids: string[], tenant: string, accessToken?: string) => Promise<boolean>;
-  bulkDeleteUserDetailsByFilters: (filters: UniversalSearchRequest, tenant: string, accessToken?: string) => Promise<boolean>;
+  // User Details Methods
+  onboardUser: (carrier: UserDetailsCarrier) => Promise<UserDetails | null>;
+  createUserDetails: (carrier: UserDetailsCarrier) => Promise<UserDetails | null>;
+  getUserDetailsById: (id: string) => Promise<UserDetails | null>;
+  updateUserDetails: (id: string, payload: UpdatePayload) => Promise<UserDetails | null>;
+  updateUser: (employeeId: string, payload: UpdatePayload) => Promise<UserDetails | null>;
+  refreshUsers: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<UserDetails> | null>;
+  bulkUpdateUserDetails: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
+  deleteUserDetailsById: (id: string) => Promise<boolean>;
+  bulkDeleteUserDetailsByIds: (ids: string[]) => Promise<boolean>;
+  bulkDeleteUserDetailsByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
+
+  // Employee Aggregate Methods
+  createEmployeeAggregate: (payload: any) => Promise<any | null>;
+  getEmployeeAggregate: (employeeId: string) => Promise<any | null>;
+  updateEmployeeAggregate: (employeeId: string, payload: UpdatePayload) => Promise<any | null>;
+  deleteEmployeeAggregate: (employeeId: string) => Promise<boolean>;
+
+  // Employment History Methods
+  createEmploymentHistory: (item: EmploymentHistoryItem) => Promise<EmploymentHistoryItem | null>;
+  getEmploymentHistoryById: (id: string) => Promise<EmploymentHistoryItem | null>;
+  updateEmploymentHistory: (id: string, payload: UpdatePayload) => Promise<EmploymentHistoryItem | null>;
+  searchEmploymentHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EmploymentHistoryItem> | null>;
+  bulkUpdateEmploymentHistory: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
+  deleteEmploymentHistoryById: (id: string) => Promise<boolean>;
+  bulkDeleteEmploymentHistoryByIds: (ids: string[]) => Promise<boolean>;
+  bulkDeleteEmploymentHistoryByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
+
+  // Event History Methods
+  createEventHistory: (item: EventHistoryItem) => Promise<EventHistoryItem | null>;
+  getEventHistoryById: (id: string) => Promise<EventHistoryItem | null>;
+  updateEventHistory: (id: string, payload: UpdatePayload) => Promise<EventHistoryItem | null>;
+  searchEventHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EventHistoryItem> | null>;
+  bulkUpdateEventHistory: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
+  deleteEventHistoryById: (id: string) => Promise<boolean>;
+  bulkDeleteEventHistoryByIds: (ids: string[]) => Promise<boolean>;
+  bulkDeleteEventHistoryByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
+
+  // General Details Methods
+  createGeneralDetails: (item: GeneralDetailsItem) => Promise<GeneralDetailsItem | null>;
+  getGeneralDetailsById: (id: string) => Promise<GeneralDetailsItem | null>;
+  updateGeneralDetails: (id: string, payload: UpdatePayload) => Promise<GeneralDetailsItem | null>;
+  deleteGeneralDetails: (id: string) => Promise<boolean>;
+
+  // Job Details Methods
+  createJobDetails: (item: JobDetailsItem) => Promise<JobDetailsItem | null>;
+  getJobDetailsById: (id: string) => Promise<JobDetailsItem | null>;
+  updateJobDetails: (id: string, payload: UpdatePayload) => Promise<JobDetailsItem | null>;
+  deleteJobDetails: (id: string) => Promise<boolean>;
+
+  // Skill Items Methods
+  createSkill: (item: SkillItem) => Promise<SkillItem | null>;
+  getSkillById: (id: string) => Promise<SkillItem | null>;
+  updateSkill: (id: string, payload: UpdatePayload) => Promise<SkillItem | null>;
+  deleteSkill: (id: string) => Promise<boolean>;
+
+  // Keycloak User Methods
+  createKeycloakUser: (item: KeycloakUserItem) => Promise<KeycloakUserItem | null>;
+  getKeycloakUserById: (id: string) => Promise<KeycloakUserItem | null>;
+  updateKeycloakUser: (id: string, payload: UpdatePayload) => Promise<KeycloakUserItem | null>;
+  deleteKeycloakUser: (id: string) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -55,8 +193,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
 
   /**
+   * Check if token is still valid
+   */
+  const validateToken = (): boolean => {
+    if (isTokenExpired()) {
+      removeStorageItem(StorageKeys.USER);
+      removeStorageItem(StorageKeys.SESSION);
+      removeStorageItem(StorageKeys.TENANT);
+      
+      toast({
+        variant: 'destructive',
+        title: 'Session Expired',
+        description: 'Your session has expired. Please log in again.',
+      });
+      
+      window.location.href = '/auth/login';
+      return false;
+    }
+    return true;
+  };
+
+  /**
    * Generic error handler
-   * Shows error toast and returns null/false based on type
    */
   const handleError = (error: unknown, title: string, defaultMessage: string) => {
     const errorMessage = error instanceof Error ? error.message : defaultMessage;
@@ -69,7 +227,6 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   /**
    * Generic success handler
-   * Shows success toast with custom message
    */
   const handleSuccess = (message: string) => {
     toast({
@@ -79,241 +236,554 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
   };
 
   /**
-   * Create User Details
+   * Generic async operation wrapper with token validation and loading state
    */
-  const createUserDetails = async (
-    carrier: UserDetailsCarrier,
-    tenant: string,
-    accessToken?: string
-  ): Promise<UserDetails | null> => {
+  const executeApiCall = async <T,>(
+    apiCall: (tenant: string, accessToken: string) => Promise<any>,
+    operationName: string,
+    successMessage: string,
+    returnOnSuccess: boolean = false
+  ): Promise<T | boolean | null> => {
+    if (!validateToken()) return returnOnSuccess ? false : null;
+    
+    const auth = resolveAuth();
+    if (!auth.tenant || !auth.accessToken) {
+      handleError(new Error('Missing auth'), 'Error', 'Authentication information is missing');
+      return returnOnSuccess ? false : null;
+    }
+    
     setIsLoading(true);
     try {
-      const response = await apiCreateUserDetails(carrier, tenant, accessToken);
+      const response = await apiCall(auth.tenant, auth.accessToken);
 
       if (!response.success) {
-        handleError(response.message, 'Creation Failed', response.message || 'Failed to create user details');
-        return null;
+        handleError(response.message, `${operationName} Failed`, response.message || `Failed to ${operationName}`);
+        return returnOnSuccess ? false : null;
       }
 
-      handleSuccess('User details created successfully');
-      return response.data;
+      if (successMessage) {
+        handleSuccess(successMessage);
+      }
+
+      return returnOnSuccess ? true : response.data;
     } catch (error) {
-      handleError(error, 'Error', 'An error occurred while creating user details');
-      return null;
+      handleError(error, 'Error', `An error occurred during ${operationName}`);
+      return returnOnSuccess ? false : null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Get User Details by ID
-   */
-  const getUserDetailsById = async (
-    id: string,
-    tenant: string,
-    accessToken?: string
-  ): Promise<UserDetails | null> => {
-    setIsLoading(true);
-    try {
-      const response = await apiGetUserDetailsById(id, tenant, accessToken);
+  // ==================== USER DETAILS METHODS ====================
 
-      if (!response.success) {
-        handleError(response.message, 'Fetch Failed', response.message || 'Failed to fetch user details');
-        return null;
-      }
-
-      return response.data;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred while fetching user details');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
+  const onboardUser = async (carrier: UserDetailsCarrier): Promise<UserDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiOnboardUser(carrier, tenant, accessToken),
+      'Onboarding',
+      'User onboarded successfully'
+    ) as Promise<UserDetails | null>;
   };
 
-  /**
-   * Update User Details
-   */
-  const updateUserDetails = async (
-    id: string,
-    payload: UpdatePayload,
-    tenant: string,
-    accessToken?: string
-  ): Promise<UserDetails | null> => {
-    setIsLoading(true);
-    try {
-      const response = await apiUpdateUserDetails(id, payload, tenant, accessToken);
-
-      if (!response.success) {
-        handleError(response.message, 'Update Failed', response.message || 'Failed to update user details');
-        return null;
-      }
-
-      handleSuccess('User details updated successfully');
-      return response.data;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred while updating user details');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
+  const createUserDetails = async (carrier: UserDetailsCarrier): Promise<UserDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateUserDetails(carrier, tenant, accessToken),
+      'Creation',
+      'User details created successfully'
+    ) as Promise<UserDetails | null>;
   };
 
-  /**
-   * Refresh Users (Search with pagination)
-   * No success toast for read operations
-   */
+  const getUserDetailsById = async (id: string): Promise<UserDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetUserDetailsById(id, tenant, accessToken),
+      'Fetch',
+      ''
+    ) as Promise<UserDetails | null>;
+  };
+
+  const updateUserDetails = async (id: string, payload: UpdatePayload): Promise<UserDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateUserDetails(id, payload, tenant, accessToken),
+      'Update',
+      'User details updated successfully'
+    ) as Promise<UserDetails | null>;
+  };
+
+  const updateUser = async (employeeId: string, payload: UpdatePayload): Promise<UserDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateUser(employeeId, payload, tenant, accessToken),
+      'Update',
+      'User updated successfully'
+    ) as Promise<UserDetails | null>;
+  };
+
   const refreshUsers = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
-    pageSize: number = 10,
-    tenant: string = 'default',
-    accessToken?: string
+    pageSize: number = 10
   ): Promise<Pagination<UserDetails> | null> => {
-    setIsLoading(true);
-    try {
-      const response = await apiSearchUserDetails(searchRequest, page, pageSize, tenant, accessToken);
-
-      if (!response.success) {
-        handleError(response.message, 'Search Failed', response.message || 'Failed to search user details');
-        return null;
-      }
-
-      return response.data;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred while searching user details');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchUserDetails(searchRequest, page, pageSize, tenant, accessToken),
+      'Search',
+      ''
+    ) as Promise<Pagination<UserDetails> | null>;
   };
 
-  /**
-   * Bulk Update User Details
-   */
   const bulkUpdateUserDetails = async (
     filters: UniversalSearchRequest,
-    updates: UpdatePayload,
-    tenant: string,
-    accessToken?: string
+    updates: UpdatePayload
   ): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiBulkUpdateUserDetails(filters, updates, tenant, accessToken);
-
-      if (!response.success) {
-        handleError(response.message, 'Bulk Update Failed', response.message || 'Failed to bulk update user details');
-        return false;
-      }
-
-      handleSuccess(`${response.data?.affected || 0} user(s) updated successfully`);
-      return true;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred during bulk update');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkUpdateUserDetails(filters, updates, tenant, accessToken),
+      'Bulk Update',
+      '',
+      true
+    );
+    return result as boolean;
   };
 
-  /**
-   * Delete User Details by ID
-   */
-  const deleteUserDetailsById = async (
-    id: string,
-    tenant: string,
-    accessToken?: string
-  ): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiDeleteUserDetailsById(id, tenant, accessToken);
-
-      if (!response.success) {
-        handleError(response.message, 'Deletion Failed', response.message || 'Failed to delete user details');
-        return false;
-      }
-
-      handleSuccess('User details deleted successfully');
-      return true;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred while deleting user details');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+  const deleteUserDetailsById = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteUserDetailsById(id, tenant, accessToken),
+      'Deletion',
+      'User details deleted successfully',
+      true
+    );
+    return result as boolean;
   };
 
-  /**
-   * Bulk Delete User Details by IDs
-   */
-  const bulkDeleteUserDetailsByIds = async (
-    ids: string[],
-    tenant: string,
-    accessToken?: string
-  ): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiBulkDeleteUserDetailsByIds(ids, tenant, accessToken);
-
-      if (!response.success) {
-        handleError(response.message, 'Bulk Deletion Failed', response.message || 'Failed to bulk delete user details');
-        return false;
-      }
-
-      handleSuccess(`${ids.length} user(s) deleted successfully`);
-      return true;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred during bulk deletion');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+  const bulkDeleteUserDetailsByIds = async (ids: string[]): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteUserDetailsByIds(ids, tenant, accessToken),
+      'Bulk Deletion',
+      `${ids.length} user(s) deleted successfully`,
+      true
+    );
+    return result as boolean;
   };
 
-  /**
-   * Bulk Delete User Details by Filters
-   */
-  const bulkDeleteUserDetailsByFilters = async (
+  const bulkDeleteUserDetailsByFilters = async (filters: UniversalSearchRequest): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteUserDetailsByFilters(filters, tenant, accessToken),
+      'Bulk Deletion',
+      'Users deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== EMPLOYEE AGGREGATE METHODS ====================
+
+  const createEmployeeAggregate = async (payload: any): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateEmployeeAggregate(payload, tenant, accessToken),
+      'Create Aggregate',
+      'Employee aggregate created successfully'
+    ) as Promise<any | null>;
+  };
+
+  const getEmployeeAggregate = async (employeeId: string): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetEmployeeAggregate(employeeId, tenant, accessToken),
+      'Fetch Aggregate',
+      ''
+    ) as Promise<any | null>;
+  };
+
+  const updateEmployeeAggregate = async (employeeId: string, payload: UpdatePayload): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateEmployeeAggregate(employeeId, payload, tenant, accessToken),
+      'Update Aggregate',
+      'Employee aggregate updated successfully'
+    ) as Promise<any | null>;
+  };
+
+  const deleteEmployeeAggregate = async (employeeId: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteEmployeeAggregate(employeeId, tenant, accessToken),
+      'Delete Aggregate',
+      'Employee aggregate deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== EMPLOYMENT HISTORY METHODS ====================
+
+  const createEmploymentHistory = async (item: EmploymentHistoryItem): Promise<EmploymentHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateEmploymentHistory(item, tenant, accessToken),
+      'Create Employment History',
+      'Employment history created successfully'
+    ) as Promise<EmploymentHistoryItem | null>;
+  };
+
+  const getEmploymentHistoryById = async (id: string): Promise<EmploymentHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetEmploymentHistoryById(id, tenant, accessToken),
+      'Fetch Employment History',
+      ''
+    ) as Promise<EmploymentHistoryItem | null>;
+  };
+
+  const updateEmploymentHistory = async (id: string, payload: UpdatePayload): Promise<EmploymentHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateEmploymentHistory(id, payload, tenant, accessToken),
+      'Update Employment History',
+      'Employment history updated successfully'
+    ) as Promise<EmploymentHistoryItem | null>;
+  };
+
+  const searchEmploymentHistory = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<EmploymentHistoryItem> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchEmploymentHistory(searchRequest, page, pageSize, tenant, accessToken),
+      'Search Employment History',
+      ''
+    ) as Promise<Pagination<EmploymentHistoryItem> | null>;
+  };
+
+  const bulkUpdateEmploymentHistory = async (
     filters: UniversalSearchRequest,
-    tenant: string,
-    accessToken?: string
+    updates: UpdatePayload
   ): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiBulkDeleteUserDetailsByFilters(filters, tenant, accessToken);
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkUpdateEmploymentHistory(filters, updates, tenant, accessToken),
+      'Bulk Update Employment History',
+      '',
+      true
+    );
+    return result as boolean;
+  };
 
-      if (!response.success) {
-        handleError(response.message, 'Bulk Deletion Failed', response.message || 'Failed to bulk delete user details by filters');
-        return false;
-      }
+  const deleteEmploymentHistoryById = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteEmploymentHistoryById(id, tenant, accessToken),
+      'Delete Employment History',
+      'Employment history deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
 
-      handleSuccess('User details deleted successfully');
-      return true;
-    } catch (error) {
-      handleError(error, 'Error', 'An error occurred during bulk deletion');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+  const bulkDeleteEmploymentHistoryByIds = async (ids: string[]): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteEmploymentHistoryByIds(ids, tenant, accessToken),
+      'Bulk Delete Employment History',
+      `${ids.length} record(s) deleted successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteEmploymentHistoryByFilters = async (filters: UniversalSearchRequest): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteEmploymentHistoryByFilters(filters, tenant, accessToken),
+      'Bulk Delete Employment History',
+      'Records deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== EVENT HISTORY METHODS ====================
+
+  const createEventHistory = async (item: EventHistoryItem): Promise<EventHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateEventHistory(item, tenant, accessToken),
+      'Create Event History',
+      'Event history created successfully'
+    ) as Promise<EventHistoryItem | null>;
+  };
+
+  const getEventHistoryById = async (id: string): Promise<EventHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetEventHistoryById(id, tenant, accessToken),
+      'Fetch Event History',
+      ''
+    ) as Promise<EventHistoryItem | null>;
+  };
+
+  const updateEventHistory = async (id: string, payload: UpdatePayload): Promise<EventHistoryItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateEventHistory(id, payload, tenant, accessToken),
+      'Update Event History',
+      'Event history updated successfully'
+    ) as Promise<EventHistoryItem | null>;
+  };
+
+  const searchEventHistory = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<EventHistoryItem> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchEventHistory(searchRequest, page, pageSize, tenant, accessToken),
+      'Search Event History',
+      ''
+    ) as Promise<Pagination<EventHistoryItem> | null>;
+  };
+
+  const bulkUpdateEventHistory = async (
+    filters: UniversalSearchRequest,
+    updates: UpdatePayload
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkUpdateEventHistory(filters, updates, tenant, accessToken),
+      'Bulk Update Event History',
+      '',
+      true
+    );
+    return result as boolean;
+  };
+
+  const deleteEventHistoryById = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteEventHistoryById(id, tenant, accessToken),
+      'Delete Event History',
+      'Event history deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteEventHistoryByIds = async (ids: string[]): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteEventHistoryByIds(ids, tenant, accessToken),
+      'Bulk Delete Event History',
+      `${ids.length} record(s) deleted successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteEventHistoryByFilters = async (filters: UniversalSearchRequest): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteEventHistoryByFilters(filters, tenant, accessToken),
+      'Bulk Delete Event History',
+      'Records deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== GENERAL DETAILS METHODS ====================
+
+  const createGeneralDetails = async (item: GeneralDetailsItem): Promise<GeneralDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateGeneralDetails(item, tenant, accessToken),
+      'Create General Details',
+      'General details created successfully'
+    ) as Promise<GeneralDetailsItem | null>;
+  };
+
+  const getGeneralDetailsById = async (id: string): Promise<GeneralDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetGeneralDetailsById(id, tenant, accessToken),
+      'Fetch General Details',
+      ''
+    ) as Promise<GeneralDetailsItem | null>;
+  };
+
+  const updateGeneralDetails = async (id: string, payload: UpdatePayload): Promise<GeneralDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateGeneralDetails(id, payload, tenant, accessToken),
+      'Update General Details',
+      'General details updated successfully'
+    ) as Promise<GeneralDetailsItem | null>;
+  };
+
+  const deleteGeneralDetails = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteGeneralDetails(id, tenant, accessToken),
+      'Delete General Details',
+      'General details deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== JOB DETAILS METHODS ====================
+
+  const createJobDetails = async (item: JobDetailsItem): Promise<JobDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateJobDetails(item, tenant, accessToken),
+      'Create Job Details',
+      'Job details created successfully'
+    ) as Promise<JobDetailsItem | null>;
+  };
+
+  const getJobDetailsById = async (id: string): Promise<JobDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetJobDetailsById(id, tenant, accessToken),
+      'Fetch Job Details',
+      ''
+    ) as Promise<JobDetailsItem | null>;
+  };
+
+  const updateJobDetails = async (id: string, payload: UpdatePayload): Promise<JobDetailsItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateJobDetails(id, payload, tenant, accessToken),
+      'Update Job Details',
+      'Job details updated successfully'
+    ) as Promise<JobDetailsItem | null>;
+  };
+
+  const deleteJobDetails = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteJobDetails(id, tenant, accessToken),
+      'Delete Job Details',
+      'Job details deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== SKILL ITEMS METHODS ====================
+
+  const createSkill = async (item: SkillItem): Promise<SkillItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateSkill(item, tenant, accessToken),
+      'Create Skill',
+      'Skill created successfully'
+    ) as Promise<SkillItem | null>;
+  };
+
+  const getSkillById = async (id: string): Promise<SkillItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetSkillById(id, tenant, accessToken),
+      'Fetch Skill',
+      ''
+    ) as Promise<SkillItem | null>;
+  };
+
+  const updateSkill = async (id: string, payload: UpdatePayload): Promise<SkillItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateSkill(id, payload, tenant, accessToken),
+      'Update Skill',
+      'Skill updated successfully'
+    ) as Promise<SkillItem | null>;
+  };
+
+  const deleteSkill = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteSkill(id, tenant, accessToken),
+      'Delete Skill',
+      'Skill deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== KEYCLOAK USER METHODS ====================
+
+  const createKeycloakUser = async (item: KeycloakUserItem): Promise<KeycloakUserItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateKeycloakUser(item, tenant, accessToken),
+      'Create Keycloak User',
+      'Keycloak user created successfully'
+    ) as Promise<KeycloakUserItem | null>;
+  };
+
+  const getKeycloakUserById = async (id: string): Promise<KeycloakUserItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetKeycloakUserById(id, tenant, accessToken),
+      'Fetch Keycloak User',
+      ''
+    ) as Promise<KeycloakUserItem | null>;
+  };
+
+  const updateKeycloakUser = async (id: string, payload: UpdatePayload): Promise<KeycloakUserItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateKeycloakUser(id, payload, tenant, accessToken),
+      'Update Keycloak User',
+      'Keycloak user updated successfully'
+    ) as Promise<KeycloakUserItem | null>;
+  };
+
+  const deleteKeycloakUser = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteKeycloakUser(id, tenant, accessToken),
+      'Delete Keycloak User',
+      'Keycloak user deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== PROVIDER VALUE ====================
+
+  const contextValue: UserManagementContextType = {
+    // User Details
+    onboardUser,
+    createUserDetails,
+    getUserDetailsById,
+    updateUserDetails,
+    updateUser,
+    refreshUsers,
+    bulkUpdateUserDetails,
+    deleteUserDetailsById,
+    bulkDeleteUserDetailsByIds,
+    bulkDeleteUserDetailsByFilters,
+
+    // Employee Aggregate
+    createEmployeeAggregate,
+    getEmployeeAggregate,
+    updateEmployeeAggregate,
+    deleteEmployeeAggregate,
+
+    // Employment History
+    createEmploymentHistory,
+    getEmploymentHistoryById,
+    updateEmploymentHistory,
+    searchEmploymentHistory,
+    bulkUpdateEmploymentHistory,
+    deleteEmploymentHistoryById,
+    bulkDeleteEmploymentHistoryByIds,
+    bulkDeleteEmploymentHistoryByFilters,
+
+    // Event History
+    createEventHistory,
+    getEventHistoryById,
+    updateEventHistory,
+    searchEventHistory,
+    bulkUpdateEventHistory,
+    deleteEventHistoryById,
+    bulkDeleteEventHistoryByIds,
+    bulkDeleteEventHistoryByFilters,
+
+    // General Details
+    createGeneralDetails,
+    getGeneralDetailsById,
+    updateGeneralDetails,
+    deleteGeneralDetails,
+
+    // Job Details
+    createJobDetails,
+    getJobDetailsById,
+    updateJobDetails,
+    deleteJobDetails,
+
+    // Skills
+    createSkill,
+    getSkillById,
+    updateSkill,
+    deleteSkill,
+
+    // Keycloak Users
+    createKeycloakUser,
+    getKeycloakUserById,
+    updateKeycloakUser,
+    deleteKeycloakUser,
+
+    // Loading State
+    isLoading,
   };
 
   return (
-    <UserManagementContext.Provider
-      value={{
-        // API Methods
-        createUserDetails,
-        getUserDetailsById,
-        updateUserDetails,
-        refreshUsers,
-        bulkUpdateUserDetails,
-        deleteUserDetailsById,
-        bulkDeleteUserDetailsByIds,
-        bulkDeleteUserDetailsByFilters,
-
-        // Loading State
-        isLoading,
-      }}
-    >
+    <UserManagementContext.Provider value={contextValue}>
       {children}
     </UserManagementContext.Provider>
   );
@@ -323,7 +793,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
  * Hook to use User Management Context
  * 
  * Usage:
- * const { createUserDetails, refreshUsers, isLoading } = useUserManagement();
+ * const { createUserDetails, onboardUser, createEmploymentHistory, isLoading } = useUserManagement();
  */
 export function useUserManagement() {
   const context = useContext(UserManagementContext);

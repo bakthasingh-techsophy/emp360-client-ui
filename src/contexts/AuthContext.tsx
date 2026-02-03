@@ -136,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Persist encrypted session to localStorage
       setStorageItem(StorageKeys.SESSION, sessionPayload);
 
+      // Persist realm/tenant to localStorage (hardcoded as 'test-realm' for now)
+      setStorageItem(StorageKeys.TENANT, 'test-realm');
+
       return {
         success: true,
         message: "Login successful",

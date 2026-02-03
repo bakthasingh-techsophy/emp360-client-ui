@@ -1,6 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { isTokenExpired, removeStorageItem } from '@/store/localStorage';
+import StorageKeys from '@/constants/storageConstants';
 
 interface RequireAuthProps {
   children: ReactNode;
@@ -8,14 +10,29 @@ interface RequireAuthProps {
 
 /**
  * RequireAuth - Protected route wrapper
- * Redirects to login if user is not authenticated
+ * - Checks if user is authenticated
+ * - Validates token is not expired
+ * - Redirects to login if unauthorized or token expired
  */
 export function RequireAuth({ children }: RequireAuthProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const [isValid, setIsValid] = useState(true);
 
-  if (!isAuthenticated) {
-    // Redirect to login but save the attempted location
+  useEffect(() => {
+    // Check if token has expired
+    if (isTokenExpired()) {
+      // Token expired - clear storage and logout
+      removeStorageItem(StorageKeys.USER);
+      removeStorageItem(StorageKeys.SESSION);
+      removeStorageItem(StorageKeys.TENANT);
+      logout();
+      setIsValid(false);
+    }
+  }, [logout]);
+
+  // If token is invalid or user not authenticated, redirect to login
+  if (!isValid || !isAuthenticated) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 

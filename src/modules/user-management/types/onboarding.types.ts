@@ -2,6 +2,16 @@
  * Types for Employee Onboarding Forms
  */
 
+/**
+ * User Status Enum - Backend aligned
+ * ACTIVE: User is active and can login
+ * INACTIVE: User is inactive and cannot login
+ */
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+
 // User Details - Basic registration (simplified, all editable)
 export interface UserDetails {
   employeeId: string;
@@ -9,7 +19,7 @@ export interface UserDetails {
   lastName: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive' | 'on-leave';
+  status: UserStatus;
 }
 
 // User Details Carrier - DTO for API submission (extends UserDetails)

@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UserDetails } from '../../types/onboarding.types';
+import { UserDetails, UserStatus } from '../../types/onboarding.types';
 
 interface UserDetailsFormProps {
   form: UseFormReturn<UserDetails>;
@@ -43,15 +43,14 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
           <Label htmlFor="status">Status *</Label>
           <Select
             value={watch('status')}
-            onValueChange={(value) => setValue('status', value as any)}
+            onValueChange={(value) => setValue('status', value as UserStatus)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="on-leave">On Leave</SelectItem>
+              <SelectItem value={UserStatus.ACTIVE}>Active</SelectItem>
+              <SelectItem value={UserStatus.INACTIVE}>Inactive</SelectItem>
             </SelectContent>
           </Select>
           {errors.status && (

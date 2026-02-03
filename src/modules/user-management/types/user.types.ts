@@ -3,7 +3,7 @@
  * Types and interfaces for User Management system
  */
 
-export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending';
+import { UserStatus } from './onboarding.types';
 
 export type Department = 
   | 'Engineering'
@@ -58,6 +58,4 @@ export interface UserStats {
   totalUsers: number;
   activeUsers: number;
   inactiveUsers: number;
-  pendingUsers: number;
-  suspendedUsers: number;
 }

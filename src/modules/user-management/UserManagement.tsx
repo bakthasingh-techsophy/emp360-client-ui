@@ -23,7 +23,8 @@ import { DataTableRef } from '@/components/common/DataTable/types';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { mockUsers } from './data/mockData';
-import { User, UserStatus } from './types/user.types';
+import { User } from './types/user.types';
+import { UserStatus } from './types/onboarding.types';
 import { EmployeeViewModal } from './components/EmployeeViewModal';
 
 export function UserManagement() {
@@ -58,14 +59,10 @@ export function UserManagement() {
   // Get status badge variant
   const getStatusVariant = (status: UserStatus) => {
     switch (status) {
-      case 'active':
+      case 'ACTIVE':
         return 'default';
-      case 'inactive':
+      case 'INACTIVE':
         return 'secondary';
-      case 'pending':
-        return 'outline';
-      case 'suspended':
-        return 'destructive';
       default:
         return 'secondary';
     }
@@ -335,10 +332,8 @@ export function UserManagement() {
       label: 'Status',
       type: 'multiselect',
       options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
-        { value: 'pending', label: 'Pending' },
-        { value: 'suspended', label: 'Suspended' },
+        { value: 'ACTIVE', label: 'Active' },
+        { value: 'INACTIVE', label: 'Inactive' },
       ],
     },
     {

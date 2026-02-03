@@ -25,6 +25,7 @@ import {
   PromotionHistoryForm,
   OnboardingTab,
   UserDetailsCarrier,
+  UserStatus,
 } from './types/onboarding.types';
 import { UserDetailsFormComponent } from './components/onboarding/UserDetailsForm';
 import { JobDetailsFormComponent } from './components/onboarding/JobDetailsForm';
@@ -43,7 +44,7 @@ export function EmployeeOnboarding() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { createUserDetails, isLoading } = useUserManagement();
+  const { onboardUser, isLoading } = useUserManagement();
   
   // Determine mode and employee ID from URL params
   const mode = searchParams.get('mode') === 'edit' ? 'edit' : 'create';
@@ -63,7 +64,7 @@ export function EmployeeOnboarding() {
       lastName: '',
       email: '',
       phone: '',
-      status: 'active',
+      status: UserStatus.ACTIVE,
     },
   });
 
@@ -162,7 +163,7 @@ export function EmployeeOnboarding() {
             lastName: user.name.split(' ').slice(1).join(' '),
             email: user.email,
             phone: user.phone,
-            status: user.status === 'suspended' ? 'inactive' : (user.status === 'pending' ? 'active' : user.status) as 'active' | 'inactive' | 'on-leave',
+            status: user.status,
           });
 
           // Populate General Details form (if data exists)
@@ -308,14 +309,14 @@ export function EmployeeOnboarding() {
 
     try {
       if (activeTab === 'user-details' && mode === 'create') {
-        // Create new user using context API
+        // Onboard new user using context API
         const formData = userDetailsForm.getValues();
         const carrier: UserDetailsCarrier = {
           ...formData,
           createdAt: new Date().toISOString(),
         };
 
-        const result = await createUserDetails(carrier, 'default');
+        const result = await onboardUser(carrier);
         
         if (result) {
           setUserId(result.employeeId);

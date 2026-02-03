@@ -4,7 +4,7 @@ import { ApiResponse } from "@/types/responses";
 import wretch from "wretch";
 
 export const AUTH_GATEWAY = "http://localhost:8080";
-export const API_GATEWAY = "http://localhost:8080";
+export const API_GATEWAY = "http://localhost:8081";
 
 export const apiHeaders = (tenant: string, accessToken?: string) => {
   const baseHeaders = {

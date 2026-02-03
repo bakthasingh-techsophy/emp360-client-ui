@@ -86,10 +86,38 @@ export const clearStorage = (): void => {
 export const resolveAuth = (): { accessToken?: string | null; tenant?: string | null } => {
   try {
     const session = getStorageItem<any>(StorageKeys.SESSION);
-    const tenant = getStorageItem<string>(StorageKeys.TENANT) ?? "default";
+    const tenant = getStorageItem<string>(StorageKeys.TENANT) ?? "test-realm";
+    console.log("Resolved tenant from storage:", getStorageItem<string>(StorageKeys.TENANT));
     const accessToken = session?.token ?? null;
     return { accessToken, tenant };
   } catch {
-    return { accessToken: null, tenant: "default" };
+    return { accessToken: null, tenant: "test-realm" };
+  }
+};
+
+/**
+ * Check if the stored session token has expired
+ * Returns true if token is expired or doesn't exist
+ */
+export const isTokenExpired = (): boolean => {
+  try {
+    const session = getStorageItem<any>(StorageKeys.SESSION);
+    if (!session) return true; // No session = token expired
+    if (!session.expiresAt) return false; // No expiry info, assume valid
+    return Date.now() > session.expiresAt; // Check if current time exceeds expiry
+  } catch {
+    return true; // On error, treat as expired
+  }
+};
+
+/**
+ * Get session expiry time
+ */
+export const getSessionExpiryTime = (): number | null => {
+  try {
+    const session = getStorageItem<any>(StorageKeys.SESSION);
+    return session?.expiresAt ?? null;
+  } catch {
+    return null;
   }
 };
