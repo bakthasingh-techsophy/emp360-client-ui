@@ -22,6 +22,43 @@ export interface UserDetails {
   status: UserStatus;
 }
 
+/**
+ * User Details Snapshot - Backend aligned model
+ * Maps to UserDetailsSnapshot collection in MongoDB
+ */
+export type UserDetailsSnapshot = {
+  /** Internal unique identifier */
+  id: string;
+
+  /** Employee-specific fields */
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  designation: string;
+  reportingTo?: string;
+
+  /** Contact info */
+  email: string;
+  phone: string;
+
+  /** Org structure */
+  department: string;
+  role: string;
+
+  /** Employment status */
+  status: UserStatus;
+
+  /** Location & dates */
+  location: string;
+  joiningDate: string; // ISO date string
+
+  /** Audit fields */
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
+};
+
+
+
 // User Details Carrier - DTO for API submission (extends UserDetails)
 export interface UserDetailsCarrier extends UserDetails {
   createdAt: string;

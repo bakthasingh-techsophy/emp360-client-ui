@@ -31,7 +31,7 @@ import {
 } from '@/services/userDetailsService';
 
 // User Management Service
-import { apiOnboardUser, apiUpdateUser } from '@/services/userManagementService';
+import { apiOnboardUser, apiUpdateUser, apiSearchUserSnapshots, apiDeleteUser } from '@/services/userManagementService';
 
 // Employee Aggregate Service
 import {
@@ -106,7 +106,8 @@ import {
 // Types
 import Pagination from '@/types/pagination';
 import UniversalSearchRequest from '@/types/search';
-import { UserDetails, UserDetailsCarrier } from '@/modules/user-management/types/onboarding.types';
+import { UserDetails, UserDetailsCarrier, UserDetailsSnapshot } from '@/modules/user-management/types/onboarding.types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 /**
  * Generic update payload type
@@ -123,7 +124,9 @@ interface UserManagementContextType {
   getUserDetailsById: (id: string) => Promise<UserDetails | null>;
   updateUserDetails: (id: string, payload: UpdatePayload) => Promise<UserDetails | null>;
   updateUser: (employeeId: string, payload: UpdatePayload) => Promise<UserDetails | null>;
+  deleteUser: (employeeId: string) => Promise<boolean>;
   refreshUsers: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<UserDetails> | null>;
+  refreshUserDetailsSnapshots: (activeFilters: any[], searchQuery?: string, page?: number, pageSize?: number) => Promise<Pagination<UserDetailsSnapshot> | null>;
   bulkUpdateUserDetails: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
   deleteUserDetailsById: (id: string) => Promise<boolean>;
   bulkDeleteUserDetailsByIds: (ids: string[]) => Promise<boolean>;
@@ -316,6 +319,15 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<UserDetails | null>;
   };
 
+  const deleteUser = async (employeeId: string): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiDeleteUser(employeeId, tenant, accessToken),
+      'Delete',
+      'User deleted successfully',
+      true
+    ) as Promise<boolean>;
+  };
+
   const refreshUsers = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
@@ -326,6 +338,26 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       'Search',
       ''
     ) as Promise<Pagination<UserDetails> | null>;
+  };
+
+  const refreshUserDetailsSnapshots = async (
+    activeFilters: any[],
+    searchQuery: string = '',
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<UserDetailsSnapshot> | null> => {
+    // Build search request from filters and search query
+    const searchRequest = buildUniversalSearchRequest(
+      activeFilters,
+      searchQuery,
+      ['firstName', 'lastName', 'email', 'employeeId', 'designation', 'phone']
+    );
+
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchUserSnapshots(searchRequest, page, pageSize, tenant, accessToken),
+      'Search Snapshots',
+      ''
+    ) as Promise<Pagination<UserDetailsSnapshot> | null>;
   };
 
   const bulkUpdateUserDetails = async (
@@ -722,7 +754,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     getUserDetailsById,
     updateUserDetails,
     updateUser,
+    deleteUser,
     refreshUsers,
+    refreshUserDetailsSnapshots,
     bulkUpdateUserDetails,
     deleteUserDetailsById,
     bulkDeleteUserDetailsByIds,

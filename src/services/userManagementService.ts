@@ -11,6 +11,8 @@
 
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
+import Pagination from "@/types/pagination";
+import UniversalSearchRequest from "@/types/search";
 import { UserDetails, UserDetailsCarrier } from "@/modules/user-management/types/onboarding.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
@@ -91,9 +93,68 @@ export const apiUpdateUser = async (
 };
 
 /**
+ * Search User Snapshots
+ * POST /emp-user-management/v1/users/snapshots/search
+ *
+ * Performs a universal search across user snapshots with pagination.
+ * Returns: ApiResponse<Pagination<any>> (snapshot shape is dynamic)
+ *
+ * @param searchRequest - UniversalSearchRequest with filters, search text, etc.
+ * @param page - Page number (0-indexed)
+ * @param pageSize - Number of results per page
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ */
+export const apiSearchUserSnapshots = async (
+  searchRequest: UniversalSearchRequest,
+  page: number = 0,
+  pageSize: number = 10,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Pagination<any>>> => {
+  return apiRequest<Pagination<any>>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/snapshots/search?page=${page}&size=${pageSize}`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
+ * Delete User
+ * DELETE /emp-user-management/v1/users/{employeeId}
+ * 
+ * Deletes a user from the system by employee ID.
+ * Returns void wrapped in ApiResponse.
+ * 
+ * @param employeeId - Employee ID to delete
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteUser('EMP-001', 'tenant-001');
+ */
+export const apiDeleteUser = async (
+  employeeId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/${employeeId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const userManagementService = {
   apiOnboardUser,
   apiUpdateUser,
+  apiSearchUserSnapshots,
+  apiDeleteUser,
 };

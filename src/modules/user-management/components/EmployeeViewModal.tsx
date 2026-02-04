@@ -23,14 +23,14 @@ import {
   X,
   Briefcase
 } from 'lucide-react';
-import { User as UserType } from '../types/user.types';
+import { UserDetailsSnapshot } from '../types/onboarding.types';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmployeeViewModalProps {
-  employee: UserType | null;
+  employee: UserDetailsSnapshot | null;
   open: boolean;
   onClose: () => void;
-  onEdit?: (employee: UserType) => void;
+  onEdit?: (employee: UserDetailsSnapshot) => void;
 }
 
 function SkillBadge({ skill }: { skill: string }) {
@@ -45,6 +45,9 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
   if (!employee) return null;
 
   const { toast } = useToast();
+  
+  // Construct full name from firstName and lastName
+  const fullName = `${employee.firstName} ${employee.lastName}`.trim();
 
   const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: string | React.ReactNode }) => (
     <div className="flex items-start gap-3 py-2">
@@ -156,11 +159,11 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
             <div className="flex items-center gap-4 flex-1">
               <Avatar className="h-16 w-16 ring-2 ring-muted">
                 <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
-                  {getInitials(employee.name)}
+                  {getInitials(fullName)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <DialogTitle className="text-xl mb-1">{employee.name}</DialogTitle>
+                <DialogTitle className="text-xl mb-1">{fullName}</DialogTitle>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={getStatusVariant(employee.status)} className="capitalize">
                     {employee.status}
