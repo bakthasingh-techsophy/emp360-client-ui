@@ -1,5 +1,6 @@
 /**
  * Types for Employee Onboarding Forms
+ * Synced with backend Java models
  */
 
 /**
@@ -8,30 +9,90 @@
  * INACTIVE: User is inactive and cannot login
  */
 export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
 }
 
-// User Details - Basic registration (simplified, all editable)
+/**
+ * Employee Type Enum - Backend aligned
+ * Maps to backend EmployeeType enum
+ */
+export enum EmployeeType {
+  PERMANENT = "PERMANENT",
+  CONTRACT = "CONTRACT",
+  TEMPORARY = "TEMPORARY",
+  INTERN = "INTERN",
+}
+
+/**
+ * Gender Enum - Backend aligned
+ */
+export enum Gender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+  OTHER = "OTHER",
+}
+
+/**
+ * Marital Status Enum - Backend aligned
+ */
+export enum MaritalStatus {
+  SINGLE = "SINGLE",
+  MARRIED = "MARRIED",
+  DIVORCED = "DIVORCED",
+  WIDOWED = "WIDOWED",
+}
+
+/**
+ * Event Type Enum - Backend aligned
+ */
+export enum EventType {
+  PROMOTION = "PROMOTION",
+  DEMOTION = "DEMOTION",
+  TRANSFER = "TRANSFER",
+  ROLE_CHANGE = "ROLE_CHANGE",
+  JOINING = "JOINING",
+  RESIGNATION = "RESIGNATION",
+  OTHER = "OTHER",
+}
+
+/**
+ * Certification Type Enum - Backend aligned
+ */
+export enum CertificationType {
+  URL = "URL",
+  FILE = "FILE",
+  NONE = "NONE",
+}
+
+/**
+ * Document Type Enum - Backend aligned
+ */
+export enum DocumentType {
+  URL = "URL",
+  FILE = "FILE",
+}
+
+// User Details - Basic registration (Backend aligned with UserDetails.java)
 export interface UserDetails {
-  employeeId: string;
+  id: string; // Maps to @Id field - this is the employeeId
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   status: UserStatus;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 /**
  * User Details Snapshot - Backend aligned model
  * Maps to UserDetailsSnapshot collection in MongoDB
  */
-export type UserDetailsSnapshot = {
-  /** Internal unique identifier */
+export interface UserDetailsSnapshot {
+  /** Internal unique identifier - this is the employeeId */
   id: string;
 
-  /** Employee-specific fields */
-  employeeId: string;
   firstName: string;
   lastName: string;
   designation: string;
@@ -50,28 +111,31 @@ export type UserDetailsSnapshot = {
 
   /** Location & dates */
   location: string;
-  joiningDate: string; // ISO date string
+  joiningDate: string; // LocalDate as ISO string
 
   /** Audit fields */
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
-};
+}
 
-
-
-// User Details Carrier - DTO for API submission (extends UserDetails)
-export interface UserDetailsCarrier extends UserDetails {
+// User Details Carrier - DTO for API submission
+export interface UserDetailsCarrier {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  status: UserStatus;
   createdAt: string;
 }
 
-// Job Details - Professional work information
+// Job Details - Professional work information (Backend aligned with JobDetails.java)
 export interface JobDetails {
-  employeeId: string;
-  officialEmail: string;
-  primaryPhone: string;
+  id: string; // Maps to @Id field - this is the employeeId
+  email: string;
+  phone: string;
   secondaryPhone: string;
   designation: string;
-  employeeType: 'full-time' | 'part-time' | 'contract' | 'intern';
+  employeeType: EmployeeType;
   workLocation: string;
   reportingManager: string;
   joiningDate: string;
@@ -80,9 +144,11 @@ export interface JobDetails {
   sameAsDOB: boolean;
   shift: string;
   probationPeriod: number;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
-// Emergency Contact Info
+// Emergency Contact Info (Backend aligned with EmergencyContact.java)
 export interface EmergencyContact {
   id: string;
   name: string;
@@ -90,15 +156,15 @@ export interface EmergencyContact {
   phone: string;
 }
 
-// General Details - Personal information
+// General Details - Personal information (Backend aligned with GeneralDetails.java)
 export interface GeneralDetails {
+  id: string; // Maps to @Id field - this is the employeeId
   firstName: string;
   lastName: string;
-  employeeId: string;
-  officialEmail: string;
+  email: string;
   phone: string;
   secondaryPhone: string;
-  gender: 'male' | 'female' | 'other';
+  gender: Gender;
   bloodGroup: string;
   panNumber: string;
   aadharNumber: string;
@@ -111,80 +177,114 @@ export interface GeneralDetails {
   physicallyChallenged: boolean;
   passportNumber: string;
   passportExpiry: string;
-  maritalStatus: 'single' | 'married';
+  maritalStatus: MaritalStatus;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
-// Banking Details
+// Banking Details (Backend aligned with BankingDetails.java)
 export interface BankingDetails {
+  id: string; // Maps to @Id field - this is the employeeId
+  employeeId: string;
   accountHolderName: string;
   accountNumber: string;
   ifscCode: string;
   bankName: string;
   branchName: string;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
-// Employment History - Work experience
+// Employment History - Work experience (Backend aligned with EmploymentHistoryItem.java)
 export interface EmploymentHistoryItem {
   id: string;
+  employeeId: string;
   companyName: string;
   role: string;
   location: string;
-  startDate: string;
-  endDate: string;
+  startDate: string; // ISO instant
+  endDate: string; // ISO instant
   tenure: string;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 export interface EmploymentHistory {
   items: EmploymentHistoryItem[];
-  viewMode: 'timeline' | 'edit';
+  viewMode: "timeline" | "edit";
 }
 
-// Skills Set
+// Skills Set (Backend aligned with SkillItem.java)
 export interface SkillItem {
   id: string;
+  employeeId: string;
   name: string;
-  certificationType: 'url' | 'file' | 'none';
+  certificationType: CertificationType;
   certificationUrl?: string;
-  certificationFile?: File | null;
+  certificationFile?: File | null; // For frontend file upload only
   certificationFileName?: string;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 export interface SkillsSetForm {
   items: SkillItem[];
-  viewMode: 'view' | 'edit';
+  viewMode: "view" | "edit";
 }
 
-// Document Pool
+// Document Pool (Backend aligned with DocumentItem.java)
 export interface DocumentItem {
   id: string;
+  employeeId: string;
   name: string;
-  type: 'url' | 'file';
-  url?: string;
-  fileName?: string;
-  fileSize?: string;
+  type: DocumentType;
+  url: string;
+  fileName: string;
+  fileSize: string;
   uploadedDate: string;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 export interface DocumentPool {
   documents: DocumentItem[];
 }
 
-// Event History (formerly Promotion/Revision History)
+// Event History (Backend aligned with EventHistoryItem.java)
 export interface EventHistoryItem {
   id: string;
+  employeeId: string;
   date: string;
-  type: 'promotion' | 'demotion' | 'transfer' | 'role-change' | 'joining' | 'resignation' | 'other';
+  type: EventType;
   oldRole: string;
   newRole: string;
-  oldDepartment?: string;
-  newDepartment?: string;
+  oldDepartment: string;
+  newDepartment: string;
   reason: string;
   effectiveDate: string;
-  order: number; // For manual ordering
+  order: number;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 export interface EventHistoryForm {
   items: EventHistoryItem[];
+}
+
+export interface EventHistoryForm {
+  items: EventHistoryItem[];
+}
+
+// Employee Aggregate (Backend aligned with EmployeeAggregate.java)
+export interface EmployeeAggregate {
+  id: string; // Maps to @Id field - this is the employeeId
+  bankingDetailsIds: string[];
+  documentIds: string[];
+  employmentHistoryIds: string[];
+  eventHistoryIds: string[];
+  skillIds: string[];
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }
 
 // Keep old names as aliases for backward compatibility

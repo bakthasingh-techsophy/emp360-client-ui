@@ -3,9 +3,11 @@
  * Previous work experience with timeline and table views
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { EmploymentHistory, EmploymentHistoryItem } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 import { Button } from '@/components/ui/button';
 import { Timeline } from '@/components/timeline/Timeline';
 import { TimelineItem, TimelineTypeConfig } from '@/components/timeline/types';
@@ -17,14 +19,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EmploymentHistoryFormProps {
   form: UseFormReturn<EmploymentHistory>;
+  employeeId?: string;
 }
 
-export function EmploymentHistoryFormComponent({ form }: EmploymentHistoryFormProps) {
+export function EmploymentHistoryFormComponent({ form, employeeId }: EmploymentHistoryFormProps) {
   const { watch, setValue } = form;
+  const { searchEmploymentHistory } = useUserManagement();
   
   const items = watch('items') || [];
   const viewMode = watch('viewMode') || 'timeline';
   const [activeView, setActiveView] = useState<'timeline' | 'edit'>(viewMode);
+
+  const fetchEmploymentHistory = async () => {
+    if (employeeId) {
+      const searchRequest = buildUniversalSearchRequest(
+        [{ id: 'employeeId-filter', filterId: 'employeeId', operator: 'eq', value: employeeId }]
+      );
+      const data = await searchEmploymentHistory(searchRequest, 0, 100);
+      if (data && data.content) {
+        setValue('items', data.content as any);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchEmploymentHistory();
+  }, [employeeId]);
 
   // Table columns configuration
   const columns: TableColumn<EmploymentHistoryItem>[] = [
@@ -70,12 +90,15 @@ export function EmploymentHistoryFormComponent({ form }: EmploymentHistoryFormPr
 
   const emptyItem: EmploymentHistoryItem = {
     id: '',
+    employeeId: employeeId || '',
     companyName: '',
     role: '',
     location: '',
     startDate: '',
     endDate: '',
     tenure: '',
+    createdAt: '',
+    updatedAt: '',
   };
 
   // Calculate tenure

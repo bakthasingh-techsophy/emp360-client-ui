@@ -11,29 +11,11 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { GeneralDetails } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/general-details";
-
-/**
- * General Details Item
- * Personal and demographic information
- */
-export interface GeneralDetailsItem {
-  id?: string;
-  firstName: string;
-  lastName: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
-  bloodGroup: string;
-  panNumber: string;
-  nationality: string;
-  aadharNumber?: string;
-  passportNumber?: string;
-  maritalStatus?: "SINGLE" | "MARRIED" | "DIVORCED" | "WIDOWED";
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 /**
  * Update payload - Map of field names to values
@@ -44,17 +26,17 @@ export type UpdatePayload = Record<string, any>;
  * Create General Details
  * POST /emp-user-management/v1/general-details
  * 
- * @param item - GeneralDetailsItem with personal information
+ * @param item - GeneralDetails with personal information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<GeneralDetailsItem>>
+ * @returns Promise<ApiResponse<GeneralDetails>>
  */
 export const apiCreateGeneralDetails = async (
-  item: GeneralDetailsItem,
+  item: GeneralDetails,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<GeneralDetailsItem>> => {
-  return apiRequest<GeneralDetailsItem>({
+): Promise<ApiResponse<GeneralDetails>> => {
+  return apiRequest<GeneralDetails>({
     method: "POST",
     endpoint: BASE_ENDPOINT,
     tenant,
@@ -70,14 +52,14 @@ export const apiCreateGeneralDetails = async (
  * @param id - General details ID
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<GeneralDetailsItem>>
+ * @returns Promise<ApiResponse<GeneralDetails>>
  */
 export const apiGetGeneralDetailsById = async (
   id: string,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<GeneralDetailsItem>> => {
-  return apiRequest<GeneralDetailsItem>({
+): Promise<ApiResponse<GeneralDetails>> => {
+  return apiRequest<GeneralDetails>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -95,15 +77,15 @@ export const apiGetGeneralDetailsById = async (
  * @param payload - Map of fields to update
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<GeneralDetailsItem>>
+ * @returns Promise<ApiResponse<GeneralDetails>>
  */
 export const apiUpdateGeneralDetails = async (
   id: string,
   payload: UpdatePayload,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<GeneralDetailsItem>> => {
-  return apiRequest<GeneralDetailsItem>({
+): Promise<ApiResponse<GeneralDetails>> => {
+  return apiRequest<GeneralDetails>({
     method: "PATCH",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,

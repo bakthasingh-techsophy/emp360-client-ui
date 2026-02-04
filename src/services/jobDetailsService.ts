@@ -11,29 +11,11 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { JobDetails } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/job-details";
-
-/**
- * Job Details Item
- * Professional and employment information
- */
-export interface JobDetailsItem {
-  id?: string;
-  designation: string;
-  employeeType: "PERMANENT" | "CONTRACT" | "TEMPORARY" | "INTERN";
-  workLocation: string;
-  reportingManager: string;
-  joiningDate: string;
-  shift: string;
-  department?: string;
-  dateOfBirth?: string;
-  probationPeriod?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 /**
  * Update payload - Map of field names to values
@@ -44,17 +26,17 @@ export type UpdatePayload = Record<string, any>;
  * Create Job Details
  * POST /emp-user-management/v1/job-details
  * 
- * @param item - JobDetailsItem with employment information
+ * @param item - JobDetails with employment information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<JobDetailsItem>>
+ * @returns Promise<ApiResponse<JobDetails>>
  */
 export const apiCreateJobDetails = async (
-  item: JobDetailsItem,
+  item: JobDetails,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<JobDetailsItem>> => {
-  return apiRequest<JobDetailsItem>({
+): Promise<ApiResponse<JobDetails>> => {
+  return apiRequest<JobDetails>({
     method: "POST",
     endpoint: BASE_ENDPOINT,
     tenant,
@@ -70,14 +52,14 @@ export const apiCreateJobDetails = async (
  * @param id - Job details ID
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<JobDetailsItem>>
+ * @returns Promise<ApiResponse<JobDetails>>
  */
 export const apiGetJobDetailsById = async (
   id: string,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<JobDetailsItem>> => {
-  return apiRequest<JobDetailsItem>({
+): Promise<ApiResponse<JobDetails>> => {
+  return apiRequest<JobDetails>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -95,15 +77,15 @@ export const apiGetJobDetailsById = async (
  * @param payload - Map of fields to update
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<JobDetailsItem>>
+ * @returns Promise<ApiResponse<JobDetails>>
  */
 export const apiUpdateJobDetails = async (
   id: string,
   payload: UpdatePayload,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<JobDetailsItem>> => {
-  return apiRequest<JobDetailsItem>({
+): Promise<ApiResponse<JobDetails>> => {
+  return apiRequest<JobDetails>({
     method: "PATCH",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,

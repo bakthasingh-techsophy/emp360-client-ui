@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { DocumentPool, DocumentItem } from '../../types/onboarding.types';
+import { DocumentPool, DocumentItem, DocumentType } from '../../types/onboarding.types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,18 +26,21 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [docName, setDocName] = useState('');
-  const [docType, setDocType] = useState<'url' | 'file'>('url');
+  const [docType, setDocType] = useState<DocumentType>(DocumentType.URL);
   const [docUrl, setDocUrl] = useState('');
 
   const handleAddDocument = () => {
     const newDoc: DocumentItem = {
       id: `doc-${Date.now()}`,
+      employeeId: '',
       name: docName,
       type: docType,
-      url: docType === 'url' ? docUrl : undefined,
-      fileName: docType === 'file' ? docName : undefined,
+      url: docType === DocumentType.URL ? docUrl : '',
+      fileName: docType === DocumentType.FILE ? docName : '',
       uploadedDate: new Date().toISOString(),
       fileSize: '0 KB',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setValue('documents', [...documents, newDoc]);
@@ -53,7 +56,8 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
             ...doc,
             name: docName,
             type: docType,
-            url: docType === 'url' ? docUrl : doc.url,
+            url: docType === DocumentType.URL ? docUrl : doc.url,
+            updatedAt: new Date().toISOString(),
           }
         : doc
     );
@@ -83,7 +87,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
     setIsModalOpen(false);
     setEditingDoc(null);
     setDocName('');
-    setDocType('url');
+    setDocType(DocumentType.URL);
     setDocUrl('');
   };
 
@@ -123,16 +127,16 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
               </div>
               <div className="space-y-2">
                 <Label>Document Type</Label>
-                <RadioGroup value={docType} onValueChange={(value: any) => setDocType(value)}>
+                <RadioGroup value={docType} onValueChange={(value: DocumentType) => setDocType(value)}>
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="url" id="doc-type-url" />
+                      <RadioGroupItem value={DocumentType.URL} id="doc-type-url" />
                       <Label htmlFor="doc-type-url" className="font-normal cursor-pointer">
                         URL Link
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="file" id="doc-type-file" />
+                      <RadioGroupItem value={DocumentType.FILE} id="doc-type-file" />
                       <Label htmlFor="doc-type-file" className="font-normal cursor-pointer">
                         File Upload
                       </Label>
@@ -140,7 +144,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                   </div>
                 </RadioGroup>
               </div>
-              {docType === 'url' && (
+              {docType === DocumentType.URL && (
                 <div className="space-y-2">
                   <Label htmlFor="docUrl">Document URL</Label>
                   <Input
@@ -151,7 +155,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                   />
                 </div>
               )}
-              {docType === 'file' && (
+              {docType === DocumentType.FILE && (
                 <div className="space-y-2">
                   <Label htmlFor="docFile">Upload File</Label>
                   <Input id="docFile" type="file" />
@@ -164,7 +168,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
               </Button>
               <Button
                 onClick={editingDoc ? handleEditDocument : handleAddDocument}
-                disabled={!docName || (docType === 'url' && !docUrl)}
+                disabled={!docName || (docType === DocumentType.URL && !docUrl)}
               >
                 {editingDoc ? 'Update' : 'Add'}
               </Button>
@@ -187,7 +191,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-2">
-                      {doc.type === 'url' ? (
+                      {doc.type === DocumentType.URL ? (
                         <LinkIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       ) : (
                         <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -202,14 +206,14 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{doc.type.toUpperCase()}</Badge>
-                    {doc.fileSize && doc.type === 'file' && (
+                    {doc.fileSize && doc.type === DocumentType.FILE && (
                       <span className="text-xs text-muted-foreground">
                         {doc.fileSize}
                       </span>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {doc.type === 'url' && doc.url && (
+                    {doc.type === DocumentType.URL && doc.url && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -220,7 +224,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                         Open
                       </Button>
                     )}
-                    {doc.type === 'file' && (
+                    {doc.type === DocumentType.FILE && (
                       <Button variant="outline" size="sm" className="flex-1">
                         <Download className="h-3 w-3 mr-1" />
                         Download

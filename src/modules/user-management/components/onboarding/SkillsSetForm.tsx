@@ -3,9 +3,10 @@
  * Employee skills with certifications/documents
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { SkillsSetForm, SkillItem } from '../../types/onboarding.types';
+import { SkillsSetForm, SkillItem, CertificationType } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable/EditableItemsTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,13 +16,28 @@ import { Award, Link as LinkIcon, FileText } from 'lucide-react';
 
 interface SkillsSetFormProps {
   form: UseFormReturn<SkillsSetForm>;
+  employeeId?: string;
 }
 
-export function SkillsSetFormComponent({ form }: SkillsSetFormProps) {
+export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps) {
   const { watch, setValue } = form;
+  const { getSkillById } = useUserManagement();
   
   const items = watch('items') || [];
   const [activeView, setActiveView] = useState<'view' | 'edit'>('view');
+
+  const refreshSkills = async () => {
+    if (employeeId) {
+      const data = await getSkillById(employeeId);
+      if (data) {
+        setValue('items', [{ ...data, employeeId: employeeId } as any]);
+      }
+    }
+  };
+
+  useEffect(() => {
+    refreshSkills();
+  }, [employeeId]);
 
   const columns: TableColumn<SkillItem>[] = [
     {
@@ -38,9 +54,9 @@ export function SkillsSetFormComponent({ form }: SkillsSetFormProps) {
       type: 'select',
       required: true,
       options: [
-        { label: 'None', value: 'none' },
-        { label: 'URL Link', value: 'url' },
-        { label: 'File Upload', value: 'file' },
+        { label: 'None', value: CertificationType.NONE },
+        { label: 'URL Link', value: CertificationType.URL },
+        { label: 'File Upload', value: CertificationType.FILE },
       ],
       width: '150px',
     },
@@ -55,10 +71,14 @@ export function SkillsSetFormComponent({ form }: SkillsSetFormProps) {
 
   const emptyItem: SkillItem = {
     id: '',
+    employeeId: employeeId || '',
     name: '',
-    certificationType: 'none',
+    certificationType: CertificationType.NONE,
     certificationUrl: '',
     certificationFile: null,
+    certificationFileName: '',
+    createdAt: '',
+    updatedAt: '',
   };
 
   return (
@@ -101,9 +121,9 @@ export function SkillsSetFormComponent({ form }: SkillsSetFormProps) {
                         <h4 className="font-semibold">{skill.name}</h4>
                         <Award className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      {skill.certificationType !== 'none' && (
+                      {skill.certificationType !== CertificationType.NONE && (
                         <div className="flex items-center gap-2 text-sm">
-                          {skill.certificationType === 'url' ? (
+                          {skill.certificationType === CertificationType.URL ? (
                             <>
                               <LinkIcon className="h-4 w-4" />
                               <a
@@ -125,8 +145,8 @@ export function SkillsSetFormComponent({ form }: SkillsSetFormProps) {
                           )}
                         </div>
                       )}
-                      {skill.certificationType === 'none' && (
-                        <Badge variant="outline">No Certification</Badge>
+                      {skill.certificationType === CertificationType.NONE && (
+                        <Badge variant="secondary">No Certification</Badge>
                       )}
                     </div>
                   </CardContent>

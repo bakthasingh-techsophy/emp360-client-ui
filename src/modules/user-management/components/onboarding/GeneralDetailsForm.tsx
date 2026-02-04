@@ -3,8 +3,10 @@
  * Personal information, addresses, and emergency contacts
  */
 
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { GeneralDetails, EmergencyContact } from '../../types/onboarding.types';
+import { GeneralDetails, EmergencyContact, Gender, MaritalStatus } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,9 +24,63 @@ import { EditableItemsTable, TableColumn } from '@/components/common/EditableIte
 
 interface GeneralDetailsFormProps {
   form: UseFormReturn<GeneralDetails>;
+  employeeId?: string;
 }
 
-export function GeneralDetailsFormComponent({ form }: GeneralDetailsFormProps) {
+export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetailsFormProps) {
+  const { getGeneralDetailsById } = useUserManagement();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchGeneralDetails = async () => {
+    if (employeeId) {
+      setIsLoading(true);
+      const data = await getGeneralDetailsById(employeeId);
+      if (data) {
+        form.reset({
+          id: data.id || employeeId,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          secondaryPhone: data.secondaryPhone || '',
+          gender: data.gender || Gender.MALE,
+          bloodGroup: data.bloodGroup || '',
+          panNumber: data.panNumber || '',
+          aadharNumber: data.aadharNumber || '',
+          contactAddress: data.contactAddress || '',
+          permanentAddress: data.permanentAddress || '',
+          sameAsContactAddress: data.sameAsContactAddress || false,
+          emergencyContacts: data.emergencyContacts || [],
+          personalEmail: data.personalEmail || '',
+          nationality: data.nationality || '',
+          physicallyChallenged: data.physicallyChallenged || false,
+          passportNumber: data.passportNumber || '',
+          passportExpiry: data.passportExpiry || '',
+          maritalStatus: data.maritalStatus || MaritalStatus.SINGLE,
+          createdAt: data.createdAt || '',
+          updatedAt: data.updatedAt || '',
+        });
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch general details when employeeId is available
+  useEffect(() => {
+    fetchGeneralDetails();
+  }, [employeeId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading general details...</p>
+        </div>
+      </div>
+    );
+  }
+
   const {
     register,
     watch,
@@ -113,27 +169,13 @@ export function GeneralDetailsFormComponent({ form }: GeneralDetailsFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="employeeId-general">
-              Employee ID <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="employeeId-general"
-              {...register('employeeId', { required: 'Employee ID is required' })}
-              placeholder="EMP001"
-            />
-            {errors.employeeId && (
-              <p className="text-sm text-destructive">{errors.employeeId.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="officialEmail-general">
+            <Label htmlFor="email-general">
               Official Email <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="officialEmail-general"
+              id="email-general"
               type="email"
-              {...register('officialEmail', {
+              {...register('email', {
                 required: 'Official email is required',
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -142,8 +184,8 @@ export function GeneralDetailsFormComponent({ form }: GeneralDetailsFormProps) {
               })}
               placeholder="employee@company.com"
             />
-            {errors.officialEmail && (
-              <p className="text-sm text-destructive">{errors.officialEmail.message}</p>
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 
@@ -208,23 +250,23 @@ export function GeneralDetailsFormComponent({ form }: GeneralDetailsFormProps) {
             </Label>
             <RadioGroup
               value={watch('gender')}
-              onValueChange={(value) => setValue('gender', value as any)}
+              onValueChange={(value) => setValue('gender', value as Gender)}
             >
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="male" id="male" />
+                  <RadioGroupItem value={Gender.MALE} id="male" />
                   <Label htmlFor="male" className="font-normal cursor-pointer">
                     Male
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="female" id="female" />
+                  <RadioGroupItem value={Gender.FEMALE} id="female" />
                   <Label htmlFor="female" className="font-normal cursor-pointer">
                     Female
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other" />
+                  <RadioGroupItem value={Gender.OTHER} id="other" />
                   <Label htmlFor="other" className="font-normal cursor-pointer">
                     Other
                   </Label>
@@ -263,19 +305,31 @@ export function GeneralDetailsFormComponent({ form }: GeneralDetailsFormProps) {
             </Label>
             <RadioGroup
               value={watch('maritalStatus')}
-              onValueChange={(value) => setValue('maritalStatus', value as any)}
+              onValueChange={(value) => setValue('maritalStatus', value as MaritalStatus)}
             >
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 flex-wrap gap-2">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="single" id="single" />
+                  <RadioGroupItem value={MaritalStatus.SINGLE} id="single" />
                   <Label htmlFor="single" className="font-normal cursor-pointer">
                     Single
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="married" id="married" />
+                  <RadioGroupItem value={MaritalStatus.MARRIED} id="married" />
                   <Label htmlFor="married" className="font-normal cursor-pointer">
                     Married
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={MaritalStatus.DIVORCED} id="divorced" />
+                  <Label htmlFor="divorced" className="font-normal cursor-pointer">
+                    Divorced
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={MaritalStatus.WIDOWED} id="widowed" />
+                  <Label htmlFor="widowed" className="font-normal cursor-pointer">
+                    Widowed
                   </Label>
                 </div>
               </div>

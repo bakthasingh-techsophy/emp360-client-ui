@@ -4,9 +4,11 @@
  * Features: Manual entry, reorderable cards, view/edit modes
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { EventHistoryForm, EventHistoryItem } from '../../types/onboarding.types';
+import { EventHistoryForm, EventHistoryItem, EventType } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 import { Timeline } from '@/components/timeline/Timeline';
 import { TimelineItem, TimelineTypeConfig } from '@/components/timeline/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,14 +26,16 @@ import { cn } from '@/lib/utils';
 
 interface PromotionHistoryFormProps {
   form: UseFormReturn<EventHistoryForm>;
+  employeeId?: string;
 }
 
 // Dummy data for demonstration
 const dummyEvents: EventHistoryItem[] = [
   {
     id: '1',
+    employeeId: '',
     date: '2024-01-15',
-    type: 'joining',
+    type: EventType.JOINING,
     oldRole: '',
     newRole: 'Junior Software Engineer',
     oldDepartment: '',
@@ -39,11 +43,14 @@ const dummyEvents: EventHistoryItem[] = [
     reason: 'Joined the company',
     effectiveDate: '2024-01-15',
     order: 1,
+    createdAt: '',
+    updatedAt: '',
   },
   {
     id: '2',
+    employeeId: '',
     date: '2024-06-01',
-    type: 'promotion',
+    type: EventType.PROMOTION,
     oldRole: 'Junior Software Engineer',
     newRole: 'Software Engineer',
     oldDepartment: 'Engineering',
@@ -51,11 +58,14 @@ const dummyEvents: EventHistoryItem[] = [
     reason: 'Excellent performance and consistent delivery',
     effectiveDate: '2024-06-01',
     order: 2,
+    createdAt: '',
+    updatedAt: '',
   },
   {
     id: '3',
+    employeeId: '',
     date: '2025-01-10',
-    type: 'promotion',
+    type: EventType.PROMOTION,
     oldRole: 'Software Engineer',
     newRole: 'Senior Software Engineer',
     oldDepartment: 'Engineering',
@@ -63,11 +73,14 @@ const dummyEvents: EventHistoryItem[] = [
     reason: 'Leadership skills and technical expertise',
     effectiveDate: '2025-01-10',
     order: 3,
+    createdAt: '',
+    updatedAt: '',
   },
   {
     id: '4',
+    employeeId: '',
     date: '2025-09-15',
-    type: 'transfer',
+    type: EventType.TRANSFER,
     oldRole: 'Senior Software Engineer',
     newRole: 'Senior Software Engineer',
     oldDepartment: 'Engineering',
@@ -75,20 +88,23 @@ const dummyEvents: EventHistoryItem[] = [
     reason: 'Department restructuring',
     effectiveDate: '2025-09-15',
     order: 4,
+    createdAt: '',
+    updatedAt: '',
   },
 ];
 
-export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProps) {
+export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHistoryFormProps) {
   const { watch, setValue } = form;
+  const { searchEventHistory } = useUserManagement();
   
-  const items = watch('items') || dummyEvents; // Use dummy data if empty
+  const items = watch('items') || dummyEvents;
   const [activeView, setActiveView] = useState<'timeline' | 'edit'>('timeline');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventHistoryItem | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   
   // Form state for modal
-  const [eventType, setEventType] = useState<EventHistoryItem['type']>('promotion');
+  const [eventType, setEventType] = useState<EventType>(EventType.PROMOTION);
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(undefined);
   const [oldRole, setOldRole] = useState('');
@@ -97,62 +113,78 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
   const [newDepartment, setNewDepartment] = useState('');
   const [reason, setReason] = useState('');
 
-  const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      'promotion': 'Promotion',
-      'demotion': 'Demotion',
-      'transfer': 'Transfer',
-      'role-change': 'Role Change',
-      'joining': 'Joining',
-      'resignation': 'Resignation',
-      'other': 'Other',
+  const fetchEventHistory = async () => {
+    if (employeeId) {
+      const searchRequest = buildUniversalSearchRequest(
+        [{ id: 'employeeId-filter', filterId: 'employeeId', operator: 'eq', value: employeeId }]
+      );
+      const data = await searchEventHistory(searchRequest, 0, 100);
+      if (data && data.content) {
+        setValue('items', data.content as any);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchEventHistory();
+  }, [employeeId]);
+
+  const getTypeLabel = (type: EventType) => {
+    const labels: Record<EventType, string> = {
+      [EventType.PROMOTION]: 'Promotion',
+      [EventType.DEMOTION]: 'Demotion',
+      [EventType.TRANSFER]: 'Transfer',
+      [EventType.ROLE_CHANGE]: 'Role Change',
+      [EventType.JOINING]: 'Joining',
+      [EventType.RESIGNATION]: 'Resignation',
+      [EventType.OTHER]: 'Other',
     };
     return labels[type] || type;
   };
 
-  const getTypeVariant = (type: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
+  const getTypeVariant = (type: EventType): 'default' | 'destructive' | 'outline' | 'secondary' => {
     switch (type) {
-      case 'promotion':
-      case 'joining':
+      case EventType.PROMOTION:
+      case EventType.JOINING:
         return 'default';
-      case 'demotion':
-      case 'resignation':
+      case EventType.DEMOTION:
+      case EventType.RESIGNATION:
         return 'destructive';
-      case 'transfer':
+      case EventType.TRANSFER:
         return 'secondary';
       default:
         return 'outline';
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: EventType) => {
     switch (type) {
-      case 'promotion':
+      case EventType.PROMOTION:
         return TrendingUp;
-      case 'demotion':
+      case EventType.DEMOTION:
         return TrendingDown;
-      case 'transfer':
+      case EventType.TRANSFER:
         return ArrowRightLeft;
-      case 'joining':
+      case EventType.JOINING:
         return UserPlus;
-      case 'resignation':
+      case EventType.RESIGNATION:
         return UserMinus;
       default:
         return Briefcase;
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: EventType) => {
     switch (type) {
-      case 'promotion':
+      case EventType.PROMOTION:
         return { dot: 'bg-green-500/10', iconColor: 'text-green-600' };
-      case 'demotion':
+      case EventType.DEMOTION:
         return { dot: 'bg-red-500/10', iconColor: 'text-red-600' };
-      case 'transfer':
+      case EventType.TRANSFER:
         return { dot: 'bg-blue-500/10', iconColor: 'text-blue-600' };
-      case 'joining':
+      case EventType.JOINING:
         return { dot: 'bg-purple-500/10', iconColor: 'text-purple-600' };
-      case 'resignation':
+      case EventType.RESIGNATION:
         return { dot: 'bg-orange-500/10', iconColor: 'text-orange-600' };
       default:
         return { dot: 'bg-gray-500/10', iconColor: 'text-gray-600' };
@@ -172,7 +204,7 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
       setReason(event.reason);
     } else {
       setEditingEvent(null);
-      setEventType('promotion');
+      setEventType(EventType.PROMOTION);
       setEventDate(undefined);
       setEffectiveDate(undefined);
       setOldRole('');
@@ -194,6 +226,7 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
 
     const newEvent: EventHistoryItem = {
       id: editingEvent?.id || `event-${Date.now()}`,
+      employeeId: employeeId || '',
       date: eventDate.toISOString(),
       type: eventType,
       oldRole,
@@ -203,11 +236,13 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
       reason,
       effectiveDate: effectiveDate.toISOString(),
       order: editingEvent?.order || items.length + 1,
+      createdAt: editingEvent?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     let updatedItems;
     if (editingEvent) {
-      updatedItems = items.map((item) => (item.id === editingEvent.id ? newEvent : item));
+      updatedItems = items.map((item: EventHistoryItem) => (item.id === editingEvent.id ? newEvent : item));
     } else {
       updatedItems = [...items, newEvent];
     }
@@ -217,9 +252,9 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
   };
 
   const handleDeleteEvent = (id: string) => {
-    const updatedItems = items.filter((item) => item.id !== id);
+    const updatedItems = items.filter((item: EventHistoryItem) => item.id !== id);
     // Reorder remaining items
-    const reorderedItems = updatedItems.map((item, index) => ({
+    const reorderedItems = updatedItems.map((item: EventHistoryItem, index: number) => ({
       ...item,
       order: index + 1,
     }));
@@ -265,13 +300,13 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
   }));
 
   const timelineConfigs: TimelineTypeConfig[] = [
-    'promotion',
-    'demotion',
-    'transfer',
-    'role-change',
-    'joining',
-    'resignation',
-    'other',
+    EventType.PROMOTION,
+    EventType.DEMOTION,
+    EventType.TRANSFER,
+    EventType.ROLE_CHANGE,
+    EventType.JOINING,
+    EventType.RESIGNATION,
+    EventType.OTHER,
   ].map((type) => ({
     type,
     renderer: (item) => {
@@ -364,13 +399,13 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="promotion">Promotion</SelectItem>
-                        <SelectItem value="demotion">Demotion</SelectItem>
-                        <SelectItem value="transfer">Transfer</SelectItem>
-                        <SelectItem value="role-change">Role Change</SelectItem>
-                        <SelectItem value="joining">Joining</SelectItem>
-                        <SelectItem value="resignation">Resignation</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value={EventType.PROMOTION}>Promotion</SelectItem>
+                        <SelectItem value={EventType.DEMOTION}>Demotion</SelectItem>
+                        <SelectItem value={EventType.TRANSFER}>Transfer</SelectItem>
+                        <SelectItem value={EventType.ROLE_CHANGE}>Role Change</SelectItem>
+                        <SelectItem value={EventType.JOINING}>Joining</SelectItem>
+                        <SelectItem value={EventType.RESIGNATION}>Resignation</SelectItem>
+                        <SelectItem value={EventType.OTHER}>Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -409,7 +444,7 @@ export function PromotionHistoryFormComponent({ form }: PromotionHistoryFormProp
                     />
                   </div>
                 </div>
-                {(eventType === 'transfer' || eventType === 'joining') && (
+                {(eventType === EventType.TRANSFER || eventType === EventType.JOINING) && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Previous Department</Label>

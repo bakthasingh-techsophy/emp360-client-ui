@@ -145,7 +145,7 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       accessorKey: 'employeeId',
       header: 'Employee ID',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('employeeId')}</div>
+        <div className="font-medium">{row.original.id}</div>
       ),
     },
     {

@@ -73,7 +73,6 @@ import {
   apiGetGeneralDetailsById,
   apiUpdateGeneralDetails,
   apiDeleteGeneralDetails,
-  GeneralDetailsItem,
 } from '@/services/generalDetailsService';
 
 // Job Details Service
@@ -82,7 +81,6 @@ import {
   apiGetJobDetailsById,
   apiUpdateJobDetails,
   apiDeleteJobDetails,
-  JobDetailsItem,
 } from '@/services/jobDetailsService';
 
 // Skill Items Service
@@ -106,7 +104,7 @@ import {
 // Types
 import Pagination from '@/types/pagination';
 import UniversalSearchRequest from '@/types/search';
-import { UserDetails, UserDetailsCarrier, UserDetailsSnapshot } from '@/modules/user-management/types/onboarding.types';
+import { JobDetails, UserDetails, UserDetailsCarrier, UserDetailsSnapshot, GeneralDetails } from '@/modules/user-management/types/onboarding.types';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 /**
@@ -159,15 +157,15 @@ interface UserManagementContextType {
   bulkDeleteEventHistoryByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
 
   // General Details Methods
-  createGeneralDetails: (item: GeneralDetailsItem) => Promise<GeneralDetailsItem | null>;
-  getGeneralDetailsById: (id: string) => Promise<GeneralDetailsItem | null>;
-  updateGeneralDetails: (id: string, payload: UpdatePayload) => Promise<GeneralDetailsItem | null>;
+  createGeneralDetails: (item: GeneralDetails) => Promise<GeneralDetails | null>;
+  getGeneralDetailsById: (id: string) => Promise<GeneralDetails | null>;
+  updateGeneralDetails: (id: string, payload: UpdatePayload) => Promise<GeneralDetails | null>;
   deleteGeneralDetails: (id: string) => Promise<boolean>;
 
   // Job Details Methods
-  createJobDetails: (item: JobDetailsItem) => Promise<JobDetailsItem | null>;
-  getJobDetailsById: (id: string) => Promise<JobDetailsItem | null>;
-  updateJobDetails: (id: string, payload: UpdatePayload) => Promise<JobDetailsItem | null>;
+  createJobDetails: (item: JobDetails) => Promise<JobDetails | null>;
+  getJobDetailsById: (id: string) => Promise<JobDetails | null>;
+  updateJobDetails: (id: string, payload: UpdatePayload) => Promise<JobDetails | null>;
   deleteJobDetails: (id: string) => Promise<boolean>;
 
   // Skill Items Methods
@@ -603,28 +601,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== GENERAL DETAILS METHODS ====================
 
-  const createGeneralDetails = async (item: GeneralDetailsItem): Promise<GeneralDetailsItem | null> => {
+  const createGeneralDetails = async (item: GeneralDetails): Promise<GeneralDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiCreateGeneralDetails(item, tenant, accessToken),
       'Create General Details',
       'General details created successfully'
-    ) as Promise<GeneralDetailsItem | null>;
+    ) as Promise<GeneralDetails | null>;
   };
 
-  const getGeneralDetailsById = async (id: string): Promise<GeneralDetailsItem | null> => {
+  const getGeneralDetailsById = async (id: string): Promise<GeneralDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiGetGeneralDetailsById(id, tenant, accessToken),
       'Fetch General Details',
       ''
-    ) as Promise<GeneralDetailsItem | null>;
+    ) as Promise<GeneralDetails | null>;
   };
 
-  const updateGeneralDetails = async (id: string, payload: UpdatePayload): Promise<GeneralDetailsItem | null> => {
+  const updateGeneralDetails = async (id: string, payload: UpdatePayload): Promise<GeneralDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiUpdateGeneralDetails(id, payload, tenant, accessToken),
       'Update General Details',
       'General details updated successfully'
-    ) as Promise<GeneralDetailsItem | null>;
+    ) as Promise<GeneralDetails | null>;
   };
 
   const deleteGeneralDetails = async (id: string): Promise<boolean> => {
@@ -639,28 +637,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== JOB DETAILS METHODS ====================
 
-  const createJobDetails = async (item: JobDetailsItem): Promise<JobDetailsItem | null> => {
+  const createJobDetails = async (item: JobDetails): Promise<JobDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiCreateJobDetails(item, tenant, accessToken),
       'Create Job Details',
       'Job details created successfully'
-    ) as Promise<JobDetailsItem | null>;
+    ) as Promise<JobDetails | null>;
   };
 
-  const getJobDetailsById = async (id: string): Promise<JobDetailsItem | null> => {
+  const getJobDetailsById = async (id: string): Promise<JobDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiGetJobDetailsById(id, tenant, accessToken),
       'Fetch Job Details',
       ''
-    ) as Promise<JobDetailsItem | null>;
+    ) as Promise<JobDetails | null>;
   };
 
-  const updateJobDetails = async (id: string, payload: UpdatePayload): Promise<JobDetailsItem | null> => {
+  const updateJobDetails = async (id: string, payload: UpdatePayload): Promise<JobDetails | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiUpdateJobDetails(id, payload, tenant, accessToken),
       'Update Job Details',
       'Job details updated successfully'
-    ) as Promise<JobDetailsItem | null>;
+    ) as Promise<JobDetails | null>;
   };
 
   const deleteJobDetails = async (id: string): Promise<boolean> => {

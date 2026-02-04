@@ -1,20 +1,28 @@
-import { UseFormReturn } from 'react-hook-form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect, useState } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { UserDetails, UserStatus } from '../../types/onboarding.types';
+} from "@/components/ui/select";
+import { UserDetails, UserStatus } from "../../types/onboarding.types";
+import { useUserManagement } from "@/contexts/UserManagementContext";
 
 interface UserDetailsFormProps {
   form: UseFormReturn<UserDetails>;
+  employeeId?: string;
+  mode?: "create" | "edit";
 }
 
-export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
+export function UserDetailsFormComponent({
+  form,
+  employeeId,
+  mode = "create",
+}: UserDetailsFormProps) {
   const {
     register,
     formState: { errors },
@@ -22,19 +30,60 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
     watch,
   } = form;
 
+  const { getUserDetailsById } = useUserManagement();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchUserDetails = async () => {
+    if (mode === "edit" && employeeId) {
+      setIsLoading(true);
+      const data = await getUserDetailsById(employeeId);
+      if (data) {
+        form.reset({
+          id: data.id,
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          status: data.status || UserStatus.ACTIVE,
+          createdAt: data.createdAt || "",
+          updatedAt: data.updatedAt || "",
+        });
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch user details in edit mode
+  useEffect(() => {
+    fetchUserDetails();
+  }, [employeeId, mode]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">
+            Loading user details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Employee ID */}
         <div className="space-y-2">
-          <Label htmlFor="employeeId">Employee ID *</Label>
+          <Label htmlFor="id">Employee ID *</Label>
           <Input
-            id="employeeId"
+            id="id"
             placeholder="e.g., EMP001"
-            {...register('employeeId', { required: 'Employee ID is required' })}
+            {...register("id", { required: "Employee ID is required" })}
           />
-          {errors.employeeId && (
-            <p className="text-sm text-destructive">{errors.employeeId.message}</p>
+          {errors.id && (
+            <p className="text-sm text-destructive">{errors.id.message}</p>
           )}
         </div>
 
@@ -42,8 +91,8 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
         <div className="space-y-2">
           <Label htmlFor="status">Status *</Label>
           <Select
-            value={watch('status')}
-            onValueChange={(value) => setValue('status', value as UserStatus)}
+            value={watch("status")}
+            onValueChange={(value) => setValue("status", value as UserStatus)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
@@ -64,10 +113,12 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
           <Input
             id="firstName"
             placeholder="John"
-            {...register('firstName', { required: 'First name is required' })}
+            {...register("firstName", { required: "First name is required" })}
           />
           {errors.firstName && (
-            <p className="text-sm text-destructive">{errors.firstName.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.firstName.message}
+            </p>
           )}
         </div>
 
@@ -77,10 +128,12 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
           <Input
             id="lastName"
             placeholder="Doe"
-            {...register('lastName', { required: 'Last name is required' })}
+            {...register("lastName", { required: "Last name is required" })}
           />
           {errors.lastName && (
-            <p className="text-sm text-destructive">{errors.lastName.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.lastName.message}
+            </p>
           )}
         </div>
 
@@ -91,11 +144,11 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
             id="email"
             type="email"
             placeholder="john.doe@company.com"
-            {...register('email', {
-              required: 'Email is required',
+            {...register("email", {
+              required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address',
+                message: "Invalid email address",
               },
             })}
           />
@@ -111,7 +164,7 @@ export function UserDetailsFormComponent({ form }: UserDetailsFormProps) {
             id="phone"
             type="tel"
             placeholder="+1 (555) 000-0000"
-            {...register('phone', { required: 'Phone number is required' })}
+            {...register("phone", { required: "Phone number is required" })}
           />
           {errors.phone && (
             <p className="text-sm text-destructive">{errors.phone.message}</p>
