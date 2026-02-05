@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { GeneralDetails, EmergencyContact, Gender, MaritalStatus } from '../../types/onboarding.types';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,46 @@ import {
 import { DatePicker } from '@/components/ui/date-picker';
 import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable/EditableItemsTable';
 
+// Zod schema for GeneralDetails validation
+export const generalDetailsSchema = z.object({
+  id: z.string().optional(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().min(1, "Official email is required").email("Invalid email address"),
+  phone: z.string().min(1, "Phone is required").regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number"),
+  secondaryPhone: z.string().regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number").optional().or(z.literal("")),
+  gender: z.nativeEnum(Gender, { required_error: "Gender is required" }),
+  bloodGroup: z.string().min(1, "Blood group is required"),
+  panNumber: z.string().min(1, "PAN number is required").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Enter a valid PAN (e.g., ABCDE1234F)"),
+  aadharNumber: z.string().min(1, "Aadhar number is required").regex(/^[0-9]{12}$/, "Enter a valid 12-digit Aadhar number"),
+  contactAddress: z.string().min(1, "Contact address is required"),
+  permanentAddress: z.string().min(1, "Permanent address is required"),
+  sameAsContactAddress: z.boolean().optional(),
+  emergencyContacts: z.array(z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    relation: z.string(),
+    phone: z.string(),
+  })).refine((contacts) => {
+    // Check if at least one contact has all fields filled
+    return contacts.some(contact => 
+      contact.name && contact.name.trim() !== '' &&
+      contact.relation && contact.relation.trim() !== '' &&
+      contact.phone && contact.phone.trim() !== ''
+    );
+  }, {
+    message: "At least one emergency contact must be completely filled (name, relation, and phone)"
+  }),
+  personalEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  nationality: z.string().optional(),
+  physicallyChallenged: z.boolean().optional(),
+  passportNumber: z.string().regex(/^[A-Z]{1}[0-9]{7}$/, "Enter a valid passport number (e.g., A1234567)").optional().or(z.literal("")),
+  passportExpiry: z.string().optional(),
+  maritalStatus: z.nativeEnum(MaritalStatus, { required_error: "Marital status is required" }),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
 interface GeneralDetailsFormProps {
   form: UseFormReturn<GeneralDetails>;
   employeeId?: string;
@@ -31,11 +72,36 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
   const { getGeneralDetailsById } = useUserManagement();
   const [isLoading, setIsLoading] = useState(false);
 
+  // All hooks must be called before any conditional returns
+  const {
+    register,
+    watch,
+    setValue,
+    formState: { errors },
+    trigger,
+  } = form;
+
+  const sameAsContactAddress = watch('sameAsContactAddress');
+  const contactAddress = watch('contactAddress');
+  const emergencyContacts = watch('emergencyContacts') || [];
+
+  const emptyEmergencyContact: EmergencyContact = {
+    id: '',
+    name: '',
+    relation: '',
+    phone: '',
+  };
+
   const fetchGeneralDetails = async () => {
     if (employeeId) {
       setIsLoading(true);
       const data = await getGeneralDetailsById(employeeId);
       if (data) {
+        // Ensure at least one emergency contact exists
+        const contacts = data.emergencyContacts && data.emergencyContacts.length > 0 
+          ? data.emergencyContacts 
+          : [emptyEmergencyContact];
+        
         form.reset({
           id: data.id || employeeId,
           firstName: data.firstName || '',
@@ -50,7 +116,7 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
           contactAddress: data.contactAddress || '',
           permanentAddress: data.permanentAddress || '',
           sameAsContactAddress: data.sameAsContactAddress || false,
-          emergencyContacts: data.emergencyContacts || [],
+          emergencyContacts: contacts,
           personalEmail: data.personalEmail || '',
           nationality: data.nationality || '',
           physicallyChallenged: data.physicallyChallenged || false,
@@ -62,41 +128,6 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
         });
       }
       setIsLoading(false);
-    }
-  };
-
-  // Fetch general details when employeeId is available
-  useEffect(() => {
-    fetchGeneralDetails();
-  }, [employeeId]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Loading general details...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const {
-    register,
-    watch,
-    setValue,
-    formState: { errors },
-  } = form;
-
-  const sameAsContactAddress = watch('sameAsContactAddress');
-  const contactAddress = watch('contactAddress');
-  const emergencyContacts = watch('emergencyContacts') || [];
-
-  // Handle same as contact address checkbox
-  const handleSameAddressChange = (checked: boolean) => {
-    setValue('sameAsContactAddress', checked);
-    if (checked && contactAddress) {
-      setValue('permanentAddress', contactAddress);
     }
   };
 
@@ -128,11 +159,28 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
     },
   ];
 
-  const emptyEmergencyContact: EmergencyContact = {
-    id: '',
-    name: '',
-    relation: '',
-    phone: '',
+  // Fetch general details when employeeId is available
+  useEffect(() => {
+    fetchGeneralDetails();
+  }, [employeeId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading general details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle same as contact address checkbox
+  const handleSameAddressChange = (checked: boolean) => {
+    setValue('sameAsContactAddress', checked);
+    if (checked && contactAddress) {
+      setValue('permanentAddress', contactAddress);
+    }
   };
 
   return (
@@ -250,7 +298,10 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <RadioGroup
               value={watch('gender')}
-              onValueChange={(value) => setValue('gender', value as Gender)}
+              onValueChange={(value) => {
+                setValue('gender', value as Gender);
+                trigger('gender');
+              }}
             >
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
@@ -273,6 +324,9 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
                 </div>
               </div>
             </RadioGroup>
+            {errors.gender && (
+              <p className="text-sm text-destructive">{errors.gender.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -281,7 +335,10 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <Select
               value={watch('bloodGroup')}
-              onValueChange={(value) => setValue('bloodGroup', value)}
+              onValueChange={(value) => {
+                setValue('bloodGroup', value);
+                trigger('bloodGroup');
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select blood group" />
@@ -297,6 +354,9 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
                 <SelectItem value="AB-">AB-</SelectItem>
               </SelectContent>
             </Select>
+            {errors.bloodGroup && (
+              <p className="text-sm text-destructive">{errors.bloodGroup.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -305,7 +365,10 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <RadioGroup
               value={watch('maritalStatus')}
-              onValueChange={(value) => setValue('maritalStatus', value as MaritalStatus)}
+              onValueChange={(value) => {
+                setValue('maritalStatus', value as MaritalStatus);
+                trigger('maritalStatus');
+              }}
             >
               <div className="flex items-center space-x-4 flex-wrap gap-2">
                 <div className="flex items-center space-x-2">
@@ -334,6 +397,9 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
                 </div>
               </div>
             </RadioGroup>
+            {errors.maritalStatus && (
+              <p className="text-sm text-destructive">{errors.maritalStatus.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -370,9 +436,7 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <Textarea
               id="contactAddress"
-              {...register('contactAddress', {
-                required: 'Contact address is required',
-              })}
+              {...register('contactAddress')}
               placeholder="Enter your current residential address"
               rows={3}
             />
@@ -387,9 +451,7 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <Textarea
               id="permanentAddress"
-              {...register('permanentAddress', {
-                required: 'Permanent address is required',
-              })}
+              {...register('permanentAddress')}
               placeholder="Enter your permanent address"
               rows={3}
               disabled={sameAsContactAddress}
@@ -425,15 +487,14 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <Input
               id="panNumber"
-              {...register('panNumber', {
-                required: 'PAN number is required',
-                pattern: {
-                  value: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
-                  message: 'Enter a valid PAN (e.g., ABCDE1234F)',
-                },
-              })}
+              {...register('panNumber')}
               placeholder="ABCDE1234F"
               className="uppercase"
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase();
+                setValue('panNumber', value);
+                trigger('panNumber');
+              }}
             />
             {errors.panNumber && (
               <p className="text-sm text-destructive">{errors.panNumber.message}</p>
@@ -446,13 +507,7 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             </Label>
             <Input
               id="aadharNumber"
-              {...register('aadharNumber', {
-                required: 'Aadhar number is required',
-                pattern: {
-                  value: /^[0-9]{12}$/,
-                  message: 'Enter a valid 12-digit Aadhar number',
-                },
-              })}
+              {...register('aadharNumber')}
               placeholder="123456789012"
             />
             {errors.aadharNumber && (
@@ -464,14 +519,14 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
             <Label htmlFor="passportNumber">Passport Number</Label>
             <Input
               id="passportNumber"
-              {...register('passportNumber', {
-                pattern: {
-                  value: /^[A-Z]{1}[0-9]{7}$/,
-                  message: 'Enter a valid passport number (e.g., A1234567)',
-                },
-              })}
+              {...register('passportNumber')}
               placeholder="A1234567"
               className="uppercase"
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase();
+                setValue('passportNumber', value);
+                if (value) trigger('passportNumber');
+              }}
             />
             {errors.passportNumber && (
               <p className="text-sm text-destructive">{errors.passportNumber.message}</p>
@@ -505,6 +560,11 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
           minItems={1}
           maxItems={5}
         />
+        {errors.emergencyContacts && (
+          <p className="text-sm text-destructive">
+            {errors.emergencyContacts.message}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -29,75 +29,11 @@ interface PromotionHistoryFormProps {
   employeeId?: string;
 }
 
-// Dummy data for demonstration
-const dummyEvents: EventHistoryItem[] = [
-  {
-    id: '1',
-    employeeId: '',
-    date: '2024-01-15',
-    type: EventType.JOINING,
-    oldRole: '',
-    newRole: 'Junior Software Engineer',
-    oldDepartment: '',
-    newDepartment: 'Engineering',
-    reason: 'Joined the company',
-    effectiveDate: '2024-01-15',
-    order: 1,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: '2',
-    employeeId: '',
-    date: '2024-06-01',
-    type: EventType.PROMOTION,
-    oldRole: 'Junior Software Engineer',
-    newRole: 'Software Engineer',
-    oldDepartment: 'Engineering',
-    newDepartment: 'Engineering',
-    reason: 'Excellent performance and consistent delivery',
-    effectiveDate: '2024-06-01',
-    order: 2,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: '3',
-    employeeId: '',
-    date: '2025-01-10',
-    type: EventType.PROMOTION,
-    oldRole: 'Software Engineer',
-    newRole: 'Senior Software Engineer',
-    oldDepartment: 'Engineering',
-    newDepartment: 'Engineering',
-    reason: 'Leadership skills and technical expertise',
-    effectiveDate: '2025-01-10',
-    order: 3,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: '4',
-    employeeId: '',
-    date: '2025-09-15',
-    type: EventType.TRANSFER,
-    oldRole: 'Senior Software Engineer',
-    newRole: 'Senior Software Engineer',
-    oldDepartment: 'Engineering',
-    newDepartment: 'Product Development',
-    reason: 'Department restructuring',
-    effectiveDate: '2025-09-15',
-    order: 4,
-    createdAt: '',
-    updatedAt: '',
-  },
-];
-
 export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHistoryFormProps) {
   const { watch, setValue } = form;
   const { searchEventHistory } = useUserManagement();
   
-  const items = watch('items') || dummyEvents;
+  const items = watch('items') || [];
   const [activeView, setActiveView] = useState<'timeline' | 'edit'>('timeline');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventHistoryItem | null>(null);
@@ -112,6 +48,7 @@ export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHis
   const [oldDepartment, setOldDepartment] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
   const [reason, setReason] = useState('');
+  const [modalErrors, setModalErrors] = useState<string[]>([]);
 
   const fetchEventHistory = async () => {
     if (employeeId) {
@@ -222,19 +159,30 @@ export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHis
   };
 
   const handleSaveEvent = () => {
-    if (!eventDate || !effectiveDate || !newRole) return;
+    // Validate required fields
+    const errors: string[] = [];
+    if (!eventDate) errors.push('Event date is required');
+    if (!effectiveDate) errors.push('Effective date is required');
+    if (!newRole || newRole.trim() === '') errors.push('New role is required');
+    
+    if (errors.length > 0) {
+      setModalErrors(errors);
+      return;
+    }
+    
+    setModalErrors([]);
 
     const newEvent: EventHistoryItem = {
       id: editingEvent?.id || `event-${Date.now()}`,
       employeeId: employeeId || '',
-      date: eventDate.toISOString(),
+      date: eventDate?.toISOString() || new Date().toISOString(),
       type: eventType,
       oldRole,
       newRole,
       oldDepartment,
       newDepartment,
       reason,
-      effectiveDate: effectiveDate.toISOString(),
+      effectiveDate: effectiveDate?.toISOString() || new Date().toISOString(),
       order: editingEvent?.order || items.length + 1,
       createdAt: editingEvent?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -390,6 +338,15 @@ export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHis
                   Record employee career events, promotions, transfers, and other milestones
                 </DialogDescription>
               </DialogHeader>
+              {modalErrors.length > 0 && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                  <ul className="list-disc list-inside space-y-1 text-sm text-destructive">
+                    {modalErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -475,13 +432,13 @@ export function PromotionHistoryFormComponent({ form, employeeId }: PromotionHis
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={handleCloseModal}>
+                <Button variant="outline" onClick={() => {
+                  handleCloseModal();
+                  setModalErrors([]);
+                }}>
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleSaveEvent}
-                  disabled={!eventDate || !effectiveDate || !newRole}
-                >
+                <Button onClick={handleSaveEvent}>
                   {editingEvent ? 'Update' : 'Add'} Event
                 </Button>
               </DialogFooter>

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
 import { JobDetails, EmployeeType } from "../../types/onboarding.types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Zod schema for JobDetails validation
+export const jobDetailsSchema = z.object({
+  id: z.string().min(1, "Employee ID is required"),
+  email: z.string().min(1, "Official email is required").email("Invalid email address"),
+  phone: z.string().min(1, "Primary phone is required").regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number"),
+  secondaryPhone: z.string().regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number").optional().or(z.literal("")),
+  designation: z.string().min(1, "Designation is required"),
+  employeeType: z.nativeEnum(EmployeeType, { required_error: "Employee type is required" }),
+  workLocation: z.string().min(1, "Work location is required"),
+  reportingManager: z.string().min(1, "Reporting manager is required"),
+  joiningDate: z.string().min(1, "Joining date is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  celebrationDOB: z.string().optional(),
+  sameAsDOB: z.boolean().optional(),
+  shift: z.string().min(1, "Shift is required"),
+  probationPeriod: z.number().min(0, "Must be 0 or greater").max(12, "Cannot exceed 12 months"),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
 
 interface JobDetailsFormProps {
   form: UseFormReturn<JobDetails>;
@@ -154,6 +175,18 @@ export function JobDetailsFormComponent({
   const { getJobDetailsById } = useUserManagement();
   const [isLoading, setIsLoading] = useState(false);
 
+  // All hooks must be called before any conditional returns
+  const {
+    register,
+    watch,
+    setValue,
+    formState: { errors },
+    trigger,
+  } = form;
+
+  const sameAsDOB = watch("sameAsDOB");
+  const dateOfBirth = watch("dateOfBirth");
+
   const fetchJobDetails = async () => {
     if (employeeId) {
       setIsLoading(true);
@@ -200,16 +233,6 @@ export function JobDetailsFormComponent({
     );
   }
 
-  const {
-    register,
-    watch,
-    setValue,
-    formState: { errors },
-  } = form;
-
-  const sameAsDOB = watch("sameAsDOB");
-  const dateOfBirth = watch("dateOfBirth");
-
   // Handle sameAsDOB checkbox
   const handleSameAsDOBChange = (checked: boolean) => {
     setValue("sameAsDOB", checked);
@@ -233,6 +256,7 @@ export function JobDetailsFormComponent({
                 required: "Employee ID is required",
               })}
               placeholder="EMP001"
+              disabled
             />
             {errors.id && (
               <p className="text-sm text-destructive">
@@ -275,7 +299,10 @@ export function JobDetailsFormComponent({
             </Label>
             <Combobox
               value={watch("designation")}
-              onChange={(value) => setValue("designation", value)}
+              onChange={(value) => {
+                setValue("designation", value);
+                trigger("designation");
+              }}
               options={designations}
               placeholder="Select designation"
               searchPlaceholder="Search designation..."
@@ -293,7 +320,10 @@ export function JobDetailsFormComponent({
             </Label>
             <Select
               value={watch("employeeType")}
-              onValueChange={(value) => setValue("employeeType", value as EmployeeType)}
+              onValueChange={(value) => {
+                setValue("employeeType", value as EmployeeType);
+                trigger("employeeType");
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select employee type" />
@@ -318,7 +348,10 @@ export function JobDetailsFormComponent({
             </Label>
             <Combobox
               value={watch("workLocation")}
-              onChange={(value) => setValue("workLocation", value)}
+              onChange={(value) => {
+                setValue("workLocation", value);
+                trigger("workLocation");
+              }}
               options={locations}
               placeholder="Select location"
               searchPlaceholder="Search location..."
@@ -336,7 +369,10 @@ export function JobDetailsFormComponent({
             </Label>
             <Combobox
               value={watch("reportingManager")}
-              onChange={(value) => setValue("reportingManager", value)}
+              onChange={(value) => {
+                setValue("reportingManager", value);
+                trigger("reportingManager");
+              }}
               options={managers}
               placeholder="Select manager"
               searchPlaceholder="Search manager..."
@@ -354,7 +390,10 @@ export function JobDetailsFormComponent({
             </Label>
             <Select
               value={watch("shift")}
-              onValueChange={(value) => setValue("shift", value)}
+              onValueChange={(value) => {
+                setValue("shift", value);
+                trigger("shift");
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select shift" />
@@ -382,6 +421,7 @@ export function JobDetailsFormComponent({
               type="number"
               {...register("probationPeriod", {
                 required: "Probation period is required",
+                valueAsNumber: true,
                 min: { value: 0, message: "Must be 0 or greater" },
                 max: { value: 12, message: "Cannot exceed 12 months" },
               })}
@@ -409,9 +449,10 @@ export function JobDetailsFormComponent({
                   ? new Date(watch("joiningDate"))
                   : undefined
               }
-              onSelect={(date) =>
-                setValue("joiningDate", date?.toISOString() || "")
-              }
+              onSelect={(date) => {
+                setValue("joiningDate", date?.toISOString() || "");
+                trigger("joiningDate");
+              }}
               placeholder="Select joining date"
             />
             {errors.joiningDate && (
@@ -434,6 +475,7 @@ export function JobDetailsFormComponent({
               onSelect={(date) => {
                 const isoDate = date?.toISOString() || "";
                 setValue("dateOfBirth", isoDate);
+                trigger("dateOfBirth");
                 if (sameAsDOB) {
                   setValue("celebrationDOB", isoDate);
                 }

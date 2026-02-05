@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,6 +12,18 @@ import {
 } from "@/components/ui/select";
 import { UserDetails, UserStatus } from "../../types/onboarding.types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
+
+// Zod schema for UserDetails validation
+export const userDetailsSchema = z.object({
+  id: z.string().min(1, "Employee ID is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  phone: z.string().min(1, "Phone number is required"),
+  status: z.nativeEnum(UserStatus, { required_error: "Status is required" }),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
 
 interface UserDetailsFormProps {
   form: UseFormReturn<UserDetails>;
@@ -28,6 +41,7 @@ export function UserDetailsFormComponent({
     formState: { errors },
     setValue,
     watch,
+    trigger,
   } = form;
 
   const { getUserDetailsById } = useUserManagement();
@@ -92,7 +106,10 @@ export function UserDetailsFormComponent({
           <Label htmlFor="status">Status *</Label>
           <Select
             value={watch("status")}
-            onValueChange={(value) => setValue("status", value as UserStatus)}
+            onValueChange={(value) => {
+              setValue("status", value as UserStatus);
+              trigger("status");
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />

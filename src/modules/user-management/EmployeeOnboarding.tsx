@@ -15,16 +15,17 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BankingDetailsFormComponent } from "./components/onboarding/BankingDetailsForm";
+import { BankingDetailsFormComponent, bankingDetailsSchema } from "./components/onboarding/BankingDetailsForm";
 import { DocumentPoolFormComponent } from "./components/onboarding/DocumentPoolForm";
-import { EmploymentHistoryFormComponent } from "./components/onboarding/EmploymentHistoryForm";
-import { GeneralDetailsFormComponent } from "./components/onboarding/GeneralDetailsForm";
-import { JobDetailsFormComponent } from "./components/onboarding/JobDetailsForm";
+import { EmploymentHistoryFormComponent, employmentHistorySchema } from "./components/onboarding/EmploymentHistoryForm";
+import { GeneralDetailsFormComponent, generalDetailsSchema } from "./components/onboarding/GeneralDetailsForm";
+import { JobDetailsFormComponent, jobDetailsSchema } from "./components/onboarding/JobDetailsForm";
 import { OnboardingTabsNavigation } from "./components/onboarding/OnboardingTabsNavigation";
 import { PromotionHistoryFormComponent } from "./components/onboarding/PromotionHistoryForm";
-import { SkillsSetFormComponent } from "./components/onboarding/SkillsSetForm";
-import { UserDetailsFormComponent } from "./components/onboarding/UserDetailsForm";
+import { SkillsSetFormComponent, skillsSetSchema } from "./components/onboarding/SkillsSetForm";
+import { UserDetailsFormComponent, userDetailsSchema } from "./components/onboarding/UserDetailsForm";
 import {
   BankingDetails,
   DocumentPool,
@@ -59,6 +60,7 @@ export function EmployeeOnboarding() {
 
   // Form instances for each tab
   const userDetailsForm = useForm<UserDetails>({
+    resolver: zodResolver(userDetailsSchema),
     defaultValues: {
       id: "",
       firstName: "",
@@ -72,6 +74,7 @@ export function EmployeeOnboarding() {
   });
 
   const jobDetailsForm = useForm<JobDetails>({
+    resolver: zodResolver(jobDetailsSchema),
     defaultValues: {
       id: "",
       email: "",
@@ -93,6 +96,7 @@ export function EmployeeOnboarding() {
   });
 
   const generalDetailsForm = useForm<GeneralDetails>({
+    resolver: zodResolver(generalDetailsSchema),
     defaultValues: {
       id: "",
       firstName: "",
@@ -107,7 +111,14 @@ export function EmployeeOnboarding() {
       contactAddress: "",
       permanentAddress: "",
       sameAsContactAddress: false,
-      emergencyContacts: [],
+      emergencyContacts: [
+        {
+          id: '',
+          name: '',
+          relation: '',
+          phone: '',
+        },
+      ],
       personalEmail: "",
       nationality: "",
       physicallyChallenged: false,
@@ -120,6 +131,7 @@ export function EmployeeOnboarding() {
   });
 
   const bankingDetailsForm = useForm<BankingDetails>({
+    resolver: zodResolver(bankingDetailsSchema),
     defaultValues: {
       id: "",
       employeeId: "",
@@ -134,6 +146,7 @@ export function EmployeeOnboarding() {
   });
 
   const employmentHistoryForm = useForm<EmploymentHistory>({
+    resolver: zodResolver(employmentHistorySchema),
     defaultValues: {
       items: [],
       viewMode: "timeline",
@@ -141,6 +154,7 @@ export function EmployeeOnboarding() {
   });
 
   const skillsSetForm = useForm<SkillsSetForm>({
+    resolver: zodResolver(skillsSetSchema),
     defaultValues: {
       items: [],
       viewMode: "view",
@@ -244,6 +258,8 @@ export function EmployeeOnboarding() {
       "job-details",
       "banking-details",
       "general-details",
+      "employment-history",
+      "skills-set",
     ];
 
     // Validate form only for implemented forms
@@ -257,6 +273,10 @@ export function EmployeeOnboarding() {
         isValid = await bankingDetailsForm.trigger();
       } else if (activeTab === "general-details") {
         isValid = await generalDetailsForm.trigger();
+      } else if (activeTab === "employment-history") {
+        isValid = await employmentHistoryForm.trigger();
+      } else if (activeTab === "skills-set") {
+        isValid = await skillsSetForm.trigger();
       }
     }
 
@@ -287,7 +307,23 @@ export function EmployeeOnboarding() {
           }
         } else if (employeeId) {
           // Update existing user using updateUser
-          await updateUser(employeeId, formData);
+          // Check if employeeId has changed
+          const currentEmployeeId = formData.id;
+          const employeeIdChanged = currentEmployeeId !== employeeId;
+          
+          const carrier: UserDetailsCarrier = {
+            ...formData,
+            createdAt: formData.createdAt || new Date().toISOString(),
+            employeeIdChanged: employeeIdChanged,
+          };
+          
+          await updateUser(employeeId, carrier);
+          
+          // If employeeId changed, update URL params
+          if (employeeIdChanged) {
+            setUserId(currentEmployeeId);
+            setSearchParams({ mode: "edit", id: currentEmployeeId });
+          }
         }
       } else {
         // All other tabs - use updateUser
@@ -319,9 +355,13 @@ export function EmployeeOnboarding() {
           default:
             return;
         }
+         const finalPayload: any = {
+            ...formData,
+            updatedAt: new Date().toISOString(),
+          };
 
         // Update user with form data from any tab
-        await updateUser(employeeId, formData);
+        await updateUser(employeeId, finalPayload);
       }
     } catch (error) {
       console.error("Error submitting form:", error);

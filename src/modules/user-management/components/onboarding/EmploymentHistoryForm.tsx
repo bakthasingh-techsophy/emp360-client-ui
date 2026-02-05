@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { EmploymentHistory, EmploymentHistoryItem } from '../../types/onboarding.types';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
@@ -16,6 +17,39 @@ import { Briefcase, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+// Zod schema for EmploymentHistory validation
+export const employmentHistorySchema = z.object({
+  items: z.array(z.object({
+    id: z.string().optional(),
+    employeeId: z.string().optional(),
+    companyName: z.string(),
+    role: z.string(),
+    location: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+    tenure: z.string().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  })).refine((items) => {
+    // If no items, validation passes
+    if (items.length === 0) return true;
+    
+    // Every row must have all required fields filled
+    return items.every(item => 
+      item.companyName && item.companyName.trim() !== '' &&
+      item.role && item.role.trim() !== '' &&
+      item.location && item.location.trim() !== '' &&
+      item.startDate && item.startDate.trim() !== '' &&
+      item.endDate && item.endDate.trim() !== ''
+    );
+  }, {
+    message: "All employment history entries must have complete information (company name, role, location, start date, and end date)"
+  }),
+  viewMode: z.enum(['timeline', 'edit']).optional(),
+});
 
 interface EmploymentHistoryFormProps {
   form: UseFormReturn<EmploymentHistory>;
@@ -23,7 +57,7 @@ interface EmploymentHistoryFormProps {
 }
 
 export function EmploymentHistoryFormComponent({ form, employeeId }: EmploymentHistoryFormProps) {
-  const { watch, setValue } = form;
+  const { watch, setValue, formState: { errors } } = form;
   const { searchEmploymentHistory } = useUserManagement();
   
   const items = watch('items') || [];
@@ -232,6 +266,18 @@ export function EmploymentHistoryFormComponent({ form, employeeId }: EmploymentH
 
         {/* Edit Mode */}
         <TabsContent value="edit" className="mt-6">
+          {/* Validation Errors Section */}
+          {errors.items && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {typeof errors.items.message === 'string' 
+                  ? errors.items.message 
+                  : errors.items.root?.message || 'All employment history entries must have complete information (company name, role, location, start date, and end date)'}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <EditableItemsTable
             columns={columns}
             items={items}

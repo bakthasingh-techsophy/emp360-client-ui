@@ -120,12 +120,14 @@ export interface UserDetailsSnapshot {
 
 // User Details Carrier - DTO for API submission
 export interface UserDetailsCarrier {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   status: UserStatus;
   createdAt: string;
+  employeeIdChanged?: boolean; // Internal flag to indicate employeeId has changed
 }
 
 // Job Details - Professional work information (Backend aligned with JobDetails.java)

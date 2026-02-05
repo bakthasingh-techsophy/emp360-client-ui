@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { SkillsSetForm, SkillItem, CertificationType } from '../../types/onboarding.types';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable/EditableItemsTable';
@@ -13,6 +14,35 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Award, Link as LinkIcon, FileText } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+// Zod schema for SkillsSet validation
+export const skillsSetSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().optional(),
+    employeeId: z.string().optional(),
+    name: z.string(),
+    certificationType: z.nativeEnum(CertificationType).optional(),
+    certificationUrl: z.string().optional(),
+    certificationFile: z.any().optional(),
+    certificationFileName: z.string().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  })).refine((items) => {
+    // If no items, validation passes
+    if (items.length === 0) return true;
+    
+    // Every row must have all required fields filled
+    return items.every(item => 
+      item.name && item.name.trim() !== '' &&
+      item.certificationType !== undefined
+    );
+  }, {
+    message: "All skill entries must have a skill name and certification type"
+  }),
+  viewMode: z.enum(['view', 'edit']).optional(),
+});
 
 interface SkillsSetFormProps {
   form: UseFormReturn<SkillsSetForm>;
@@ -20,7 +50,7 @@ interface SkillsSetFormProps {
 }
 
 export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps) {
-  const { watch, setValue } = form;
+  const { watch, setValue, formState: { errors } } = form;
   const { getSkillById } = useUserManagement();
   
   const items = watch('items') || [];
@@ -91,7 +121,9 @@ export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps)
         </div>
       </div>
 
-      <Tabs value={activeView} onValueChange={(value) => setActiveView(value as any)}>
+      <Tabs value={activeView} onValueChange={(value) => {
+        setActiveView(value as any);
+      }}>
         <TabsList>
           <TabsTrigger value="view">View Mode</TabsTrigger>
           <TabsTrigger value="edit">Edit Mode</TabsTrigger>
@@ -157,6 +189,18 @@ export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps)
         </TabsContent>
 
         <TabsContent value="edit" className="mt-6">
+          {/* Validation Errors Section */}
+          {errors.items && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {typeof errors.items.message === 'string' 
+                  ? errors.items.message 
+                  : errors.items.root?.message || 'All skill entries must have a skill name and certification type'}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <EditableItemsTable
             columns={columns}
             items={items}
@@ -167,7 +211,9 @@ export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps)
           />
           {items.length > 0 && (
             <div className="mt-4 flex justify-end">
-              <Button variant="outline" onClick={() => setActiveView('view')}>
+              <Button variant="outline" onClick={() => {
+                setActiveView('view');
+              }}>
                 View Skills
               </Button>
             </div>

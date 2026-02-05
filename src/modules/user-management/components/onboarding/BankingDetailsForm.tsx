@@ -14,9 +14,23 @@
  */
 
 import { UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { BankingDetails } from '../../types/onboarding.types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+// Zod schema for BankingDetails validation
+export const bankingDetailsSchema = z.object({
+  id: z.string().optional(),
+  employeeId: z.string().optional(),
+  accountHolderName: z.string().min(3, "Account holder name is required (min 3 characters)"),
+  accountNumber: z.string().regex(/^[0-9]{9,18}$/, "Enter a valid account number (9-18 digits)"),
+  ifscCode: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Enter a valid IFSC code (e.g., HDFC0001234)"),
+  bankName: z.string().min(3, "Bank name is required (min 3 characters)"),
+  branchName: z.string().min(3, "Branch name is required (min 3 characters)"),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
 
 interface BankingDetailsFormProps {
   form: UseFormReturn<BankingDetails>;
