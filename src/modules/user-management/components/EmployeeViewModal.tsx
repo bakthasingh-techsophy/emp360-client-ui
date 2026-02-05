@@ -118,38 +118,14 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not available';
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
   };
-
-  // Mock data for additional details (in real app, fetch from API)
-  const mockJobDetails = {
-    joiningDate: employee.joiningDate,
-    dateOfBirth: '1990-05-15',
-    panNumber: 'ABCDE1234F',
-    aadharNumber: '1234 5678 9012',
-  };
-
-  const mockEmergencyContact = {
-    name: 'Sarah Martinez',
-    relation: 'Spouse',
-    phone: '+1 (555) 987-6543',
-  };
-
-  const mockSkills = [
-    'JavaScript',
-    'React',
-    'TypeScript',
-    'Node.js',
-    'Python',
-    'SQL',
-    'AWS',
-    'Docker',
-  ];
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -197,22 +173,26 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <InfoRowWithCopy icon={Mail} label="Email Address" value={employee.email} />
                 <InfoRowWithCopy icon={Phone} label="Phone Number" value={employee.phone} />
-                <InfoRowWithCopy icon={IdCard} label="Employee ID" value={employee.employeeId} />
+                <InfoRowWithCopy icon={IdCard} label="Employee ID" value={employee.id} />
                 <InfoRow 
                   icon={User} 
                   label="Reporting To" 
                   value={employee.reportingTo || 'Not Assigned'} 
                 />
-                <InfoRowWithCopy 
-                  icon={Phone} 
-                  label="Emergency Contact" 
-                  value={mockEmergencyContact.phone} 
-                />
-                <InfoRow 
-                  icon={User} 
-                  label="Emergency Contact Person" 
-                  value={`${mockEmergencyContact.name} (${mockEmergencyContact.relation})`} 
-                />
+                {employee.emergencyContact && (
+                  <>
+                    <InfoRowWithCopy 
+                      icon={Phone} 
+                      label="Emergency Contact" 
+                      value={employee.emergencyContact.phone} 
+                    />
+                    <InfoRow 
+                      icon={User} 
+                      label="Emergency Contact Person" 
+                      value={`${employee.emergencyContact.name} (${employee.emergencyContact.relation})`} 
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -250,39 +230,48 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
                 <InfoRow 
                   icon={Calendar} 
                   label="Date of Joining" 
-                  value={formatDate(mockJobDetails.joiningDate)} 
+                  value={formatDate(employee.joiningDate)} 
                 />
-                <InfoRow 
-                  icon={Cake} 
-                  label="Date of Birth" 
-                  value={formatDate(mockJobDetails.dateOfBirth)} 
-                />
+                {employee.dateOfBirth && (
+                  <InfoRow 
+                    icon={Cake} 
+                    label="Date of Birth" 
+                    value={formatDate(employee.dateOfBirth)} 
+                  />
+                )}
               </div>
             </div>
 
             <Separator />
 
             {/* Identity Documents - Compact Grid */}
-            <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Identity Documents
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                <InfoRowWithCopy 
-                  icon={CreditCard} 
-                  label="PAN Number" 
-                  value={mockJobDetails.panNumber} 
-                />
-                <InfoRowWithCopy 
-                  icon={CreditCard} 
-                  label="Aadhar Number" 
-                  value={mockJobDetails.aadharNumber} 
-                />
-              </div>
-            </div>
-
-            <Separator />
+            {(employee.panNumber || employee.aadharNumber) && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Identity Documents
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    {employee.panNumber && (
+                      <InfoRowWithCopy 
+                        icon={CreditCard} 
+                        label="PAN Number" 
+                        value={employee.panNumber} 
+                      />
+                    )}
+                    {employee.aadharNumber && (
+                      <InfoRowWithCopy 
+                        icon={CreditCard} 
+                        label="Aadhar Number" 
+                        value={employee.aadharNumber} 
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Skills - Flex Wrap Layout */}
             <div>
@@ -290,9 +279,9 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
                 <Briefcase className="h-4 w-4" />
                 Skills & Expertise
               </h3>
-              {mockSkills.length > 0 ? (
+              {employee.skills && employee.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {mockSkills.map((skill, index) => (
+                  {employee.skills.map((skill, index) => (
                     <SkillBadge key={index} skill={skill} />
                   ))}
                 </div>

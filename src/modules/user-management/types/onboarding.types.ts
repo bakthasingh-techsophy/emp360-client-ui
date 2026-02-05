@@ -92,7 +92,7 @@ export interface UserDetails {
 export interface UserDetailsSnapshot {
   /** Internal unique identifier - this is the employeeId */
   id: string;
-
+  
   firstName: string;
   lastName: string;
   designation: string;
@@ -113,6 +113,16 @@ export interface UserDetailsSnapshot {
   location: string;
   joiningDate: string; // LocalDate as ISO string
   dateOfBirth?: string; // LocalDate as ISO string
+
+  /** Identity documents */
+  panNumber?: string;
+  aadharNumber?: string;
+
+  /** Emergency contact */
+  emergencyContact?: EmergencyContact;
+
+  /** Skills */
+  skills?: string[];
 
   /** Audit fields */
   createdAt: string; // ISO instant

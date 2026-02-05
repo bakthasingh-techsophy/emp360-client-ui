@@ -13,7 +13,7 @@ import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
-import { UserDetails, UserDetailsCarrier } from "@/modules/user-management/types/onboarding.types";
+import { UserDetails, UserDetailsCarrier, SkillItem, SkillItemCarrier } from "@/modules/user-management/types/onboarding.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
 
@@ -150,6 +150,75 @@ export const apiDeleteUser = async (
 };
 
 /**
+ * Create Skill
+ * POST /emp-user-management/v1/users/skills
+ * 
+ * Creates a new skill entry for an employee.
+ * 
+ * @param carrier - SkillItemCarrier with skill information
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<SkillItem>>
+ * 
+ * @example
+ * const response = await apiCreateSkill({
+ *   employeeId: 'EMP-001',
+ *   name: 'Java',
+ *   certificationType: CertificationType.NONE,
+ *   createdAt: new Date().toISOString()
+ * }, 'tenant-001');
+ */
+export const apiCreateSkill = async (
+  carrier: SkillItemCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<SkillItem>> => {
+  return apiRequest<SkillItem>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/skills`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Update Skill
+ * PATCH /emp-user-management/v1/users/skills/{skillId}?employeeId={employeeId}
+ * 
+ * Partially updates a skill entry - only provided fields are updated.
+ * Requires both skillId (path param) and employeeId (query param).
+ * 
+ * @param skillId - Skill ID to update
+ * @param employeeId - Employee ID (query parameter)
+ * @param payload - Map of fields to update (e.g., { name: "Advanced Java" })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<SkillItem>>
+ * 
+ * @example
+ * const response = await apiUpdateSkill('SKILL-123', 'EMP-001', {
+ *   name: 'Advanced Java',
+ *   updatedAt: new Date().toISOString()
+ * }, 'tenant-001');
+ */
+export const apiUpdateSkill = async (
+  skillId: string,
+  employeeId: string,
+  payload: UpdatePayload,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<SkillItem>> => {
+  return apiRequest<SkillItem>({
+    method: "PATCH",
+    endpoint: `${BASE_ENDPOINT}/skills/${skillId}?employeeId=${employeeId}`,
+    tenant,
+    accessToken,
+    body: payload,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const userManagementService = {
@@ -157,4 +226,6 @@ export const userManagementService = {
   apiUpdateUser,
   apiSearchUserSnapshots,
   apiDeleteUser,
+  apiCreateSkill,
+  apiUpdateSkill,
 };

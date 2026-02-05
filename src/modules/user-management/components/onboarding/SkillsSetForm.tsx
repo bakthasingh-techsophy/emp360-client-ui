@@ -100,7 +100,7 @@ export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
     try {
       if (editingItem && editingItem.id) {
         // Update existing - use record (plain object)
-        await updateSkill(editingItem.id, {
+        await updateSkill(editingItem.id, employeeId, {
           name,
           certificationType,
           certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,

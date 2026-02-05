@@ -31,7 +31,14 @@ import {
 } from '@/services/userDetailsService';
 
 // User Management Service
-import { apiOnboardUser, apiUpdateUser, apiSearchUserSnapshots, apiDeleteUser } from '@/services/userManagementService';
+import { 
+  apiOnboardUser, 
+  apiUpdateUser, 
+  apiSearchUserSnapshots, 
+  apiDeleteUser,
+  apiCreateSkill,
+  apiUpdateSkill,
+} from '@/services/userManagementService';
 
 // Employee Aggregate Service
 import {
@@ -94,9 +101,7 @@ import {
 
 // Skill Items Service
 import {
-  apiCreateSkill,
   apiGetSkillById,
-  apiUpdateSkill,
   apiDeleteSkill,
   apiSearchSkills,
   SkillItem,
@@ -212,7 +217,7 @@ interface UserManagementContextType {
   // Skill Items Methods
   createSkill: (carrier: SkillItemCarrier) => Promise<SkillItem | null>;
   getSkillById: (id: string) => Promise<SkillItem | null>;
-  updateSkill: (id: string, payload: UpdatePayload) => Promise<SkillItem | null>;
+  updateSkill: (id: string, employeeId: string, payload: UpdatePayload) => Promise<SkillItem | null>;
   refreshSkills: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<SkillItem> | null>;
   deleteSkill: (id: string) => Promise<boolean>;
 
@@ -786,9 +791,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<SkillItem | null>;
   };
 
-  const updateSkill = async (id: string, payload: UpdatePayload): Promise<SkillItem | null> => {
+  const updateSkill = async (id: string, employeeId: string, payload: UpdatePayload): Promise<SkillItem | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiUpdateSkill(id, payload, tenant, accessToken),
+      (tenant, accessToken) => apiUpdateSkill(id, employeeId, payload, tenant, accessToken),
       'Update Skill',
       'Skill updated successfully'
     ) as Promise<SkillItem | null>;
