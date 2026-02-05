@@ -15,6 +15,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { EventHistoryItemCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
@@ -58,13 +59,13 @@ export type UpdatePayload = Record<string, any>;
  * Create Event History
  * POST /emp-user-management/v1/event-history
  * 
- * @param item - EventHistoryItem with event data
+ * @param carrier - EventHistoryItemCarrier with event data
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<EventHistoryItem>>
  */
 export const apiCreateEventHistory = async (
-  item: EventHistoryItem,
+  carrier: EventHistoryItemCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<EventHistoryItem>> => {
@@ -73,7 +74,7 @@ export const apiCreateEventHistory = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 

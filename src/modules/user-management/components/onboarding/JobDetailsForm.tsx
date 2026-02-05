@@ -43,9 +43,10 @@ export const jobDetailsSchema = z.object({
   phone: z.string().min(1, "Primary phone is required").regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number"),
   secondaryPhone: z.string().regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number").optional().or(z.literal("")),
   designation: z.string().min(1, "Designation is required"),
+  department: z.string().optional(),
   employeeType: z.nativeEnum(EmployeeType, { required_error: "Employee type is required" }),
-  workLocation: z.string().min(1, "Work location is required"),
-  reportingManager: z.string().min(1, "Reporting manager is required"),
+  location: z.string().min(1, "Work location is required"),
+  reportingTo: z.string().min(1, "Reporting manager is required"),
   joiningDate: z.string().min(1, "Joining date is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   celebrationDOB: z.string().optional(),
@@ -71,6 +72,18 @@ const designations = [
   { value: "ui-ux-designer", label: "UI/UX Designer" },
   { value: "qa-engineer", label: "QA Engineer" },
   { value: "devops-engineer", label: "DevOps Engineer" },
+];
+
+const departments = [
+  { value: "engineering", label: "Engineering" },
+  { value: "product", label: "Product" },
+  { value: "design", label: "Design" },
+  { value: "qa", label: "Quality Assurance" },
+  { value: "devops", label: "DevOps" },
+  { value: "hr", label: "Human Resources" },
+  { value: "finance", label: "Finance" },
+  { value: "sales", label: "Sales" },
+  { value: "marketing", label: "Marketing" },
 ];
 
 const locations = [
@@ -198,9 +211,10 @@ export function JobDetailsFormComponent({
           phone: data.phone || "",
           secondaryPhone: data.secondaryPhone || "",
           designation: data.designation || "",
+          department: data.department || "",
           employeeType: data.employeeType || EmployeeType.FULL_TIME,
-          workLocation: data.workLocation || "",
-          reportingManager: data.reportingManager || "",
+          location: data.location || "",
+          reportingTo: data.reportingTo || "",
           joiningDate: data.joiningDate || "",
           dateOfBirth: data.dateOfBirth || "",
           celebrationDOB: data.celebrationDOB || "",
@@ -316,6 +330,27 @@ export function JobDetailsFormComponent({
 
           <div className="space-y-2">
             <Label>
+              Department
+            </Label>
+            <Combobox
+              value={watch("department")}
+              onChange={(value) => {
+                setValue("department", value);
+                trigger("department");
+              }}
+              options={departments}
+              placeholder="Select department"
+              searchPlaceholder="Search department..."
+            />
+            {errors.department && (
+              <p className="text-sm text-destructive">
+                {errors.department.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
               Employee Type <span className="text-destructive">*</span>
             </Label>
             <Select
@@ -347,18 +382,18 @@ export function JobDetailsFormComponent({
               Work Location <span className="text-destructive">*</span>
             </Label>
             <Combobox
-              value={watch("workLocation")}
+              value={watch("location")}
               onChange={(value) => {
-                setValue("workLocation", value);
-                trigger("workLocation");
+                setValue("location", value);
+                trigger("location");
               }}
               options={locations}
               placeholder="Select location"
               searchPlaceholder="Search location..."
             />
-            {errors.workLocation && (
+            {errors.location && (
               <p className="text-sm text-destructive">
-                {errors.workLocation.message}
+                {errors.location.message}
               </p>
             )}
           </div>
@@ -368,18 +403,18 @@ export function JobDetailsFormComponent({
               Reporting Manager <span className="text-destructive">*</span>
             </Label>
             <Combobox
-              value={watch("reportingManager")}
+              value={watch("reportingTo")}
               onChange={(value) => {
-                setValue("reportingManager", value);
-                trigger("reportingManager");
+                setValue("reportingTo", value);
+                trigger("reportingTo");
               }}
               options={managers}
               placeholder="Select manager"
               searchPlaceholder="Search manager..."
             />
-            {errors.reportingManager && (
+            {errors.reportingTo && (
               <p className="text-sm text-destructive">
-                {errors.reportingManager.message}
+                {errors.reportingTo.message}
               </p>
             )}
           </div>

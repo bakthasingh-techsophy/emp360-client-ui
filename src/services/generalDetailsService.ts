@@ -11,7 +11,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
-import { GeneralDetails } from "@/modules/user-management/types/onboarding.types";
+import { GeneralDetails, GeneralDetailsCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 
@@ -26,13 +26,13 @@ export type UpdatePayload = Record<string, any>;
  * Create General Details
  * POST /emp-user-management/v1/general-details
  * 
- * @param item - GeneralDetails with personal information
+ * @param carrier - GeneralDetailsCarrier with personal information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<GeneralDetails>>
  */
 export const apiCreateGeneralDetails = async (
-  item: GeneralDetails,
+  carrier: GeneralDetailsCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<GeneralDetails>> => {
@@ -41,7 +41,7 @@ export const apiCreateGeneralDetails = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 

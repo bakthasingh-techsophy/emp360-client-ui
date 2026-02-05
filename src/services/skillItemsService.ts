@@ -11,6 +11,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { SkillItemCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
@@ -32,19 +33,6 @@ export interface SkillItem {
   issuer?: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-/**
- * Skill Item Carrier
- * Used for creating new skill records
- */
-export interface SkillItemCarrier {
-  employeeId: string;
-  name: string;
-  certificationType: "NONE" | "URL" | "FILE";
-  certificationUrl?: string;
-  certificationFileName?: string;
-  createdAt: string; // ISO string
 }
 
 /**

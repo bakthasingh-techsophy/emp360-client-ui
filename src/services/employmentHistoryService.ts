@@ -15,6 +15,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { EmploymentHistoryItemCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
@@ -40,22 +41,6 @@ export interface EmploymentHistoryItem {
 }
 
 /**
- * Employment History Item Carrier
- * Used for creating new employment history records
- */
-export interface EmploymentHistoryItemCarrier {
-  employeeId: string;
-  companyName: string;
-  role: string;
-  location: string;
-  startDate: string; // ISO string
-  endDate: string; // ISO string
-  tenure: string;
-  order?: number; // Order for sorting
-  createdAt: string; // ISO string
-}
-
-/**
  * Bulk Operation Response Interface
  */
 export interface BulkOperationResponse {
@@ -71,13 +56,13 @@ export type UpdatePayload = Record<string, any>;
  * Create Employment History
  * POST /emp-user-management/v1/employment-history
  * 
- * @param item - EmploymentHistoryItem with employment data
+ * @param carrier - EmploymentHistoryItemCarrier with employment data
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<EmploymentHistoryItem>>
  */
 export const apiCreateEmploymentHistory = async (
-  item: EmploymentHistoryItem,
+  carrier: EmploymentHistoryItemCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<EmploymentHistoryItem>> => {
@@ -86,7 +71,7 @@ export const apiCreateEmploymentHistory = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 

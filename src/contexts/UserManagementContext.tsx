@@ -83,14 +83,34 @@ import {
   apiDeleteJobDetails,
 } from '@/services/jobDetailsService';
 
+// Banking Details Service
+import {
+  apiCreateBankingDetails,
+  apiGetBankingDetailsById,
+  apiUpdateBankingDetails,
+  apiSearchBankingDetails,
+  apiDeleteBankingDetails,
+} from '@/services/bankingDetailsService';
+
 // Skill Items Service
 import {
   apiCreateSkill,
   apiGetSkillById,
   apiUpdateSkill,
   apiDeleteSkill,
+  apiSearchSkills,
   SkillItem,
 } from '@/services/skillItemsService';
+
+// Document Pool Service
+import {
+  apiCreateDocument,
+  apiGetDocumentById,
+  apiUpdateDocument,
+  apiDeleteDocument,
+  apiSearchDocuments,
+  DocumentItem,
+} from '@/services/documentPoolService';
 
 // Keycloak User Service
 import {
@@ -104,7 +124,21 @@ import {
 // Types
 import Pagination from '@/types/pagination';
 import UniversalSearchRequest from '@/types/search';
-import { JobDetails, UserDetails, UserDetailsCarrier, UserDetailsSnapshot, GeneralDetails } from '@/modules/user-management/types/onboarding.types';
+import { 
+  JobDetails, 
+  UserDetails, 
+  UserDetailsCarrier, 
+  UserDetailsSnapshot, 
+  GeneralDetails,
+  GeneralDetailsCarrier,
+  JobDetailsCarrier,
+  EmploymentHistoryItemCarrier,
+  EventHistoryItemCarrier,
+  SkillItemCarrier,
+  DocumentItemCarrier,
+  BankingDetails,
+  BankingDetailsCarrier
+} from '@/modules/user-management/types/onboarding.types';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 /**
@@ -137,42 +171,57 @@ interface UserManagementContextType {
   deleteEmployeeAggregate: (employeeId: string) => Promise<boolean>;
 
   // Employment History Methods
-  createEmploymentHistory: (item: EmploymentHistoryItem) => Promise<EmploymentHistoryItem | null>;
+  createEmploymentHistory: (carrier: EmploymentHistoryItemCarrier) => Promise<EmploymentHistoryItem | null>;
   getEmploymentHistoryById: (id: string) => Promise<EmploymentHistoryItem | null>;
   updateEmploymentHistory: (id: string, payload: UpdatePayload) => Promise<EmploymentHistoryItem | null>;
-  searchEmploymentHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EmploymentHistoryItem> | null>;
+  refreshEmploymentHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EmploymentHistoryItem> | null>;
   bulkUpdateEmploymentHistory: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
   deleteEmploymentHistoryById: (id: string) => Promise<boolean>;
   bulkDeleteEmploymentHistoryByIds: (ids: string[]) => Promise<boolean>;
   bulkDeleteEmploymentHistoryByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
 
   // Event History Methods
-  createEventHistory: (item: EventHistoryItem) => Promise<EventHistoryItem | null>;
+  createEventHistory: (carrier: EventHistoryItemCarrier) => Promise<EventHistoryItem | null>;
   getEventHistoryById: (id: string) => Promise<EventHistoryItem | null>;
   updateEventHistory: (id: string, payload: UpdatePayload) => Promise<EventHistoryItem | null>;
-  searchEventHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EventHistoryItem> | null>;
+  refreshEventHistory: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EventHistoryItem> | null>;
   bulkUpdateEventHistory: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
   deleteEventHistoryById: (id: string) => Promise<boolean>;
   bulkDeleteEventHistoryByIds: (ids: string[]) => Promise<boolean>;
   bulkDeleteEventHistoryByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
 
   // General Details Methods
-  createGeneralDetails: (item: GeneralDetails) => Promise<GeneralDetails | null>;
+  createGeneralDetails: (carrier: GeneralDetailsCarrier) => Promise<GeneralDetails | null>;
   getGeneralDetailsById: (id: string) => Promise<GeneralDetails | null>;
   updateGeneralDetails: (id: string, payload: UpdatePayload) => Promise<GeneralDetails | null>;
   deleteGeneralDetails: (id: string) => Promise<boolean>;
 
   // Job Details Methods
-  createJobDetails: (item: JobDetails) => Promise<JobDetails | null>;
+  createJobDetails: (carrier: JobDetailsCarrier) => Promise<JobDetails | null>;
   getJobDetailsById: (id: string) => Promise<JobDetails | null>;
   updateJobDetails: (id: string, payload: UpdatePayload) => Promise<JobDetails | null>;
   deleteJobDetails: (id: string) => Promise<boolean>;
 
+  // Banking Details Methods
+  createBankingDetails: (carrier: BankingDetailsCarrier) => Promise<BankingDetails | null>;
+  getBankingDetailsById: (id: string) => Promise<BankingDetails | null>;
+  updateBankingDetails: (id: string, payload: UpdatePayload) => Promise<BankingDetails | null>;
+  refreshBankingDetails: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<BankingDetails> | null>;
+  deleteBankingDetails: (id: string) => Promise<boolean>;
+
   // Skill Items Methods
-  createSkill: (item: SkillItem) => Promise<SkillItem | null>;
+  createSkill: (carrier: SkillItemCarrier) => Promise<SkillItem | null>;
   getSkillById: (id: string) => Promise<SkillItem | null>;
   updateSkill: (id: string, payload: UpdatePayload) => Promise<SkillItem | null>;
+  refreshSkills: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<SkillItem> | null>;
   deleteSkill: (id: string) => Promise<boolean>;
+
+  // Document Pool Methods
+  createDocument: (carrier: DocumentItemCarrier) => Promise<DocumentItem | null>;
+  getDocumentById: (id: string) => Promise<DocumentItem | null>;
+  updateDocument: (id: string, payload: UpdatePayload) => Promise<DocumentItem | null>;
+  refreshDocuments: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<DocumentItem> | null>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
   // Keycloak User Methods
   createKeycloakUser: (item: KeycloakUserItem) => Promise<KeycloakUserItem | null>;
@@ -439,9 +488,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== EMPLOYMENT HISTORY METHODS ====================
 
-  const createEmploymentHistory = async (item: EmploymentHistoryItem): Promise<EmploymentHistoryItem | null> => {
+  const createEmploymentHistory = async (carrier: EmploymentHistoryItemCarrier): Promise<EmploymentHistoryItem | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiCreateEmploymentHistory(item, tenant, accessToken),
+      (tenant, accessToken) => apiCreateEmploymentHistory(carrier, tenant, accessToken),
       'Create Employment History',
       'Employment history created successfully'
     ) as Promise<EmploymentHistoryItem | null>;
@@ -463,14 +512,14 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<EmploymentHistoryItem | null>;
   };
 
-  const searchEmploymentHistory = async (
+  const refreshEmploymentHistory = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
     pageSize: number = 10
   ): Promise<Pagination<EmploymentHistoryItem> | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiSearchEmploymentHistory(searchRequest, page, pageSize, tenant, accessToken),
-      'Search Employment History',
+      'Refresh Employment History',
       ''
     ) as Promise<Pagination<EmploymentHistoryItem> | null>;
   };
@@ -520,9 +569,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== EVENT HISTORY METHODS ====================
 
-  const createEventHistory = async (item: EventHistoryItem): Promise<EventHistoryItem | null> => {
+  const createEventHistory = async (carrier: EventHistoryItemCarrier): Promise<EventHistoryItem | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiCreateEventHistory(item, tenant, accessToken),
+      (tenant, accessToken) => apiCreateEventHistory(carrier, tenant, accessToken),
       'Create Event History',
       'Event history created successfully'
     ) as Promise<EventHistoryItem | null>;
@@ -544,14 +593,14 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<EventHistoryItem | null>;
   };
 
-  const searchEventHistory = async (
+  const refreshEventHistory = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
     pageSize: number = 10
   ): Promise<Pagination<EventHistoryItem> | null> => {
     return executeApiCall(
       (tenant, accessToken) => apiSearchEventHistory(searchRequest, page, pageSize, tenant, accessToken),
-      'Search Event History',
+      'Refresh Event History',
       ''
     ) as Promise<Pagination<EventHistoryItem> | null>;
   };
@@ -601,9 +650,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== GENERAL DETAILS METHODS ====================
 
-  const createGeneralDetails = async (item: GeneralDetails): Promise<GeneralDetails | null> => {
+  const createGeneralDetails = async (carrier: GeneralDetailsCarrier): Promise<GeneralDetails | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiCreateGeneralDetails(item, tenant, accessToken),
+      (tenant, accessToken) => apiCreateGeneralDetails(carrier, tenant, accessToken),
       'Create General Details',
       'General details created successfully'
     ) as Promise<GeneralDetails | null>;
@@ -637,9 +686,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // ==================== JOB DETAILS METHODS ====================
 
-  const createJobDetails = async (item: JobDetails): Promise<JobDetails | null> => {
+  const createJobDetails = async (carrier: JobDetailsCarrier): Promise<JobDetails | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiCreateJobDetails(item, tenant, accessToken),
+      (tenant, accessToken) => apiCreateJobDetails(carrier, tenant, accessToken),
       'Create Job Details',
       'Job details created successfully'
     ) as Promise<JobDetails | null>;
@@ -671,11 +720,59 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== BANKING DETAILS METHODS ====================
+
+  const createBankingDetails = async (carrier: BankingDetailsCarrier): Promise<BankingDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateBankingDetails(carrier, tenant, accessToken),
+      'Create Banking Details',
+      'Banking details created successfully'
+    ) as Promise<BankingDetails | null>;
+  };
+
+  const getBankingDetailsById = async (id: string): Promise<BankingDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetBankingDetailsById(id, tenant, accessToken),
+      'Fetch Banking Details',
+      ''
+    ) as Promise<BankingDetails | null>;
+  };
+
+  const updateBankingDetails = async (id: string, payload: UpdatePayload): Promise<BankingDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateBankingDetails(id, payload, tenant, accessToken),
+      'Update Banking Details',
+      'Banking details updated successfully'
+    ) as Promise<BankingDetails | null>;
+  };
+
+  const refreshBankingDetails = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<BankingDetails> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchBankingDetails(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Banking Details',
+      ''
+    ) as Promise<Pagination<BankingDetails> | null>;
+  };
+
+  const deleteBankingDetails = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteBankingDetails(id, tenant, accessToken),
+      'Delete Banking Details',
+      'Banking details deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
   // ==================== SKILL ITEMS METHODS ====================
 
-  const createSkill = async (item: SkillItem): Promise<SkillItem | null> => {
+  const createSkill = async (carrier: SkillItemCarrier): Promise<SkillItem | null> => {
     return executeApiCall(
-      (tenant, accessToken) => apiCreateSkill(item, tenant, accessToken),
+      (tenant, accessToken) => apiCreateSkill(carrier, tenant, accessToken),
       'Create Skill',
       'Skill created successfully'
     ) as Promise<SkillItem | null>;
@@ -697,11 +794,63 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<SkillItem | null>;
   };
 
+  const refreshSkills = async (searchRequest: UniversalSearchRequest, page: number = 0, pageSize: number = 10): Promise<Pagination<SkillItem> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchSkills(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Skills',
+      ''
+    ) as Promise<Pagination<SkillItem> | null>;
+  };
+
   const deleteSkill = async (id: string): Promise<boolean> => {
     const result = await executeApiCall(
       (tenant, accessToken) => apiDeleteSkill(id, tenant, accessToken),
       'Delete Skill',
       'Skill deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== DOCUMENT POOL METHODS ====================
+
+  const createDocument = async (carrier: DocumentItemCarrier): Promise<DocumentItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateDocument(carrier, tenant, accessToken),
+      'Create Document',
+      'Document created successfully'
+    ) as Promise<DocumentItem | null>;
+  };
+
+  const getDocumentById = async (id: string): Promise<DocumentItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetDocumentById(id, tenant, accessToken),
+      'Fetch Document',
+      ''
+    ) as Promise<DocumentItem | null>;
+  };
+
+  const updateDocument = async (id: string, payload: UpdatePayload): Promise<DocumentItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateDocument(id, payload, tenant, accessToken),
+      'Update Document',
+      'Document updated successfully'
+    ) as Promise<DocumentItem | null>;
+  };
+
+  const refreshDocuments = async (searchRequest: UniversalSearchRequest, page: number = 0, pageSize: number = 10): Promise<Pagination<DocumentItem> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchDocuments(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Documents',
+      ''
+    ) as Promise<Pagination<DocumentItem> | null>;
+  };
+
+  const deleteDocument = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteDocument(id, tenant, accessToken),
+      'Delete Document',
+      'Document deleted successfully',
       true
     );
     return result as boolean;
@@ -770,7 +919,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     createEmploymentHistory,
     getEmploymentHistoryById,
     updateEmploymentHistory,
-    searchEmploymentHistory,
+    refreshEmploymentHistory,
     bulkUpdateEmploymentHistory,
     deleteEmploymentHistoryById,
     bulkDeleteEmploymentHistoryByIds,
@@ -780,7 +929,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     createEventHistory,
     getEventHistoryById,
     updateEventHistory,
-    searchEventHistory,
+    refreshEventHistory,
     bulkUpdateEventHistory,
     deleteEventHistoryById,
     bulkDeleteEventHistoryByIds,
@@ -798,11 +947,26 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     updateJobDetails,
     deleteJobDetails,
 
+    // Banking Details
+    createBankingDetails,
+    getBankingDetailsById,
+    updateBankingDetails,
+    refreshBankingDetails,
+    deleteBankingDetails,
+
     // Skills
     createSkill,
     getSkillById,
     updateSkill,
+    refreshSkills,
     deleteSkill,
+
+    // Documents
+    createDocument,
+    getDocumentById,
+    updateDocument,
+    refreshDocuments,
+    deleteDocument,
 
     // Keycloak Users
     createKeycloakUser,

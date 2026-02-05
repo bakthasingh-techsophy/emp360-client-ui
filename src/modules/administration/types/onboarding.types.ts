@@ -21,7 +21,7 @@ export interface JobDetailsForm {
   secondaryPhone: string;
   designation: string;
   employeeType: 'full-time' | 'part-time' | 'contract' | 'intern';
-  workLocation: string;
+  location: string;
   reportingManager: string;
   joiningDate: string;
   dateOfBirth: string;

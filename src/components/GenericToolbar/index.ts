@@ -14,6 +14,10 @@ export type {
   BulkAction,
   BulkActionType,
   BulkActionOption,
+  SortableField,
+  SortFieldType,
+  SortDirection,
+  CurrentSort,
 } from './types';
 export { DEFAULT_OPERATORS } from './types';
 export type { FilterControllerConfig, FilterControllerConnection } from './useFilterController';

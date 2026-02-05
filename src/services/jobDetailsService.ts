@@ -11,7 +11,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
-import { JobDetails } from "@/modules/user-management/types/onboarding.types";
+import { JobDetails, JobDetailsCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 
@@ -26,13 +26,13 @@ export type UpdatePayload = Record<string, any>;
  * Create Job Details
  * POST /emp-user-management/v1/job-details
  * 
- * @param item - JobDetails with employment information
+ * @param carrier - JobDetailsCarrier with employment information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<JobDetails>>
  */
 export const apiCreateJobDetails = async (
-  item: JobDetails,
+  carrier: JobDetailsCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<JobDetails>> => {
@@ -41,7 +41,7 @@ export const apiCreateJobDetails = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 

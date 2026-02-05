@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { DocumentPool, DocumentItem, DocumentType } from '../../types/onboarding.types';
+import { DocumentType } from '../../types/onboarding.types';
+import { DocumentItem } from '@/services/documentPoolService';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,11 +17,10 @@ import { FileText, Link as LinkIcon, Trash2, Upload, Download } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 
 interface DocumentPoolFormProps {
-  form: UseFormReturn<DocumentPool>;
   employeeId?: string;
 }
 
-export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolFormProps) {
+export function DocumentPoolFormComponent({ employeeId }: DocumentPoolFormProps) {
   const { refreshDocuments, createDocument, updateDocument, deleteDocument } = useUserManagement();
   
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -37,8 +36,14 @@ export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolForm
     
     setIsLoading(true);
     try {
-      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
-      const data = await refreshDocuments(filters, '', 0, 100);
+      const searchRequest = {
+        filters: {
+          and: {
+            employeeId: employeeId,
+          },
+        },
+      };
+      const data = await refreshDocuments(searchRequest, 0, 100);
       if (data && data.content) {
         setDocuments(data.content);
       }
@@ -49,39 +54,48 @@ export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolForm
 
   useEffect(() => {
     fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
   const handleAddDocument = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !docName) return;
 
-    // Create new - use carrier
-    // fileName is always required by backend, use docName for both URL and FILE types
-    await createDocument({
-      employeeId,
-      name: docName,
-      type: docType === DocumentType.URL ? "URL" : "FILE",
-      url: docType === DocumentType.URL ? docUrl : '',
-      fileName: docName, // Always populate fileName with document name
-      uploadedDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      // Create new - use carrier
+      // fileName is always required by backend, use docName for both URL and FILE types
+      await createDocument({
+        employeeId,
+        name: docName,
+        type: docType,
+        url: docType === DocumentType.URL ? docUrl : '',
+        fileName: docName, // Always populate fileName with document name
+        uploadedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      });
 
-    await fetchDocuments();
-    handleCloseModal();
+      await fetchDocuments();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error adding document:', error);
+    }
   };
 
   const handleEditDocument = async () => {
-    if (!editingDoc || !editingDoc.id) return;
+    if (!editingDoc || !editingDoc.id || !docName) return;
 
-    // Update existing - use record (plain object)
-    await updateDocument(editingDoc.id, {
-      name: docName,
-      type: docType,
-      url: docType === DocumentType.URL ? docUrl : editingDoc.url,
-    });
-    
-    await fetchDocuments();
-    handleCloseModal();
+    try {
+      // Update existing - use record (plain object)
+      await updateDocument(editingDoc.id, {
+        name: docName,
+        type: docType,
+        url: docType === DocumentType.URL ? docUrl : editingDoc.url,
+      });
+      
+      await fetchDocuments();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error editing document:', error);
+    }
   };
 
   const handleDeleteDocument = async (id: string) => {
@@ -95,7 +109,7 @@ export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolForm
     if (doc) {
       setEditingDoc(doc);
       setDocName(doc.name);
-      setDocType(doc.type);
+      setDocType(doc.type as DocumentType);
       setDocUrl(doc.url || '');
     }
     setIsModalOpen(true);
@@ -269,7 +283,7 @@ export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolForm
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteDocument(doc.id)}
+                      onClick={() => doc.id && handleDeleteDocument(doc.id)}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

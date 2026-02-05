@@ -87,9 +87,10 @@ export function EmployeeOnboarding() {
       phone: "",
       secondaryPhone: "",
       designation: "",
+      department: "",
       employeeType: EmployeeType.FULL_TIME,
-      workLocation: "",
-      reportingManager: "",
+      location: "",
+      reportingTo: "",
       joiningDate: "",
       dateOfBirth: "",
       celebrationDOB: "",
@@ -585,7 +586,6 @@ export function EmployeeOnboarding() {
                   </p>
                 </div>
                 <DocumentPoolFormComponent 
-                  form={documentPoolForm}
                   employeeId={employeeId || undefined}
                 />
               </Card>

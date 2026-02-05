@@ -3,38 +3,62 @@
  * Previous work experience with modal-based creation
  */
 
-import { useState, useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { z } from 'zod';
-import { format } from 'date-fns';
-import { EmploymentHistory, EmploymentHistoryItem } from '../../types/onboarding.types';
-import { useUserManagement } from '@/contexts/UserManagementContext';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Briefcase, Calendar as CalendarIcon, MapPin, Edit2, Trash2, Plus } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Timeline } from '@/components/timeline/Timeline';
+import { useState, useEffect } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
+import { format } from "date-fns";
+import {
+  EmploymentHistory,
+  EmploymentHistoryItem,
+} from "../../types/onboarding.types";
+import { useUserManagement } from "@/contexts/UserManagementContext";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import {
+  Briefcase,
+  Calendar as CalendarIcon,
+  MapPin,
+  Edit2,
+  Trash2,
+  Plus,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Timeline } from "@/components/timeline/Timeline";
 
 // Zod schema for EmploymentHistory validation
 export const employmentHistorySchema = z.object({
-  items: z.array(z.object({
-    id: z.string().optional(),
-    employeeId: z.string(),
-    companyName: z.string(),
-    role: z.string(),
-    location: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
-    tenure: z.string().optional(),
-    createdAt: z.string().optional(),
-    updatedAt: z.string().optional(),
-  })),
+  items: z.array(
+    z.object({
+      id: z.string().optional(),
+      employeeId: z.string(),
+      companyName: z.string(),
+      role: z.string(),
+      location: z.string(),
+      startDate: z.string(),
+      endDate: z.string(),
+      tenure: z.string().optional(),
+      createdAt: z.string().optional(),
+      updatedAt: z.string().optional(),
+    }),
+  ),
 });
 
 interface EmploymentHistoryFormProps {
@@ -42,34 +66,49 @@ interface EmploymentHistoryFormProps {
   employeeId?: string;
 }
 
-export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistoryFormProps) {
-  const { refreshEmploymentHistory, createEmploymentHistory, updateEmploymentHistory, deleteEmploymentHistoryById } = useUserManagement();
-  
+export function EmploymentHistoryFormComponent({
+  employeeId,
+}: EmploymentHistoryFormProps) {
+  const {
+    refreshEmploymentHistory,
+    createEmploymentHistory,
+    updateEmploymentHistory,
+    deleteEmploymentHistoryById,
+  } = useUserManagement();
+
   const [items, setItems] = useState<EmploymentHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<EmploymentHistoryItem | null>(null);
+  const [editingItem, setEditingItem] = useState<EmploymentHistoryItem | null>(
+    null,
+  );
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
-  
+
   // Modal form state
-  const [companyName, setCompanyName] = useState('');
-  const [role, setRole] = useState('');
-  const [location, setLocation] = useState('');
+  const [companyName, setCompanyName] = useState("");
+  const [role, setRole] = useState("");
+  const [location, setLocation] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   const fetchEmploymentHistory = async () => {
     if (!employeeId) return;
-    
+
     setIsLoading(true);
     try {
-      const filters = [
-        { id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }
-      ];
-      const data = await refreshEmploymentHistory(filters, '', 0, 100);
+      const searchRequest = {
+        filters: {
+          and: {
+            employeeId: employeeId,
+          },
+        },
+        sort: {
+          startDate: -1 as const, // Sort by startDate descending
+        },
+      };
+      const data = await refreshEmploymentHistory(searchRequest, 0, 100);
       if (data && data.content) {
-        // Items are already sorted by backend (startDate desc)
         setItems(data.content as any);
       }
     } finally {
@@ -79,24 +118,28 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
 
   useEffect(() => {
     fetchEmploymentHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
-  const calculateTenure = (start: Date | undefined, end: Date | undefined): string => {
-    if (!start || !end) return '';
-    
+  const calculateTenure = (
+    start: Date | undefined,
+    end: Date | undefined,
+  ): string => {
+    if (!start || !end) return "";
+
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     const years = Math.floor(diffDays / 365);
     const months = Math.floor((diffDays % 365) / 30);
     const days = Math.floor((diffDays % 365) % 30);
-    
+
     const parts = [];
     if (years > 0) parts.push(`${years}y`);
     if (months > 0) parts.push(`${months}m`);
     if (days > 0 && years === 0) parts.push(`${days}d`);
-    
-    return parts.length > 0 ? parts.join(' ') : '0d';
+
+    return parts.length > 0 ? parts.join(" ") : "0d";
   };
 
   const handleOpenModal = (item?: EmploymentHistoryItem) => {
@@ -114,9 +157,9 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
-    setCompanyName('');
-    setRole('');
-    setLocation('');
+    setCompanyName("");
+    setRole("");
+    setLocation("");
     setStartDate(undefined);
     setEndDate(undefined);
     setStartDateOpen(false);
@@ -127,8 +170,6 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
     if (!employeeId || !startDate || !endDate) return;
 
     const tenure = calculateTenure(startDate, endDate);
-    const order = items.length > 0 ? Math.max(...items.map(i => i.order || 0)) + 1 : 1;
-    
     if (editingItem && editingItem.id) {
       // Update existing - use record (plain object)
       await updateEmploymentHistory(editingItem.id, {
@@ -148,8 +189,6 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
         location,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        tenure,
-        order,
         createdAt: new Date().toISOString(),
       });
     }
@@ -160,7 +199,7 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
 
   const handleDelete = async (id: string) => {
     if (!id) return;
-    
+
     await deleteEmploymentHistoryById(id);
     await fetchEmploymentHistory();
   };
@@ -170,7 +209,9 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Loading employment history...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading employment history...
+          </p>
         </div>
       </div>
     );
@@ -194,7 +235,7 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingItem ? 'Edit Employment' : 'Add Employment'}
+                {editingItem ? "Edit Employment" : "Add Employment"}
               </DialogTitle>
               <DialogDescription>
                 Add details about your previous employment
@@ -247,7 +288,7 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
+                          !startDate && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -277,7 +318,7 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
+                          !endDate && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -310,9 +351,11 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!companyName || !role || !location || !startDate || !endDate}
+                disabled={
+                  !companyName || !role || !location || !startDate || !endDate
+                }
               >
-                {editingItem ? 'Update' : 'Add'}
+                {editingItem ? "Update" : "Add"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -323,22 +366,24 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
           <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No employment history added yet</p>
-          <p className="text-sm mt-2">Click "Add Employment" to add your work experience</p>
+          <p className="text-sm mt-2">
+            Click "Add Employment" to add your work experience
+          </p>
         </div>
       ) : (
         <>
           {/* Desktop Timeline View - hidden on mobile */}
           <div className="hidden md:block">
             <Timeline
-              items={items.map(item => ({
-                id: item.id || '',
-                type: 'employment',
+              items={items.map((item) => ({
+                id: item.id || "",
+                type: "employment",
                 timestamp: new Date(item.startDate),
                 data: item,
               }))}
               typeConfigs={[
                 {
-                  type: 'employment',
+                  type: "employment",
                   renderer: (timelineItem) => {
                     const item = timelineItem.data as EmploymentHistoryItem;
                     return (
@@ -346,13 +391,10 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between">
                             <div className="space-y-2 flex-1">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="font-mono text-xs">
-                                  #{item.order || 0}
-                                </Badge>
-                                <h4 className="font-semibold">{item.role}</h4>
-                              </div>
-                              <p className="text-sm font-medium text-muted-foreground">{item.companyName}</p>
+                              <h4 className="font-semibold">{item.role}</h4>
+                              <p className="text-sm font-medium text-muted-foreground">
+                                {item.companyName}
+                              </p>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
@@ -360,7 +402,15 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <CalendarIcon className="h-3 w-3" />
-                                  {format(new Date(item.startDate), 'dd MMM yyyy')} - {format(new Date(item.endDate), 'dd MMM yyyy')}
+                                  {format(
+                                    new Date(item.startDate),
+                                    "dd MMM yyyy",
+                                  )}{" "}
+                                  -{" "}
+                                  {format(
+                                    new Date(item.endDate),
+                                    "dd MMM yyyy",
+                                  )}
                                 </div>
                               </div>
                               {item.tenure && (
@@ -389,7 +439,7 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                     );
                   },
                   icon: { component: Briefcase },
-                  color: { dot: 'bg-blue-500/10', iconColor: 'text-blue-600' },
+                  color: { dot: "bg-blue-500/10", iconColor: "text-blue-600" },
                 },
               ]}
               autoSort={false}
@@ -404,13 +454,12 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                   <div className="flex items-start justify-between">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          #{item.order || 0}
-                        </Badge>
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                         <h4 className="font-semibold text-sm">{item.role}</h4>
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground">{item.companyName}</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {item.companyName}
+                      </p>
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
@@ -418,11 +467,16 @@ export function EmploymentHistoryFormComponent({ employeeId }: EmploymentHistory
                         </div>
                         <div className="flex items-center gap-1">
                           <CalendarIcon className="h-3 w-3" />
-                          {format(new Date(item.startDate), 'dd MMM yyyy')} - {format(new Date(item.endDate), 'dd MMM yyyy')}
+                          {format(
+                            new Date(item.startDate),
+                            "dd MMM yyyy",
+                          )} - {format(new Date(item.endDate), "dd MMM yyyy")}
                         </div>
                       </div>
                       {item.tenure && (
-                        <Badge variant="secondary" className="text-xs">{item.tenure}</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.tenure}
+                        </Badge>
                       )}
                     </div>
                     <div className="flex gap-1">

@@ -52,9 +52,15 @@ export function BankingDetailsFormComponent({ form, employeeId }: BankingDetails
   const fetchBankingDetails = async () => {
     if (employeeId) {
       setIsLoading(true);
-      // Build filter to search by employeeId
-      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
-      const result = await refreshBankingDetails(filters, '', 0, 1);
+      // Build proper UniversalSearchRequest to search by employeeId
+      const searchRequest = {
+        filters: {
+          and: {
+            employeeId: employeeId
+          }
+        }
+      };
+      const result = await refreshBankingDetails(searchRequest, 0, 1);
       
       // Get the first result if exists
       if (result && result.content && result.content.length > 0) {
@@ -79,6 +85,7 @@ export function BankingDetailsFormComponent({ form, employeeId }: BankingDetails
   // Fetch banking details when employeeId is available
   useEffect(() => {
     fetchBankingDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
   if (isLoading) {

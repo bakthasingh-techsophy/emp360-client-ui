@@ -274,6 +274,16 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       ),
     },
     {
+      accessorKey: 'dateOfBirth',
+      header: 'Date of Birth',
+      cell: ({ row }) => {
+        const dob = row.getValue('dateOfBirth') as string | undefined;
+        return (
+          <div className="text-sm">{dob ? formatDate(dob) : '-'}</div>
+        );
+      },
+    },
+    {
       id: 'actions',
       header: () => <div className="text-center">Actions</div>,
       cell: ({ row }) => {
@@ -386,6 +396,9 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
         }}
         paginationVariant="default"
         fixedPagination={true}
+        initialColumnVisibility={{
+          dateOfBirth: false,
+        }}
         selection={{
           enabled: selectionMode,
           getRowId: (user) => user?.id || '',

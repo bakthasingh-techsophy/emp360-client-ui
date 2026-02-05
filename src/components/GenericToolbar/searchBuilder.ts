@@ -1,22 +1,23 @@
-import { ActiveFilter } from './types';
-import { 
-  UniversalSearchRequest, 
-  FieldFilterValue, 
+import { ActiveFilter } from "./types";
+import {
+  UniversalSearchRequest,
+  FieldFilterValue,
   OperatorMap,
   DateFilter,
-  DateFilterType 
-} from '@/types/search';
+  DateFilterType,
+  SortMap,
+} from "@/types/search";
 
 /**
  * Builds a UniversalSearchRequest from GenericToolbar's ActiveFilter array
  * Maps operators to the structured format expected by backend QueryBuilderUtil
- * 
+ *
  * Backend expects:
  * {
  *   searchText: "keyword",
  *   searchFields: ["name", "email"],
  *   filters: {
- *     and: { 
+ *     and: {
  *       field1: { op: "eq", value: "value1" },
  *       field2: { op: "all", values: ["value2", "value3"] },
  *       field3: { op: "regex", pattern: "text", options: "i" }
@@ -30,7 +31,7 @@ import {
  *     endDate: "2025-10-31T23:59:59Z"
  *   }
  * }
- * 
+ *
  * Example with 'all' operator (includes all):
  * - ActiveFilter: { filterId: "userTypes", operator: "all", value: ["staff"] }
  * - Output: { filters: { and: { userTypes: { op: "all", values: ["staff"] } } } }
@@ -38,7 +39,8 @@ import {
 export function buildUniversalSearchRequest(
   activeFilters: ActiveFilter[],
   searchText?: string,
-  searchFields?: string[]
+  searchFields?: string[],
+  sort?: SortMap
 ): UniversalSearchRequest {
   const request: UniversalSearchRequest = {};
 
@@ -56,12 +58,14 @@ export function buildUniversalSearchRequest(
     const { filterId, operator, value } = filter;
 
     // Skip if no value (except for 'today' and 'exists' operators)
-    if (operator !== 'today' && operator !== 'exists') {
-      if (value === null || value === undefined || value === '') continue;
+    if (operator !== "today" && operator !== "exists") {
+      if (value === null || value === undefined || value === "") continue;
       if (Array.isArray(value) && value.length === 0) continue;
-      if (typeof value === 'object' && !Array.isArray(value)) {
+      if (typeof value === "object" && !Array.isArray(value)) {
         const objValue = value as any;
-        const hasValue = Object.values(objValue).some(v => v !== null && v !== undefined && v !== '');
+        const hasValue = Object.values(objValue).some(
+          (v) => v !== null && v !== undefined && v !== ""
+        );
         if (!hasValue) continue;
       }
     }
@@ -86,6 +90,10 @@ export function buildUniversalSearchRequest(
   if (dateFilter) {
     request.dateFilter = dateFilter;
   }
+  // Add sorting if provided
+  if (sort && Object.keys(sort).length > 0) {
+    request.sort = sort;
+  }
 
   return request;
 }
@@ -94,7 +102,7 @@ export function buildUniversalSearchRequest(
  * Checks if operator is a date operator
  */
 function isDateOperator(operator: string): operator is DateFilterType {
-  return ['today', 'on', '>=', '<=', 'between'].includes(operator);
+  return ["today", "on", ">=", "<=", "between"].includes(operator);
 }
 
 /**
@@ -102,39 +110,43 @@ function isDateOperator(operator: string): operator is DateFilterType {
  * Backend expects: { type, field, startDate?, endDate?, onDate? }
  * Dates must be ISO 8601 format (e.g., "2025-10-01T00:00:00Z")
  */
-function buildDateFilter(field: string, operator: DateFilterType, value: any): DateFilter {
+function buildDateFilter(
+  field: string,
+  operator: DateFilterType,
+  value: any
+): DateFilter {
   const dateFilter: DateFilter = {
     type: operator,
     field: field,
   };
 
-  if (operator === 'today') {
+  if (operator === "today") {
     // No additional fields needed - backend handles it
     return dateFilter;
   }
 
-  if (operator === 'on') {
+  if (operator === "on") {
     // Backend expects 'onDate' field
     const dateValue = value?.from || value;
     dateFilter.onDate = ensureISO8601(dateValue);
     return dateFilter;
   }
 
-  if (operator === '>=') {
+  if (operator === ">=") {
     // Backend expects 'startDate' field
     const dateValue = value?.from || value;
     dateFilter.startDate = ensureISO8601(dateValue);
     return dateFilter;
   }
 
-  if (operator === '<=') {
+  if (operator === "<=") {
     // Backend expects 'endDate' field
     const dateValue = value?.from || value;
     dateFilter.endDate = ensureISO8601(dateValue);
     return dateFilter;
   }
 
-  if (operator === 'between') {
+  if (operator === "between") {
     // Backend expects both 'startDate' and 'endDate'
     dateFilter.startDate = ensureISO8601(value?.from);
     dateFilter.endDate = ensureISO8601(value?.to);
@@ -149,12 +161,12 @@ function buildDateFilter(field: string, operator: DateFilterType, value: any): D
  * Backend expects: "2025-10-01T00:00:00Z"
  */
 function ensureISO8601(date: any): string {
-  if (!date) return '';
-  
+  if (!date) return "";
+
   // If already a string in ISO format, return as-is
-  if (typeof date === 'string') {
+  if (typeof date === "string") {
     // If it's already in ISO format with timezone, return it
-    if (date.includes('T') && date.includes('Z')) {
+    if (date.includes("T") && date.includes("Z")) {
       return date;
     }
     // If it's just a date string (YYYY-MM-DD), add time component
@@ -168,19 +180,19 @@ function ensureISO8601(date: any): string {
       return date;
     }
   }
-  
+
   // If it's a Date object or timestamp
   try {
     return new Date(date).toISOString();
   } catch {
-    return '';
+    return "";
   }
 }
 
 /**
  * Builds the appropriate FieldFilterValue based on operator and value
  * Matches backend QueryBuilderUtil.buildFieldCriteria() expectations:
- * 
+ *
  * 1. Structured operator map: { op: "all", values: [...] } or { op: "eq", value: ... }
  * 2. Collection -> defaults to $in (backward compatibility)
  * 3. String with "regex:" prefix -> regex filter
@@ -188,53 +200,53 @@ function ensureISO8601(date: any): string {
  */
 function buildFilterValue(operator: string, value: any): FieldFilterValue {
   // Text operators
-  if (operator === 'regex') {
+  if (operator === "regex") {
     // Backend expects: { op: "regex", pattern: "text", options: "i" }
     const operatorMap: OperatorMap = {
-      op: 'regex',
+      op: "regex",
       pattern: value,
-      options: 'i', // case-insensitive by default
+      options: "i", // case-insensitive by default
     };
     return operatorMap;
   }
 
   // Comparison operators (eq, lt, lte, gt, gte)
-  if (['eq', 'lt', 'lte', 'gt', 'gte'].includes(operator)) {
+  if (["eq", "lt", "lte", "gt", "gte"].includes(operator)) {
     // Backend expects: { op: "eq", value: ... }
     const operatorMap: OperatorMap = {
-      op: operator as 'eq' | 'lt' | 'lte' | 'gt' | 'gte',
+      op: operator as "eq" | "lt" | "lte" | "gt" | "gte",
       value: value,
     };
     return operatorMap;
   }
 
   // Collection operators (in, all, nin)
-  if (['in', 'all', 'nin'].includes(operator)) {
+  if (["in", "all", "nin"].includes(operator)) {
     // Backend expects: { op: "in", values: [...] }
     const values = Array.isArray(value) ? value : [value];
     const operatorMap: OperatorMap = {
-      op: operator as 'in' | 'all' | 'nin',
+      op: operator as "in" | "all" | "nin",
       values: values,
     };
     return operatorMap;
   }
 
   // Size operator
-  if (operator === 'size') {
+  if (operator === "size") {
     // Backend expects: { op: "size", value: number }
     const operatorMap: OperatorMap = {
-      op: 'size',
+      op: "size",
       value: Number(value),
     };
     return operatorMap;
   }
 
   // Exists operator
-  if (operator === 'exists') {
+  if (operator === "exists") {
     // Backend expects: { op: "exists", value: boolean }
     const operatorMap: OperatorMap = {
-      op: 'exists',
-      value: value === true || value === 'true',
+      op: "exists",
+      value: value === true || value === "true",
     };
     return operatorMap;
   }
@@ -248,15 +260,15 @@ function buildFilterValue(operator: string, value: any): FieldFilterValue {
 
 /**
  * Example usage in table components:
- * 
+ *
  * const searchRequest = buildUniversalSearchRequest(
  *   activeFilters,
  *   searchTerm,
  *   ['firstName', 'lastName', 'email', 'phone']
  * );
- * 
+ *
  * refreshUsers(searchRequest, selectedStudioScope);
- * 
+ *
  * Example output matching backend expectations:
  * {
  *   searchText: "john",

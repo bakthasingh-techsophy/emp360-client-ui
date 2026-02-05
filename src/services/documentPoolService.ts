@@ -12,6 +12,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { DocumentItemCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
@@ -34,21 +35,6 @@ export interface DocumentItem {
   fileSize?: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-/**
- * Document Item Carrier
- * Used for creating new document records
- */
-export interface DocumentItemCarrier {
-  employeeId: string;
-  name: string;
-  type: "URL" | "FILE";
-  url: string;
-  fileName: string;
-  fileSize?: string;
-  uploadedDate?: string;
-  createdAt: string; // ISO string
 }
 
 /**

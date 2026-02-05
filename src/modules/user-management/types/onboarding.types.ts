@@ -112,22 +112,129 @@ export interface UserDetailsSnapshot {
   /** Location & dates */
   location: string;
   joiningDate: string; // LocalDate as ISO string
+  dateOfBirth?: string; // LocalDate as ISO string
 
   /** Audit fields */
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }
 
-// User Details Carrier - DTO for API submission
+/**
+ * CARRIER TYPES - DTOs for API submissions (Create operations)
+ * These mirror the backend carrier models and are used to send data from frontend to backend
+ */
+
+// User Details Carrier - DTO for user creation
 export interface UserDetailsCarrier {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string;
+  employeeIdChanged?: boolean;
   status: UserStatus;
-  createdAt: string;
-  employeeIdChanged?: boolean; // Internal flag to indicate employeeId has changed
+  createdAt: string; // ISO instant
+}
+
+// Job Details Carrier - DTO for job details creation
+export interface JobDetailsCarrier {
+  officialEmail: string;
+  primaryPhone?: string;
+  secondaryPhone?: string;
+  designation: string;
+  department?: string;
+  employeeType: EmployeeType;
+  workLocation?: string;
+  reportingManager?: string;
+  joiningDate?: string;
+  dateOfBirth?: string;
+  celebrationDOB?: string;
+  sameAsDOB?: boolean;
+  shift?: string;
+  probationPeriod?: number;
+  createdAt: string; // ISO instant
+}
+
+// General Details Carrier - DTO for general details creation
+export interface GeneralDetailsCarrier {
+  firstName: string;
+  lastName: string;
+  officialEmail: string;
+  phone: string;
+  secondaryPhone?: string;
+  gender?: Gender;
+  bloodGroup?: string;
+  panNumber?: string;
+  aadharNumber?: string;
+  contactAddress?: string;
+  permanentAddress?: string;
+  sameAsContactAddress?: boolean;
+  emergencyContacts?: EmergencyContact[];
+  personalEmail?: string;
+  nationality?: string;
+  physicallyChallenged?: boolean;
+  passportNumber?: string;
+  passportExpiry?: string;
+  maritalStatus?: MaritalStatus;
+  createdAt: string; // ISO instant
+}
+
+// Banking Details Carrier - DTO for banking details creation
+export interface BankingDetailsCarrier {
+  employeeId: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  bankName: string;
+  branchName: string;
+  createdAt: string; // ISO instant
+}
+
+// Employment History Item Carrier - DTO for employment history creation
+export interface EmploymentHistoryItemCarrier {
+  employeeId: string;
+  companyName: string;
+  role: string;
+  location?: string;
+  startDate?: string; // ISO instant
+  endDate?: string; // ISO instant
+  createdAt: string; // ISO instant
+}
+
+// Skill Item Carrier - DTO for skill creation
+export interface SkillItemCarrier {
+  employeeId: string;
+  name: string;
+  certificationType: CertificationType;
+  certificationUrl?: string;
+  certificationFileName?: string;
+  createdAt: string; // ISO instant
+}
+
+// Document Item Carrier - DTO for document creation
+export interface DocumentItemCarrier {
+  employeeId: string;
+  name: string;
+  type: DocumentType;
+  url: string;
+  fileName: string;
+  fileSize?: string;
+  uploadedDate?: string;
+  createdAt: string; // ISO instant
+}
+
+// Event History Item Carrier - DTO for event history creation
+export interface EventHistoryItemCarrier {
+  employeeId: string;
+  date?: string;
+  type: EventType;
+  oldRole?: string;
+  newRole?: string;
+  oldDepartment?: string;
+  newDepartment?: string;
+  reason?: string;
+  effectiveDate?: string;
+  createdAt: string; // ISO instant
 }
 
 // Job Details - Professional work information (Backend aligned with JobDetails.java)
@@ -137,9 +244,10 @@ export interface JobDetails {
   phone: string;
   secondaryPhone: string;
   designation: string;
+  department: string;
   employeeType: EmployeeType;
-  workLocation: string;
-  reportingManager: string;
+  location: string;
+  reportingTo: string;
   joiningDate: string;
   dateOfBirth: string;
   celebrationDOB: string;
@@ -208,7 +316,6 @@ export interface EmploymentHistoryItem {
   startDate: string; // ISO instant
   endDate: string; // ISO instant
   tenure: string;
-  order?: number; // Order for sorting
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }
@@ -266,7 +373,6 @@ export interface EventHistoryItem {
   newDepartment: string;
   reason: string;
   effectiveDate: string;
-  order: number;
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }

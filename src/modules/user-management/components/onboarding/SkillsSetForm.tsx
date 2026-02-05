@@ -55,8 +55,14 @@ export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
     
     setIsLoading(true);
     try {
-      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
-      const data = await refreshSkills(filters, '', 0, 100);
+      const searchRequest = {
+        filters: {
+          and: {
+            employeeId: employeeId,
+          },
+        },
+      };
+      const data = await refreshSkills(searchRequest, 0, 100);
       if (data && data.content) {
         setItems(data.content as any);
       }
@@ -67,6 +73,7 @@ export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
 
   useEffect(() => {
     fetchSkills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
   const handleOpenModal = (item?: SkillItem) => {
@@ -88,29 +95,32 @@ export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
   };
 
   const handleSave = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !name) return;
 
-    if (editingItem && editingItem.id) {
-      // Update existing - use record (plain object)
-      await updateSkill(editingItem.id, {
-        name,
-        certificationType,
-        certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
-      });
-    } else {
-      // Create new - use carrier
-      await createSkill({
-        employeeId,
-        name,
-        certificationType: certificationType === CertificationType.NONE ? "NONE" : 
-                          certificationType === CertificationType.URL ? "URL" : "FILE",
-        certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
-        createdAt: new Date().toISOString(),
-      });
+    try {
+      if (editingItem && editingItem.id) {
+        // Update existing - use record (plain object)
+        await updateSkill(editingItem.id, {
+          name,
+          certificationType,
+          certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
+        });
+      } else {
+        // Create new - use carrier
+        await createSkill({
+          employeeId,
+          name,
+          certificationType,
+          certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      await fetchSkills();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error saving skill:', error);
     }
-
-    await fetchSkills();
-    handleCloseModal();
   };
 
   const handleDelete = async (id: string) => {

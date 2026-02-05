@@ -12,7 +12,7 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
-import { BankingDetails } from "@/modules/user-management/types/onboarding.types";
+import { BankingDetails, BankingDetailsCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
@@ -29,13 +29,13 @@ export type UpdatePayload = Record<string, any>;
  * Create Banking Details
  * POST /emp-user-management/v1/banking-details
  * 
- * @param item - BankingDetails with bank account information
+ * @param carrier - BankingDetailsCarrier with bank account information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<BankingDetails>>
  */
 export const apiCreateBankingDetails = async (
-  item: BankingDetails,
+  carrier: BankingDetailsCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<BankingDetails>> => {
@@ -44,7 +44,7 @@ export const apiCreateBankingDetails = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 
