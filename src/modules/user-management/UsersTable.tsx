@@ -4,7 +4,7 @@
  * Handles all table-related logic, data fetching via searchUserSnapshots, and user interactions.
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '@tanstack/react-table';
 import { Eye, MoreHorizontal, Copy, Check, Trash2 } from 'lucide-react';
@@ -28,9 +28,12 @@ import { EmployeeViewModal } from './components/EmployeeViewModal';
 type Props = {
   searchQuery: string;
   activeFilters: ActiveFilter[];
+  visibleColumns: string[];
+  selectionMode: boolean;
+  onSelectionChange: (ids: string[]) => void;
 };
 
-export function UsersTable({ searchQuery, activeFilters }: Props) {
+export function UsersTable({ searchQuery, activeFilters, visibleColumns, selectionMode, onSelectionChange }: Props) {
   const navigate = useNavigate();
   const { refreshUserDetailsSnapshots, isLoading } = useUserManagement();
   const tableRef = useRef<DataTableRef>(null);
@@ -40,8 +43,6 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
   const [totalItems, setTotalItems] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectionMode, setSelectionMode] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserDetailsSnapshot | null>(null);
@@ -72,7 +73,7 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
   };
 
   // Copy to clipboard
-  const copyToClipboard = async (text: string, fieldId: string) => {
+  const copyToClipboard = useCallback(async (text: string, fieldId: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(fieldId);
@@ -80,7 +81,21 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  };
+  }, []);
+
+  // Action handlers - defined before columns to allow memoization
+  const handleViewUser = useCallback((user: UserDetailsSnapshot) => {
+    setSelectedUser(user);
+    setViewModalOpen(true);
+  }, []);
+
+  const handleEditUser = useCallback((user: UserDetailsSnapshot) => {
+    navigate(`/employee-onboarding?mode=edit&id=${user.id}`);
+  }, [navigate]);
+
+  const handleDeleteUser = useCallback((user: UserDetailsSnapshot) => {
+    console.log('Delete user:', user);
+  }, []);
 
   // Fetch data from API when filters or search change
   useEffect(() => {
@@ -112,17 +127,14 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
     fetchData();
   }, [activeFilters, searchQuery, pageIndex, pageSize, refreshUserDetailsSnapshots]);
 
-  // Define table columns
-  const columns: ColumnDef<UserDetailsSnapshot>[] = [
+  // Define table columns - memoized to prevent unnecessary re-renders
+  const columns: ColumnDef<UserDetailsSnapshot>[] = useMemo(() => [
     {
       id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => {
-            table.toggleAllPageRowsSelected(!!value);
-            setTimeout(updateSelectedIds, 0);
-          }}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
           onClick={(e) => e.stopPropagation()}
         />
@@ -130,10 +142,7 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       cell: ({ row }) => (
         <Checkbox
           checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
-            row.toggleSelected(!!value);
-            setTimeout(updateSelectedIds, 0);
-          }}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
           onClick={(e) => e.stopPropagation()}
         />
@@ -142,13 +151,15 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       enableHiding: false,
     },
     {
-      accessorKey: 'employeeId',
+      id: 'employeeId',
+      accessorKey: 'id',
       header: 'Employee ID',
       cell: ({ row }) => (
         <div className="font-medium">{row.original.id}</div>
       ),
     },
     {
+      id: 'name',
       accessorKey: 'firstName',
       header: 'Name',
       cell: ({ row }) => (
@@ -166,7 +177,8 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       ),
     },
     {
-      accessorKey: 'contactInfo',
+      id: 'contactInfo',
+      accessorKey: 'email',
       header: 'Contact Info',
       cell: ({ row }) => {
         const user = row.original;
@@ -284,6 +296,104 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
       },
     },
     {
+      accessorKey: 'reportingTo',
+      header: 'Reporting To',
+      cell: ({ row }) => {
+        const reportingTo = row.getValue('reportingTo') as string | undefined;
+        return (
+          <div className="text-sm">{reportingTo || '-'}</div>
+        );
+      },
+    },
+    {
+      accessorKey: 'role',
+      header: 'Role',
+      cell: ({ row }) => {
+        const role = row.getValue('role') as string;
+        return (
+          <Badge variant="secondary" className="capitalize text-xs">
+            {role.replace(/-/g, ' ')}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: 'panNumber',
+      header: 'PAN Number',
+      cell: ({ row }) => {
+        const panNumber = row.getValue('panNumber') as string | undefined;
+        return (
+          <div className="text-sm font-mono">{panNumber || '-'}</div>
+        );
+      },
+    },
+    {
+      accessorKey: 'aadharNumber',
+      header: 'Aadhar Number',
+      cell: ({ row }) => {
+        const aadharNumber = row.getValue('aadharNumber') as string | undefined;
+        return (
+          <div className="text-sm font-mono">{aadharNumber || '-'}</div>
+        );
+      },
+    },
+    {
+      accessorKey: 'emergencyContact',
+      header: 'Emergency Contact',
+      cell: ({ row }) => {
+        const contact = row.getValue('emergencyContact') as { name: string; phone: string; relation: string } | undefined;
+        return (
+          <div className="text-sm">
+            {contact ? (
+              <div>
+                <div className="font-medium">{contact.name}</div>
+                <div className="text-xs text-muted-foreground">{contact.phone}</div>
+              </div>
+            ) : '-'}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'skills',
+      header: 'Skills',
+      cell: ({ row }) => {
+        const skills = row.getValue('skills') as string[] | undefined;
+        return (
+          <div className="text-sm">
+            {skills && skills.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {skills.slice(0, 3).map((skill, idx) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    {skill}
+                  </Badge>
+                ))}
+                {skills.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{skills.length - 3}
+                  </Badge>
+                )}
+              </div>
+            ) : '-'}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created At',
+      cell: ({ row }) => (
+        <div className="text-sm">{formatDate(row.getValue('createdAt'))}</div>
+      ),
+    },
+    {
+      accessorKey: 'updatedAt',
+      header: 'Updated At',
+      cell: ({ row }) => (
+        <div className="text-sm">{formatDate(row.getValue('updatedAt'))}</div>
+      ),
+    },
+    {
       id: 'actions',
       header: () => <div className="text-center">Actions</div>,
       cell: ({ row }) => {
@@ -342,49 +452,42 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
         );
       },
     },
-  ];
+  ], [copyToClipboard, copiedField, handleViewUser, handleEditUser, handleDeleteUser]);
 
-  // Get visible columns (show select only in selection mode)
-  const visibleTableColumns = useMemo(() => {
-    return columns.filter((col) => {
-      const id = 'id' in col ? col.id : 'accessorKey' in col ? col.accessorKey : null;
-      
-      if (id === 'select' && !selectionMode) {
-        return false;
+  // Filter columns based on visibleColumns prop
+  const filteredColumns = useMemo(() => 
+    columns.filter((column: any) => {
+      // Always include select column if in selection mode
+      if (column.id === 'select') {
+        return selectionMode;
       }
-      
-      return id !== undefined;
-    });
-  }, [columns, selectionMode]);
+      // Always include action columns
+      if (column.id === 'actions') {
+        return true;
+      }
+      // For other columns, check if id or accessorKey is in visibleColumns
+      if (column.id) {
+        return visibleColumns.includes(column.id);
+      }
+      if ('accessorKey' in column) {
+        return visibleColumns.includes(column.accessorKey as string);
+      }
+      return true;
+    }),
+    [columns, visibleColumns, selectionMode]
+  );
 
-  // Action handlers
-  const handleViewUser = (user: UserDetailsSnapshot) => {
-    setSelectedUser(user);
-    setViewModalOpen(true);
-  };
-
-  const handleEditUser = (user: UserDetailsSnapshot) => {
-    navigate(`/employee-onboarding?mode=edit&id=${user.id}`);
-  };
-
-  const handleDeleteUser = (user: UserDetailsSnapshot) => {
-    console.log('Delete user:', user);
-  };
-
-  // Sync selected IDs from table ref
-  const updateSelectedIds = () => {
-    if (selectionMode && tableRef.current) {
-      const ids = tableRef.current.getSelectedIds();
-      setSelectedIds(ids);
-    }
-  };
+  console.log('UsersTable: selectionMode', selectionMode);
+  console.log('UsersTable: filteredColumns count', filteredColumns.length);
+  console.log('UsersTable: has select column?', filteredColumns.some((c: any) => c.id === 'select'));
+  console.log('UsersTable: columns', filteredColumns.map((c: any) => c.id || c.accessorKey));
 
   return (
     <>
       <DataTable
         ref={tableRef}
         data={tableData}
-        columns={visibleTableColumns}
+        columns={filteredColumns}
         loading={isLoading}
         pagination={{
           pageIndex,
@@ -396,12 +499,11 @@ export function UsersTable({ searchQuery, activeFilters }: Props) {
         }}
         paginationVariant="default"
         fixedPagination={true}
-        initialColumnVisibility={{
-          dateOfBirth: false,
-        }}
         selection={{
-          enabled: selectionMode,
-          getRowId: (user) => user?.id || '',
+          enabled: selectionMode ?? false,
+          onSelectionChange,
+          getRowId: (user) => user.id,
+          enableSelectAll: true,
         }}
         emptyState={{
           title: 'No users found',

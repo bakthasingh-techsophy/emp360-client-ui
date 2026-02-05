@@ -3,13 +3,13 @@
  * Manage users with filtering, search, and CRUD operations
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Download, UserCheck, UserX, Trash2 } from 'lucide-react';
+import { UserPlus, UserX, Trash2, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
-import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
+import { AvailableFilter, ActiveFilter, BulkAction } from '@/components/GenericToolbar/types';
 import { UsersTable } from './UsersTable';
 
 export function UserManagement() {
@@ -21,8 +21,35 @@ export function UserManagement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
 
+  // Column visibility state - minimal columns visible by default
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'employeeId',
+    'name',
+    'contactInfo',
+    'department',
+    'status',
+  ]);
+
   // Filter configuration
   const filterConfig: AvailableFilter[] = [
+    {
+      id: 'employeeId',
+      label: 'Employee ID',
+      type: 'text',
+      placeholder: 'Enter employee ID...',
+    },
+    {
+      id: 'firstName',
+      label: 'First Name',
+      type: 'text',
+      placeholder: 'Enter first name...',
+    },
+    {
+      id: 'lastName',
+      label: 'Last Name',
+      type: 'text',
+      placeholder: 'Enter last name...',
+    },
     {
       id: 'status',
       label: 'Status',
@@ -64,8 +91,60 @@ export function UserManagement() {
       ],
     },
     {
+      id: 'location',
+      label: 'Location',
+      type: 'multiselect',
+      options: [
+        { value: 'bangalore', label: 'Bangalore' },
+        { value: 'hyderabad', label: 'Hyderabad' },
+        { value: 'pune', label: 'Pune' },
+        { value: 'mumbai', label: 'Mumbai' },
+        { value: 'delhi', label: 'Delhi' },
+        { value: 'remote', label: 'Remote' },
+      ],
+    },
+    {
+      id: 'reportingTo',
+      label: 'Reporting To',
+      type: 'text',
+      placeholder: 'Enter manager name...',
+    },
+    {
       id: 'joiningDate',
       label: 'Joining Date',
+      type: 'date',
+    },
+    {
+      id: 'dateOfBirth',
+      label: 'Date of Birth',
+      type: 'date',
+    },
+    {
+      id: 'panNumber',
+      label: 'PAN Number',
+      type: 'text',
+      placeholder: 'Enter PAN number...',
+    },
+    {
+      id: 'aadharNumber',
+      label: 'Aadhar Number',
+      type: 'text',
+      placeholder: 'Enter Aadhar number...',
+    },
+    {
+      id: 'skills',
+      label: 'Skills',
+      type: 'text',
+      placeholder: 'Enter skill name...',
+    },
+    {
+      id: 'createdAt',
+      label: 'Created At',
+      type: 'date',
+    },
+    {
+      id: 'updatedAt',
+      label: 'Updated At',
       type: 'date',
     },
   ];
@@ -76,58 +155,119 @@ export function UserManagement() {
     { id: 'name', label: 'Name' },
     { id: 'contactInfo', label: 'Contact Info' },
     { id: 'department', label: 'Department' },
+    { id: 'role', label: 'Role' },
     { id: 'status', label: 'Status' },
     { id: 'location', label: 'Location' },
+    { id: 'reportingTo', label: 'Reporting To' },
     { id: 'joiningDate', label: 'Joining Date' },
-    { id: 'actions', label: 'Actions' },
+    { id: 'dateOfBirth', label: 'Date of Birth' },
+    { id: 'panNumber', label: 'PAN Number' },
+    { id: 'aadharNumber', label: 'Aadhar Number' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'createdAt', label: 'Created At' },
+    { id: 'updatedAt', label: 'Updated At' },
   ];
 
   // Action handlers
-  const handleAddUser = () => {
+  const handleAddUser = useCallback(() => {
     navigate('/employee-onboarding');
-  };
+  }, [navigate]);
 
-  const handleExportAll = (sendEmail: boolean, email?: string) => {
+  const handleExportAll = useCallback((sendEmail: boolean, email?: string) => {
     console.log('Export all users', { sendEmail, email });
-  };
+    // TODO: Implement actual export logic
+  }, []);
 
-  const handleExportResults = (sendEmail: boolean, email?: string) => {
+  const handleExportResults = useCallback((sendEmail: boolean, email?: string) => {
     console.log('Export filtered results', { sendEmail, email });
-  };
+    // TODO: Implement actual export logic
+  }, []);
 
-  const handleToggleSelection = () => {
-    setSelectionMode(!selectionMode);
+  const handleToggleSelection = useCallback(() => {
+    setSelectionMode(prev => !prev);
     if (selectionMode) {
       setSelectedIds([]);
     }
-  };
+  }, [selectionMode]);
+
+  const handleSelectionChange = useCallback((selectedUserIds: string[]) => {
+    setSelectedIds(selectedUserIds);
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds([]);
+    setSelectionMode(false);
+  }, []);
+
+  const handleVisibleColumnsChange = useCallback((columns: string[]) => {
+    // Always include actions - it should not be hideable
+    const finalColumns = [...columns];
+    if (!finalColumns.includes('actions')) {
+      finalColumns.push('actions');
+    }
+    setVisibleColumns(finalColumns);
+  }, []);
+
+  // Bulk action handlers
+  const handleBulkDelete = useCallback(() => {
+    if (selectedIds.length > 0) {
+      console.log('Bulk delete users:', selectedIds);
+      // TODO: Implement bulk delete dialog and functionality
+      handleClearSelection();
+    }
+  }, [selectedIds, handleClearSelection]);
+
+  const handleBulkCreditLeaves = useCallback(() => {
+    if (selectedIds.length > 0) {
+      console.log('Bulk credit leaves for users:', selectedIds);
+      // TODO: Implement bulk credit leaves dialog and functionality
+      handleClearSelection();
+    }
+  }, [selectedIds, handleClearSelection]);
+
+  const handleBulkDeactivate = useCallback(() => {
+    if (selectedIds.length > 0) {
+      console.log('Bulk deactivate users:', selectedIds);
+      // TODO: Implement bulk deactivate functionality
+      handleClearSelection();
+    }
+  }, [selectedIds, handleClearSelection]);
 
   // Memoize activeFilters to prevent unnecessary re-renders of UsersTable
   const memoizedActiveFilters = useMemo(() => activeFilters, [activeFilters]);
 
-  // Bulk action handlers
-  const handleBulkDelete = (selectedIds: string[]) => {
-    console.log('Bulk delete users:', selectedIds);
-    setSelectedIds([]);
-  };
-
-  const handleBulkExport = (selectedIds: string[]) => {
-    console.log('Bulk export users:', selectedIds);
-  };
-
-  const handleBulkActivate = (selectedIds: string[]) => {
-    console.log('Bulk activate users:', selectedIds);
-    setSelectedIds([]);
-  };
-
-  const handleBulkDeactivate = (selectedIds: string[]) => {
-    console.log('Bulk deactivate users:', selectedIds);
-    setSelectedIds([]);
-  };
+  // Define bulk actions
+  const bulkActions: BulkAction[] = useMemo(() => [
+    {
+      id: 'delete',
+      label: 'Delete Selected',
+      icon: <Trash2 className="h-4 w-4" />,
+      type: 'button',
+      variant: 'destructive',
+      onClick: handleBulkDelete,
+    },
+    {
+      id: 'credit-leaves',
+      label: 'Credit Leaves',
+      icon: <Gift className="h-4 w-4" />,
+      type: 'button',
+      variant: 'outline',
+      onClick: handleBulkCreditLeaves,
+    },
+    {
+      id: 'deactivate',
+      label: 'Deactivate',
+      icon: <UserX className="h-4 w-4" />,
+      type: 'button',
+      variant: 'outline',
+      onClick: handleBulkDeactivate,
+    },
+  ], [handleBulkDelete, handleBulkCreditLeaves, handleBulkDeactivate]);
 
   return (
-    <PageLayout
-      toolbar={
+    <>
+      <PageLayout
+        toolbar={
         <div className="space-y-4">
           {/* Page Header with Action Button */}
           <div className="flex items-center justify-between">
@@ -151,56 +291,18 @@ export function UserManagement() {
             onSearchChange={setSearchQuery}
             showConfigureView
             allColumns={allColumns}
-            visibleColumns={allColumns.map((col) => col.id)}
-            onVisibleColumnsChange={() => {}}
+            visibleColumns={visibleColumns}
+            onVisibleColumnsChange={handleVisibleColumnsChange}
             showFilters
             availableFilters={filterConfig}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
-            showExport
+            showExport={!selectionMode}
             onExportAll={handleExportAll}
             onExportResults={handleExportResults}
             showBulkActions
-            bulkActions={[
-              {
-                id: 'export',
-                label: 'Export Selected',
-                icon: <Download className="h-4 w-4" />,
-                type: 'button',
-                variant: 'outline',
-                onClick: handleBulkExport,
-              },
-              {
-                id: 'status',
-                label: 'Change Status',
-                type: 'dropdown',
-                variant: 'outline',
-                options: [
-                  {
-                    id: 'activate',
-                    label: 'Activate Users',
-                    icon: <UserCheck className="h-4 w-4" />,
-                    onClick: handleBulkActivate,
-                  },
-                  {
-                    id: 'deactivate',
-                    label: 'Deactivate Users',
-                    icon: <UserX className="h-4 w-4" />,
-                    onClick: handleBulkDeactivate,
-                  },
-                ],
-              },
-              {
-                id: 'delete',
-                label: 'Delete Selected',
-                icon: <Trash2 className="h-4 w-4" />,
-                type: 'button',
-                variant: 'destructive',
-                onClick: handleBulkDelete,
-              },
-            ]}
+            bulkActions={bulkActions}
             selectedCount={selectedIds.length}
-            selectedIds={selectedIds}
             onToggleSelection={handleToggleSelection}
             selectionMode={selectionMode}
           />
@@ -208,7 +310,14 @@ export function UserManagement() {
       }
     >
       {/* Users Table Component */}
-      <UsersTable searchQuery={searchQuery} activeFilters={memoizedActiveFilters} />
+      <UsersTable 
+        searchQuery={searchQuery} 
+        activeFilters={memoizedActiveFilters}
+        visibleColumns={visibleColumns}
+        selectionMode={selectionMode}
+        onSelectionChange={handleSelectionChange}
+      />
     </PageLayout>
+  </>
   );
 }
