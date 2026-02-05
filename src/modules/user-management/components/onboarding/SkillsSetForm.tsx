@@ -1,6 +1,6 @@
 /**
  * Skills Set Form
- * Employee skills with certifications/documents
+ * Employee skills with certifications/documents - Modal-based creation
  */
 
 import { useState, useEffect } from 'react';
@@ -8,14 +8,14 @@ import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import { SkillsSetForm, SkillItem, CertificationType } from '../../types/onboarding.types';
 import { useUserManagement } from '@/contexts/UserManagementContext';
-import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable/EditableItemsTable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Award, Link as LinkIcon, FileText } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Award, Link as LinkIcon, FileText, Edit2, Trash2, Plus } from 'lucide-react';
 
 // Zod schema for SkillsSet validation
 export const skillsSetSchema = z.object({
@@ -23,25 +23,13 @@ export const skillsSetSchema = z.object({
     id: z.string().optional(),
     employeeId: z.string().optional(),
     name: z.string(),
-    certificationType: z.nativeEnum(CertificationType).optional(),
+    certificationType: z.nativeEnum(CertificationType),
     certificationUrl: z.string().optional(),
     certificationFile: z.any().optional(),
     certificationFileName: z.string().optional(),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
-  })).refine((items) => {
-    // If no items, validation passes
-    if (items.length === 0) return true;
-    
-    // Every row must have all required fields filled
-    return items.every(item => 
-      item.name && item.name.trim() !== '' &&
-      item.certificationType !== undefined
-    );
-  }, {
-    message: "All skill entries must have a skill name and certification type"
-  }),
-  viewMode: z.enum(['view', 'edit']).optional(),
+  })),
 });
 
 interface SkillsSetFormProps {
@@ -49,67 +37,99 @@ interface SkillsSetFormProps {
   employeeId?: string;
 }
 
-export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps) {
-  const { watch, setValue, formState: { errors } } = form;
-  const { getSkillById } = useUserManagement();
+export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
+  const { refreshSkills, createSkill, updateSkill, deleteSkill } = useUserManagement();
   
-  const items = watch('items') || [];
-  const [activeView, setActiveView] = useState<'view' | 'edit'>('view');
+  const [items, setItems] = useState<SkillItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<SkillItem | null>(null);
+  
+  // Modal form state
+  const [name, setName] = useState('');
+  const [certificationType, setCertificationType] = useState<CertificationType>(CertificationType.NONE);
+  const [certificationUrl, setCertificationUrl] = useState('');
 
-  const refreshSkills = async () => {
-    if (employeeId) {
-      const data = await getSkillById(employeeId);
-      if (data) {
-        setValue('items', [{ ...data, employeeId: employeeId } as any]);
+  const fetchSkills = async () => {
+    if (!employeeId) return;
+    
+    setIsLoading(true);
+    try {
+      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
+      const data = await refreshSkills(filters, '', 0, 100);
+      if (data && data.content) {
+        setItems(data.content as any);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    refreshSkills();
+    fetchSkills();
   }, [employeeId]);
 
-  const columns: TableColumn<SkillItem>[] = [
-    {
-      key: 'name',
-      header: 'Skill Name',
-      type: 'text',
-      required: true,
-      placeholder: 'e.g., React, Java, Project Management',
-      flex: 2,
-    },
-    {
-      key: 'certificationType',
-      header: 'Certification Type',
-      type: 'select',
-      required: true,
-      options: [
-        { label: 'None', value: CertificationType.NONE },
-        { label: 'URL Link', value: CertificationType.URL },
-        { label: 'File Upload', value: CertificationType.FILE },
-      ],
-      width: '150px',
-    },
-    {
-      key: 'certificationUrl',
-      header: 'Certification URL',
-      type: 'text',
-      placeholder: 'https://...',
-      flex: 2,
-    },
-  ];
-
-  const emptyItem: SkillItem = {
-    id: '',
-    employeeId: employeeId || '',
-    name: '',
-    certificationType: CertificationType.NONE,
-    certificationUrl: '',
-    certificationFile: null,
-    certificationFileName: '',
-    createdAt: '',
-    updatedAt: '',
+  const handleOpenModal = (item?: SkillItem) => {
+    if (item) {
+      setEditingItem(item);
+      setName(item.name);
+      setCertificationType(item.certificationType);
+      setCertificationUrl(item.certificationUrl || '');
+    }
+    setIsModalOpen(true);
   };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+    setName('');
+    setCertificationType(CertificationType.NONE);
+    setCertificationUrl('');
+  };
+
+  const handleSave = async () => {
+    if (!employeeId) return;
+
+    if (editingItem && editingItem.id) {
+      // Update existing - use record (plain object)
+      await updateSkill(editingItem.id, {
+        name,
+        certificationType,
+        certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
+      });
+    } else {
+      // Create new - use carrier
+      await createSkill({
+        employeeId,
+        name,
+        certificationType: certificationType === CertificationType.NONE ? "NONE" : 
+                          certificationType === CertificationType.URL ? "URL" : "FILE",
+        certificationUrl: certificationType === CertificationType.URL ? certificationUrl : undefined,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    await fetchSkills();
+    handleCloseModal();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!id) return;
+    
+    await deleteSkill(id);
+    await fetchSkills();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading skills...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -119,42 +139,108 @@ export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps)
             Add your professional skills and certifications
           </p>
         </div>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Skill
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingItem ? 'Edit Skill' : 'Add Skill'}
+              </DialogTitle>
+              <DialogDescription>
+                Add details about your skill and certification
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Skill Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., React, Java, Project Management"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="certificationType">
+                  Certification Type <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={certificationType}
+                  onValueChange={(value) => setCertificationType(value as CertificationType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select certification type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={CertificationType.NONE}>None</SelectItem>
+                    <SelectItem value={CertificationType.URL}>URL Link</SelectItem>
+                    <SelectItem value={CertificationType.FILE}>File Upload</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {certificationType === CertificationType.URL && (
+                <div className="space-y-2">
+                  <Label htmlFor="certificationUrl">Certification URL</Label>
+                  <Input
+                    id="certificationUrl"
+                    value={certificationUrl}
+                    onChange={(e) => setCertificationUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              )}
+              {certificationType === CertificationType.FILE && (
+                <div className="space-y-2">
+                  <Label htmlFor="certificationFile">Upload Certificate</Label>
+                  <Input id="certificationFile" type="file" />
+                  <p className="text-xs text-muted-foreground">
+                    Upload your certification document
+                  </p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseModal}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!name || !certificationType}
+              >
+                {editingItem ? 'Update' : 'Add'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs value={activeView} onValueChange={(value) => {
-        setActiveView(value as any);
-      }}>
-        <TabsList>
-          <TabsTrigger value="view">View Mode</TabsTrigger>
-          <TabsTrigger value="edit">Edit Mode</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="view" className="mt-6">
-          {items.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No skills added yet</p>
-              <p className="text-sm mt-2">Switch to Edit Mode to add your skills</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setActiveView('edit')}
-              >
-                Add Skills
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map((skill) => (
-                <Card key={skill.id}>
-                  <CardContent className="pt-6">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-semibold">{skill.name}</h4>
+      {items.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+          <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>No skills added yet</p>
+          <p className="text-sm mt-2">Click "Add Skill" to add your skills and certifications</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((skill) => (
+            <Card key={skill.id}>
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
                         <Award className="h-5 w-5 text-muted-foreground" />
+                        <h4 className="font-semibold">{skill.name}</h4>
                       </div>
                       {skill.certificationType !== CertificationType.NONE && (
-                        <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center gap-2 text-sm mt-2">
                           {skill.certificationType === CertificationType.URL ? (
                             <>
                               <LinkIcon className="h-4 w-4" />
@@ -178,48 +264,36 @@ export function SkillsSetFormComponent({ form, employeeId }: SkillsSetFormProps)
                         </div>
                       )}
                       {skill.certificationType === CertificationType.NONE && (
-                        <Badge variant="secondary">No Certification</Badge>
+                        <Badge variant="secondary" className="mt-2">No Certification</Badge>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="edit" className="mt-6">
-          {/* Validation Errors Section */}
-          {errors.items && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {typeof errors.items.message === 'string' 
-                  ? errors.items.message 
-                  : errors.items.root?.message || 'All skill entries must have a skill name and certification type'}
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <EditableItemsTable
-            columns={columns}
-            items={items}
-            onChange={(newItems) => setValue('items', newItems)}
-            emptyItemTemplate={emptyItem}
-            minItems={0}
-            maxItems={20}
-          />
-          {items.length > 0 && (
-            <div className="mt-4 flex justify-end">
-              <Button variant="outline" onClick={() => {
-                setActiveView('view');
-              }}>
-                View Skills
-              </Button>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                  </div>
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleOpenModal(skill)}
+                    >
+                      <Edit2 className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => skill.id && handleDelete(skill.id)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

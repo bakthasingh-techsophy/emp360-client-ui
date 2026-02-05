@@ -3,9 +3,10 @@
  * Document management with grid layout and upload modal
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { DocumentPool, DocumentItem, DocumentType } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -17,60 +18,77 @@ import { Badge } from '@/components/ui/badge';
 
 interface DocumentPoolFormProps {
   form: UseFormReturn<DocumentPool>;
+  employeeId?: string;
 }
 
-export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
-  const { watch, setValue } = form;
+export function DocumentPoolFormComponent({ form, employeeId }: DocumentPoolFormProps) {
+  const { refreshDocuments, createDocument, updateDocument, deleteDocument } = useUserManagement();
   
-  const documents = watch('documents') || [];
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [docName, setDocName] = useState('');
   const [docType, setDocType] = useState<DocumentType>(DocumentType.URL);
   const [docUrl, setDocUrl] = useState('');
 
-  const handleAddDocument = () => {
-    const newDoc: DocumentItem = {
-      id: `doc-${Date.now()}`,
-      employeeId: '',
+  const fetchDocuments = async () => {
+    if (!employeeId) return;
+    
+    setIsLoading(true);
+    try {
+      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
+      const data = await refreshDocuments(filters, '', 0, 100);
+      if (data && data.content) {
+        setDocuments(data.content);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [employeeId]);
+
+  const handleAddDocument = async () => {
+    if (!employeeId) return;
+
+    // Create new - use carrier
+    // fileName is always required by backend, use docName for both URL and FILE types
+    await createDocument({
+      employeeId,
+      name: docName,
+      type: docType === DocumentType.URL ? "URL" : "FILE",
+      url: docType === DocumentType.URL ? docUrl : '',
+      fileName: docName, // Always populate fileName with document name
+      uploadedDate: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+
+    await fetchDocuments();
+    handleCloseModal();
+  };
+
+  const handleEditDocument = async () => {
+    if (!editingDoc || !editingDoc.id) return;
+
+    // Update existing - use record (plain object)
+    await updateDocument(editingDoc.id, {
       name: docName,
       type: docType,
-      url: docType === DocumentType.URL ? docUrl : '',
-      fileName: docType === DocumentType.FILE ? docName : '',
-      uploadedDate: new Date().toISOString(),
-      fileSize: '0 KB',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setValue('documents', [...documents, newDoc]);
+      url: docType === DocumentType.URL ? docUrl : editingDoc.url,
+    });
+    
+    await fetchDocuments();
     handleCloseModal();
   };
 
-  const handleEditDocument = () => {
-    if (!editingDoc) return;
-
-    const updatedDocs = documents.map((doc) =>
-      doc.id === editingDoc.id
-        ? {
-            ...doc,
-            name: docName,
-            type: docType,
-            url: docType === DocumentType.URL ? docUrl : doc.url,
-            updatedAt: new Date().toISOString(),
-          }
-        : doc
-    );
-
-    setValue('documents', updatedDocs);
-    handleCloseModal();
-  };
-
-  const handleDeleteDocument = (id: string) => {
-    setValue(
-      'documents',
-      documents.filter((doc) => doc.id !== id)
-    );
+  const handleDeleteDocument = async (id: string) => {
+    if (!id) return;
+    
+    await deleteDocument(id);
+    await fetchDocuments();
   };
 
   const handleOpenModal = (doc?: DocumentItem) => {
@@ -90,6 +108,17 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
     setDocType(DocumentType.URL);
     setDocUrl('');
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading documents...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

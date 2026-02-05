@@ -40,6 +40,22 @@ export interface EmploymentHistoryItem {
 }
 
 /**
+ * Employment History Item Carrier
+ * Used for creating new employment history records
+ */
+export interface EmploymentHistoryItemCarrier {
+  employeeId: string;
+  companyName: string;
+  role: string;
+  location: string;
+  startDate: string; // ISO string
+  endDate: string; // ISO string
+  tenure: string;
+  order?: number; // Order for sorting
+  createdAt: string; // ISO string
+}
+
+/**
  * Bulk Operation Response Interface
  */
 export interface BulkOperationResponse {

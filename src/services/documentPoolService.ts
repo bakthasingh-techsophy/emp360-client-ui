@@ -1,12 +1,13 @@
 /**
- * Skill Items Service
- * Handles all API operations for skill management
+ * Document Pool Service
+ * Handles all API operations for document management
  * 
  * Endpoints:
- * - POST /emp-user-management/v1/skills - Create skill
- * - GET /emp-user-management/v1/skills/{id} - Get skill by ID
- * - PATCH /emp-user-management/v1/skills/{id} - Update skill
- * - DELETE /emp-user-management/v1/skills/{id} - Delete skill
+ * - POST /emp-user-management/v1/documents - Create document
+ * - GET /emp-user-management/v1/documents/{id} - Get document by ID
+ * - PATCH /emp-user-management/v1/documents/{id} - Update document
+ * - POST /emp-user-management/v1/documents/search - Search documents
+ * - DELETE /emp-user-management/v1/documents/{id} - Delete document
  * 
  * All responses follow ApiResponse<T> wrapper format
  */
@@ -16,34 +17,37 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 
-const BASE_ENDPOINT = "/emp-user-management/v1/skills";
+const BASE_ENDPOINT = "/emp-user-management/v1/documents";
 
 /**
- * Skill Item
- * Represents a single skill or certification
+ * Document Item
+ * Represents a single document record
  */
-export interface SkillItem {
+export interface DocumentItem {
   id?: string;
+  employeeId: string;
   name: string;
-  certificationType: "BASIC" | "INTERMEDIATE" | "ADVANCED" | "PROFESSIONAL" | "EXPERT";
-  certificationUrl?: string;
-  issuedDate?: string;
-  expiryDate?: string;
-  issuer?: string;
+  type: "URL" | "FILE";
+  url?: string;
+  fileName?: string;
+  uploadedDate: string;
+  fileSize?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 /**
- * Skill Item Carrier
- * Used for creating new skill records
+ * Document Item Carrier
+ * Used for creating new document records
  */
-export interface SkillItemCarrier {
+export interface DocumentItemCarrier {
   employeeId: string;
   name: string;
-  certificationType: "NONE" | "URL" | "FILE";
-  certificationUrl?: string;
-  certificationFileName?: string;
+  type: "URL" | "FILE";
+  url: string;
+  fileName: string;
+  fileSize?: string;
+  uploadedDate?: string;
   createdAt: string; // ISO string
 }
 
@@ -53,20 +57,20 @@ export interface SkillItemCarrier {
 export type UpdatePayload = Record<string, any>;
 
 /**
- * Create Skill
- * POST /emp-user-management/v1/skills
+ * Create Document
+ * POST /emp-user-management/v1/documents
  * 
- * @param carrier - SkillItemCarrier with skill information
+ * @param carrier - DocumentItemCarrier with document information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<SkillItem>>
+ * @returns Promise<ApiResponse<DocumentItem>>
  */
-export const apiCreateSkill = async (
-  carrier: SkillItemCarrier,
+export const apiCreateDocument = async (
+  carrier: DocumentItemCarrier,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<SkillItem>> => {
-  return apiRequest<SkillItem>({
+): Promise<ApiResponse<DocumentItem>> => {
+  return apiRequest<DocumentItem>({
     method: "POST",
     endpoint: BASE_ENDPOINT,
     tenant,
@@ -76,20 +80,20 @@ export const apiCreateSkill = async (
 };
 
 /**
- * Get Skill by ID
- * GET /emp-user-management/v1/skills/{id}
+ * Get Document by ID
+ * GET /emp-user-management/v1/documents/{id}
  * 
- * @param id - Skill ID
+ * @param id - Document ID
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<SkillItem>>
+ * @returns Promise<ApiResponse<DocumentItem>>
  */
-export const apiGetSkillById = async (
+export const apiGetDocumentById = async (
   id: string,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<SkillItem>> => {
-  return apiRequest<SkillItem>({
+): Promise<ApiResponse<DocumentItem>> => {
+  return apiRequest<DocumentItem>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -98,24 +102,24 @@ export const apiGetSkillById = async (
 };
 
 /**
- * Update Skill
- * PATCH /emp-user-management/v1/skills/{id}
+ * Update Document
+ * PATCH /emp-user-management/v1/documents/{id}
  * 
  * Partial update - only provided fields are updated
  * 
- * @param id - Skill ID
+ * @param id - Document ID
  * @param payload - Map of fields to update
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<SkillItem>>
+ * @returns Promise<ApiResponse<DocumentItem>>
  */
-export const apiUpdateSkill = async (
+export const apiUpdateDocument = async (
   id: string,
   payload: UpdatePayload,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<SkillItem>> => {
-  return apiRequest<SkillItem>({
+): Promise<ApiResponse<DocumentItem>> => {
+  return apiRequest<DocumentItem>({
     method: "PATCH",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -125,15 +129,15 @@ export const apiUpdateSkill = async (
 };
 
 /**
- * Delete Skill
- * DELETE /emp-user-management/v1/skills/{id}
+ * Delete Document
+ * DELETE /emp-user-management/v1/documents/{id}
  * 
- * @param id - Skill ID
+ * @param id - Document ID
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<void>>
  */
-export const apiDeleteSkill = async (
+export const apiDeleteDocument = async (
   id: string,
   tenant: string,
   accessToken?: string
@@ -147,8 +151,8 @@ export const apiDeleteSkill = async (
 };
 
 /**
- * Search Skills
- * POST /emp-user-management/v1/skills/search
+ * Search Documents
+ * POST /emp-user-management/v1/documents/search
  * 
  * Universal search with filtering, sorting, and pagination
  * 
@@ -157,16 +161,16 @@ export const apiDeleteSkill = async (
  * @param pageSize - Number of items per page
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<Pagination<SkillItem>>>
+ * @returns Promise<ApiResponse<Pagination<DocumentItem>>>
  */
-export const apiSearchSkills = async (
+export const apiSearchDocuments = async (
   searchRequest: UniversalSearchRequest,
   page: number = 0,
   pageSize: number = 10,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<Pagination<SkillItem>>> => {
-  return apiRequest<Pagination<SkillItem>>({
+): Promise<ApiResponse<Pagination<DocumentItem>>> => {
+  return apiRequest<Pagination<DocumentItem>>({
     method: "POST",
     endpoint: `${BASE_ENDPOINT}/search?page=${page}&size=${pageSize}`,
     tenant,
@@ -178,10 +182,10 @@ export const apiSearchSkills = async (
 /**
  * Export all service functions as default object for easier importing
  */
-export const skillItemsService = {
-  apiCreateSkill,
-  apiGetSkillById,
-  apiUpdateSkill,
-  apiDeleteSkill,
-  apiSearchSkills,
+export const documentPoolService = {
+  apiCreateDocument,
+  apiGetDocumentById,
+  apiUpdateDocument,
+  apiDeleteDocument,
+  apiSearchDocuments,
 };

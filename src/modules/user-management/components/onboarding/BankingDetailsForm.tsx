@@ -13,9 +13,11 @@
  * Bank account information for salary payments
  */
 
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import { BankingDetails } from '../../types/onboarding.types';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -23,7 +25,8 @@ import { Label } from '@/components/ui/label';
 export const bankingDetailsSchema = z.object({
   id: z.string().optional(),
   employeeId: z.string().optional(),
-  accountHolderName: z.string().min(3, "Account holder name is required (min 3 characters)"),
+  firstName: z.string().min(2, "First name is required (min 2 characters)"),
+  lastName: z.string().min(2, "Last name is required (min 2 characters)"),
   accountNumber: z.string().regex(/^[0-9]{9,18}$/, "Enter a valid account number (9-18 digits)"),
   ifscCode: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Enter a valid IFSC code (e.g., HDFC0001234)"),
   bankName: z.string().min(3, "Bank name is required (min 3 characters)"),
@@ -34,13 +37,62 @@ export const bankingDetailsSchema = z.object({
 
 interface BankingDetailsFormProps {
   form: UseFormReturn<BankingDetails>;
+  employeeId?: string;
 }
 
-export function BankingDetailsFormComponent({ form }: BankingDetailsFormProps) {
+export function BankingDetailsFormComponent({ form, employeeId }: BankingDetailsFormProps) {
+  const { refreshBankingDetails } = useUserManagement();
+  const [isLoading, setIsLoading] = useState(false);
+
   const {
     register,
     formState: { errors },
   } = form;
+
+  const fetchBankingDetails = async () => {
+    if (employeeId) {
+      setIsLoading(true);
+      // Build filter to search by employeeId
+      const filters = [{ id: 'employeeId', filterId: 'employeeId', operator: 'eq', value: employeeId }];
+      const result = await refreshBankingDetails(filters, '', 0, 1);
+      
+      // Get the first result if exists
+      if (result && result.content && result.content.length > 0) {
+        const data = result.content[0];
+        form.reset({
+          id: data.id || '',
+          employeeId: data.employeeId || employeeId,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          accountNumber: data.accountNumber || '',
+          ifscCode: data.ifscCode || '',
+          bankName: data.bankName || '',
+          branchName: data.branchName || '',
+          createdAt: data.createdAt || '',
+          updatedAt: data.updatedAt || '',
+        });
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch banking details when employeeId is available
+  useEffect(() => {
+    fetchBankingDetails();
+  }, [employeeId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">
+            Loading banking details...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,23 +104,45 @@ export function BankingDetailsFormComponent({ form }: BankingDetailsFormProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="accountHolderName">
-              Account Holder Name <span className="text-destructive">*</span>
+            <Label htmlFor="firstName">
+              First Name <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="accountHolderName"
-              {...register('accountHolderName', {
-                required: 'Account holder name is required',
+              id="firstName"
+              {...register('firstName', {
+                required: 'First name is required',
                 minLength: {
-                  value: 3,
-                  message: 'Name must be at least 3 characters',
+                  value: 2,
+                  message: 'First name must be at least 2 characters',
                 },
               })}
-              placeholder="John Doe"
+              placeholder="John"
             />
-            {errors.accountHolderName && (
+            {errors.firstName && (
               <p className="text-sm text-destructive">
-                {errors.accountHolderName.message}
+                {errors.firstName.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lastName">
+              Last Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="lastName"
+              {...register('lastName', {
+                required: 'Last name is required',
+                minLength: {
+                  value: 2,
+                  message: 'Last name must be at least 2 characters',
+                },
+              })}
+              placeholder="Doe"
+            />
+            {errors.lastName && (
+              <p className="text-sm text-destructive">
+                {errors.lastName.message}
               </p>
             )}
           </div>
@@ -162,7 +236,7 @@ export function BankingDetailsFormComponent({ form }: BankingDetailsFormProps) {
       <div className="rounded-lg border border-border bg-muted/50 p-4">
         <h4 className="font-medium mb-2">Important Notes:</h4>
         <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Ensure the account holder name matches your official name</li>
+          <li>Ensure your name matches your official name as per documents</li>
           <li>Double-check the account number and IFSC code for accuracy</li>
           <li>The account should be active and operational</li>
           <li>Contact HR if you need to update banking details later</li>

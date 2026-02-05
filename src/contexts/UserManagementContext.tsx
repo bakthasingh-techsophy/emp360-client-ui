@@ -123,7 +123,7 @@ interface UserManagementContextType {
   updateUserDetails: (id: string, payload: UpdatePayload) => Promise<UserDetails | null>;
   updateUser: (employeeId: string, payload: UpdatePayload) => Promise<UserDetails | null>;
   deleteUser: (employeeId: string) => Promise<boolean>;
-  refreshUsers: (activeFilters: any[], searchQuery?: string, page?: number, pageSize?: number) => Promise<Pagination<UserDetails> | null>;
+  refreshUsers: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<UserDetails> | null>;
   refreshUserDetailsSnapshots: (activeFilters: any[], searchQuery?: string, page?: number, pageSize?: number) => Promise<Pagination<UserDetailsSnapshot> | null>;
   bulkUpdateUserDetails: (filters: UniversalSearchRequest, updates: UpdatePayload) => Promise<boolean>;
   deleteUserDetailsById: (id: string) => Promise<boolean>;
@@ -327,18 +327,10 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUsers = async (
-    activeFilters: any[],
-    searchQuery: string = '',
+    searchRequest: UniversalSearchRequest,
     page: number = 0,
     pageSize: number = 10
   ): Promise<Pagination<UserDetails> | null> => {
-    // Build search request from filters and search query
-    const searchRequest = buildUniversalSearchRequest(
-      activeFilters,
-      searchQuery,
-      ['firstName', 'lastName', 'email', 'employeeId', 'designation', 'phone']
-    );
-
     return executeApiCall(
       (tenant, accessToken) => apiSearchUserDetails(searchRequest, page, pageSize, tenant, accessToken),
       'Search',

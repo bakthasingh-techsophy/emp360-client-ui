@@ -198,7 +198,7 @@ export function JobDetailsFormComponent({
           phone: data.phone || "",
           secondaryPhone: data.secondaryPhone || "",
           designation: data.designation || "",
-          employeeType: data.employeeType || EmployeeType.PERMANENT,
+          employeeType: data.employeeType || EmployeeType.FULL_TIME,
           workLocation: data.workLocation || "",
           reportingManager: data.reportingManager || "",
           joiningDate: data.joiningDate || "",
@@ -329,7 +329,7 @@ export function JobDetailsFormComponent({
                 <SelectValue placeholder="Select employee type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={EmployeeType.PERMANENT}>Full Time (Permanent)</SelectItem>
+                <SelectItem value={EmployeeType.FULL_TIME}>Full Time (Permanent)</SelectItem>
                 <SelectItem value={EmployeeType.CONTRACT}>Contract</SelectItem>
                 <SelectItem value={EmployeeType.TEMPORARY}>Part Time (Temporary)</SelectItem>
                 <SelectItem value={EmployeeType.INTERN}>Intern</SelectItem>

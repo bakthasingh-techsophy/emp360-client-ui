@@ -18,7 +18,7 @@ export enum UserStatus {
  * Maps to backend EmployeeType enum
  */
 export enum EmployeeType {
-  PERMANENT = "PERMANENT",
+  FULL_TIME = "FULL_TIME",
   CONTRACT = "CONTRACT",
   TEMPORARY = "TEMPORARY",
   INTERN = "INTERN",
@@ -188,7 +188,8 @@ export interface GeneralDetails {
 export interface BankingDetails {
   id: string; // Maps to @Id field - this is the employeeId
   employeeId: string;
-  accountHolderName: string;
+  firstName: string;
+  lastName: string;
   accountNumber: string;
   ifscCode: string;
   bankName: string;
@@ -207,6 +208,7 @@ export interface EmploymentHistoryItem {
   startDate: string; // ISO instant
   endDate: string; // ISO instant
   tenure: string;
+  order?: number; // Order for sorting
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }
