@@ -104,7 +104,6 @@ export interface UserDetailsSnapshot {
 
   /** Org structure */
   department: string;
-  role: string;
 
   /** Employment status */
   status: UserStatus;

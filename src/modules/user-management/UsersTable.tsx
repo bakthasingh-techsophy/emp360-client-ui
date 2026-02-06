@@ -248,12 +248,12 @@ export function UsersTable({ searchQuery, activeFilters, visibleColumns, selecti
       accessorKey: 'department',
       header: 'Department',
       cell: ({ row }) => {
-        const role = row.original.role.replace(/-/g, ' ');
+        const designation = row.original.designation;
         return (
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium">{row.getValue('department')}</span>
             <Badge variant="secondary" className="capitalize text-xs w-fit">
-              {role}
+              {designation}
             </Badge>
           </div>
         );
@@ -302,18 +302,6 @@ export function UsersTable({ searchQuery, activeFilters, visibleColumns, selecti
         const reportingTo = row.getValue('reportingTo') as string | undefined;
         return (
           <div className="text-sm">{reportingTo || '-'}</div>
-        );
-      },
-    },
-    {
-      accessorKey: 'role',
-      header: 'Role',
-      cell: ({ row }) => {
-        const role = row.getValue('role') as string;
-        return (
-          <Badge variant="secondary" className="capitalize text-xs">
-            {role.replace(/-/g, ' ')}
-          </Badge>
         );
       },
     },

@@ -215,11 +215,6 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
                   label="Designation" 
                   value={employee.designation} 
                 />
-                <InfoRow 
-                  icon={Briefcase} 
-                  label="Role" 
-                  value={employee.role.replace(/-/g, ' ')} 
-                />
                 {employee.location && (
                   <InfoRow 
                     icon={Building2} 
