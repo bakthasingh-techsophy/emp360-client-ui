@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, UserX, Trash2, Gift, UserCheck } from 'lucide-react';
+import { UserPlus, UserX, Trash2, Gift, UserCheck, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
@@ -169,6 +169,10 @@ export function UserManagement() {
   // Action handlers
   const handleAddUser = useCallback(() => {
     navigate('/employee-onboarding');
+  }, [navigate]);
+
+  const handleSettings = useCallback(() => {
+    navigate('/user-management/settings');
   }, [navigate]);
 
   const handleExportAll = useCallback((sendEmail: boolean, email?: string) => {
@@ -360,10 +364,16 @@ export function UserManagement() {
                 Manage system users, roles, and access control
               </p>
             </div>
-            <Button onClick={handleAddUser} className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Onboard New Employee
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleSettings} variant="outline" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+              <Button onClick={handleAddUser} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Onboard New Employee
+              </Button>
+            </div>
           </div>
 
           {/* Generic Toolbar */}

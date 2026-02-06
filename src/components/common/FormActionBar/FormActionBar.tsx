@@ -295,6 +295,14 @@ export function FormActionBar({
 
   const { left, right } = getLeftRightContent();
 
+  // Determine flex justification based on content presence
+  const getJustifyClass = () => {
+    if (left && right) return 'justify-between';
+    if (right && !left) return 'justify-end';
+    if (left && !right) return 'justify-start';
+    return 'justify-start';
+  };
+
   return (
     <div className={cn(
       'fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-40',
@@ -304,7 +312,10 @@ export function FormActionBar({
       className
     )}>
       <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex justify-between items-center gap-4">
+        <div className={cn(
+          'flex items-center gap-4',
+          getJustifyClass()
+        )}>
           {left}
           {right}
         </div>
