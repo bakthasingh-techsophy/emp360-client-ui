@@ -100,7 +100,7 @@ export function LayoutWithAppShell() {
   });
 
   // ==================== EVENT HANDLERS ====================
-  
+
   /**
    * Handle pin/unpin of menu items
    * Updates both pinned state and order preferences
@@ -121,18 +121,18 @@ export function LayoutWithAppShell() {
    * Get dynamic page title based on current route
    */
   const getPageTitle = () => {
-    if (activePage) return activePage;
-    
-    // Find the menu item for the current path
-    const currentMenuItem = allMenuItems.find((item) => item.to === path);
-    if (currentMenuItem) return currentMenuItem.label;
-    
-    // Fallback to path-based titles
-    if (path.startsWith('/settings')) return 'Settings';
-    if (path.startsWith('/support')) return 'Support';
-    if (path.startsWith('/dashboard')) return 'Dashboard';
-    if (path.startsWith('/account')) return 'Account';
-    
+    // if (activePage) return activePage;
+
+    // // Find the menu item for the current path
+    // const currentMenuItem = allMenuItems.find((item) => item.to === path);
+    // if (currentMenuItem) return currentMenuItem.label;
+
+    // // Fallback to path-based titles
+    // if (path.startsWith('/settings')) return 'Settings';
+    // if (path.startsWith('/support')) return 'Support';
+    // if (path.startsWith('/dashboard')) return 'Dashboard';
+    // if (path.startsWith('/account')) return 'Account';
+
     return 'Employee 360';
   };
 
@@ -206,22 +206,22 @@ export function LayoutWithAppShell() {
       pinnedMenuIds={pinnedMenuIds}
       onTogglePin={handleTogglePin}
       menuCategories={menuCategoriesForPicker}
-      
+
       // Branding
       logo={<User className="h-6 w-6 text-primary" />}
       brandName="Employee 360"
-      
+
       // Header & Loading
       headerContent={headerContent}
       loadingBar={<LoadingBar />}
-      
+
       // Navigation
       onNavigate={handleNavigate}
-      
+
       // Customization options (all optional with sensible defaults)
       sheetAnimationDuration={0}         // 0 = instant (no animation), 200 = smooth slide (default)
-      sheetPosition="left"           
-      // useMenuPicker={true}             // Enable menu picker (false = show all menus in sidebar)
+      sheetPosition="left"
+    // useMenuPicker={true}             // Enable menu picker (false = show all menus in sidebar)
     >
       {/* Page content rendered here */}
       <Outlet />
