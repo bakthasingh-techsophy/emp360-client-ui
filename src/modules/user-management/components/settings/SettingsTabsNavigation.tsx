@@ -48,7 +48,7 @@ export function SettingsTabsNavigation({
       </div>
 
       {/* Medium & Large screens: Scrollable tabs */}
-      <div className="hidden md:block overflow-x-auto scrollbar-thin border-b">
+      <div className="hidden md:block overflow-x-auto scrollbar-thin">
         <div className="min-w-max px-4">
           <TabsList className="w-auto inline-flex">
             {tabs.map((tab) => (

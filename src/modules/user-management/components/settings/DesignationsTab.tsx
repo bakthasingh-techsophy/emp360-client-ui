@@ -3,27 +3,54 @@
  * Manage job titles and designations
  */
 
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable';
+import { Form } from '@/components/ui/form';
 import { Designation } from '../../types/settings.types';
+import { useToast } from '@/hooks/use-toast';
+
+// Zod schema for Designations form validation
+const designationItemSchema = z.object({
+  id: z.string().min(1, 'Code is required and cannot be empty'),
+  description: z.string().min(1, 'Description is required and cannot be empty'),
+});
+
+const designationsFormSchema = z.object({
+  items: z.array(designationItemSchema).min(1, 'At least one designation is required'),
+});
+
+type DesignationsFormData = z.infer<typeof designationsFormSchema>;
 
 export function DesignationsTab() {
-  const [items, setItems] = useState<Designation[]>([
-    { id: 'software-engineer', description: 'Software Engineer' },
-    { id: 'senior-software-engineer', description: 'Senior Software Engineer' },
-    { id: 'tech-lead', description: 'Tech Lead' },
-    { id: 'manager', description: 'Manager' },
-    { id: 'senior-manager', description: 'Senior Manager' },
-  ]);
+  const { toast } = useToast();
+
+  const form = useForm<DesignationsFormData>({
+    resolver: zodResolver(designationsFormSchema),
+    defaultValues: {
+      items: [
+        { id: 'SOFTWARE_ENGINEER', description: 'Software Engineer' },
+        { id: 'SENIOR_SOFTWARE_ENGINEER', description: 'Senior Software Engineer' },
+        { id: 'TECH_LEAD', description: 'Tech Lead' },
+        { id: 'MANAGER', description: 'Manager' },
+        { id: 'SENIOR_MANAGER', description: 'Senior Manager' },
+      ],
+    },
+  });
+
+  const { watch, setValue } = form;
+  const items = watch('items');
 
   const columns: TableColumn<Designation>[] = [
     {
       key: 'id',
-      header: 'ID',
+      header: 'Code',
       type: 'text',
       required: true,
-      placeholder: 'Enter unique designation ID...',
+      placeholder: 'Enter unique code...',
       width: '250px',
+      minWidth: '250px',
     },
     {
       key: 'description',
@@ -40,26 +67,57 @@ export function DesignationsTab() {
     description: '',
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Designations</h2>
-        <p className="text-muted-foreground mt-1">
-          Manage job titles and designations across your organization
-        </p>
-      </div>
+  const handleItemsChange = (newItems: Designation[]) => {
+    // Transform code values to uppercase with underscores
+    const transformedItems = newItems.map(item => ({
+      ...item,
+      id: item.id.toUpperCase().replace(/\s+/g, '_'),
+    }));
+    setValue('items', transformedItems, { shouldValidate: true });
+  };
 
-      <EditableItemsTable
-        columns={columns}
-        items={items}
-        onChange={setItems}
-        emptyItemTemplate={emptyItem}
-        minItems={1}
-        maxItems={100}
-        showAddButton={true}
-        allowRemove={true}
-        allowAdd={true}
-      />
-    </div>
+  const handleSave = async (item: Designation, index: number) => {
+    // Validate and submit single item
+    const isValid = await form.trigger();
+    if (isValid) {
+      try {
+        // TODO: Implement API call to save single designation
+        console.log('Saving designation:', item, 'at index:', index);
+        
+        toast({
+          title: 'Success',
+          description: `Designation "${item.description}" saved successfully`,
+        });
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to save designation',
+        });
+      }
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form>
+        {/* Centered Container - Full width on mobile, constrained on larger screens */}
+        <div className="w-full max-w-5xl mx-auto">
+          <EditableItemsTable
+            columns={columns}
+            items={items}
+            onChange={handleItemsChange}
+            emptyItemTemplate={emptyItem}
+            minItems={1}
+            maxItems={100}
+            showAddButton={true}
+            allowRemove={true}
+            allowAdd={true}
+            allowSave={true}
+            onSave={handleSave}
+          />
+        </div>
+      </form>
+    </Form>
   );
 }
