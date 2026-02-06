@@ -38,6 +38,9 @@ import {
   apiDeleteUser,
   apiCreateSkill,
   apiUpdateSkill,
+  apiBulkDeleteUsers,
+  apiBulkDeactivateUsers,
+  apiBulkEnableUsers,
 } from '@/services/userManagementService';
 
 // Employee Aggregate Service
@@ -168,6 +171,9 @@ interface UserManagementContextType {
   deleteUserDetailsById: (id: string) => Promise<boolean>;
   bulkDeleteUserDetailsByIds: (ids: string[]) => Promise<boolean>;
   bulkDeleteUserDetailsByFilters: (filters: UniversalSearchRequest) => Promise<boolean>;
+  bulkDeleteUsers: (searchRequest: UniversalSearchRequest) => Promise<boolean>;
+  bulkDeactivateUsers: (searchRequest: UniversalSearchRequest) => Promise<boolean>;
+  bulkEnableUsers: (searchRequest: UniversalSearchRequest) => Promise<boolean>;
 
   // Employee Aggregate Methods
   createEmployeeAggregate: (payload: any) => Promise<any | null>;
@@ -450,6 +456,38 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       (tenant, accessToken) => apiBulkDeleteUserDetailsByFilters(filters, tenant, accessToken),
       'Bulk Deletion',
       'Users deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteUsers = async (
+    searchRequest: UniversalSearchRequest
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteUsers(searchRequest, tenant, accessToken),
+      'Bulk Delete Users',
+      `Users matching criteria deleted successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeactivateUsers = async (searchRequest: UniversalSearchRequest): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeactivateUsers(searchRequest, tenant, accessToken),
+      'Bulk Deactivate Users',
+      `Users matching criteria deactivated successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkEnableUsers = async (searchRequest: UniversalSearchRequest): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkEnableUsers(searchRequest, tenant, accessToken),
+      'Bulk Enable Users',
+      `Users matching criteria enabled successfully`,
       true
     );
     return result as boolean;
@@ -913,6 +951,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     deleteUserDetailsById,
     bulkDeleteUserDetailsByIds,
     bulkDeleteUserDetailsByFilters,
+    bulkDeleteUsers,
+    bulkDeactivateUsers,
+    bulkEnableUsers,
 
     // Employee Aggregate
     createEmployeeAggregate,

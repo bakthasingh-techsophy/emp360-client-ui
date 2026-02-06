@@ -219,6 +219,105 @@ export const apiUpdateSkill = async (
 };
 
 /**
+ * Bulk Delete Users by Filters
+ * POST /emp-user-management/v1/users/bulk/delete
+ * 
+ * Deletes multiple users matching the provided filter criteria.
+ * The request body contains UniversalSearchRequest with filters.
+ * Backend handles pagination internally during execution.
+ * 
+ * @param searchRequest - UniversalSearchRequest with filters (e.g., { filters: { and: { status: "inactive" } } })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiBulkDeleteUsers(
+ *   { filters: { and: { status: "inactive", department: "IT" } } },
+ *   'tenant-001'
+ * );
+ */
+export const apiBulkDeleteUsers = async (
+  searchRequest: UniversalSearchRequest,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/bulk/delete`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
+ * Bulk Deactivate Users
+ * POST /emp-user-management/v1/users/bulk/deactivate
+ * 
+ * Deactivates multiple users matching the provided filter criteria.
+ * The request body contains UniversalSearchRequest with filters.
+ * Backend handles the selection and deactivation internally.
+ * 
+ * @param searchRequest - UniversalSearchRequest with filters (e.g., { filters: { and: { status: "active" } } })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiBulkDeactivateUsers(
+ *   { filters: { and: { status: "active", department: "IT" } } },
+ *   'tenant-001'
+ * );
+ */
+export const apiBulkDeactivateUsers = async (
+  searchRequest: UniversalSearchRequest,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/bulk/deactivate`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
+ * Bulk Enable Users
+ * POST /emp-user-management/v1/users/bulk/enable
+ * 
+ * Enables/activates multiple users matching the provided filter criteria.
+ * The request body contains UniversalSearchRequest with filters.
+ * Backend handles the selection and activation internally.
+ * 
+ * @param searchRequest - UniversalSearchRequest with filters (e.g., { filters: { and: { status: "inactive" } } })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiBulkEnableUsers(
+ *   { filters: { and: { status: "inactive", department: "IT" } } },
+ *   'tenant-001'
+ * );
+ */
+export const apiBulkEnableUsers = async (
+  searchRequest: UniversalSearchRequest,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/bulk/enable`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const userManagementService = {
@@ -228,4 +327,7 @@ export const userManagementService = {
   apiDeleteUser,
   apiCreateSkill,
   apiUpdateSkill,
+  apiBulkDeleteUsers,
+  apiBulkDeactivateUsers,
+  apiBulkEnableUsers,
 };

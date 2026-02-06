@@ -7,10 +7,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '@tanstack/react-table';
-import { Eye, MoreHorizontal, Copy, Check, Trash2 } from 'lucide-react';
+import { Eye, MoreHorizontal, Copy, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +36,7 @@ type Props = {
 
 export function UsersTable({ searchQuery, activeFilters, visibleColumns, selectionMode, onSelectionChange }: Props) {
   const navigate = useNavigate();
-  const { refreshUserDetailsSnapshots, isLoading } = useUserManagement();
+  const { refreshUserDetailsSnapshots, deleteUser, isLoading } = useUserManagement();
   const tableRef = useRef<DataTableRef>(null);
 
   // Table state
@@ -46,6 +47,10 @@ export function UsersTable({ searchQuery, activeFilters, visibleColumns, selecti
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserDetailsSnapshot | null>(null);
+  
+  // Confirmation dialog state for single user deletion
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserDetailsSnapshot | null>(null);
 
   // Ref to track previous dependency values to detect actual changes
   const prevDepsRef = useRef<{ activeFilters: ActiveFilter[]; searchQuery: string; pageIndex: number; pageSize: number } | null>(null);
@@ -94,8 +99,20 @@ export function UsersTable({ searchQuery, activeFilters, visibleColumns, selecti
   }, [navigate]);
 
   const handleDeleteUser = useCallback((user: UserDetailsSnapshot) => {
-    console.log('Delete user:', user);
+    setUserToDelete(user);
+    setDeleteConfirmOpen(true);
   }, []);
+
+  const confirmDeleteUser = useCallback(async () => {
+    if (!userToDelete) return;
+    
+    const success = await deleteUser(userToDelete.employeeId);
+    if (success) {
+      // Refresh table data
+      fetchData();
+    }
+    setUserToDelete(null);
+  }, [userToDelete, deleteUser]);
 
   // Fetch data from API when filters or search change
   useEffect(() => {
@@ -512,6 +529,35 @@ export function UsersTable({ searchQuery, activeFilters, visibleColumns, selecti
           setViewModalOpen(false);
           handleEditUser(user);
         }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={confirmDeleteUser}
+        title="Delete User"
+        description={
+          userToDelete ? (
+            <div className="space-y-2">
+              <p>
+                Are you sure you want to delete{' '}
+                <strong>
+                  {userToDelete.firstName} {userToDelete.lastName}
+                </strong>{' '}
+                ({userToDelete.employeeId})?
+              </p>
+              <p className="text-destructive text-xs">
+                This action cannot be undone. All user data will be permanently removed.
+              </p>
+            </div>
+          ) : (
+            'Are you sure you want to delete this user?'
+          )
+        }
+        variant="destructive"
+        confirmText="Delete"
+        icon={<AlertTriangle className="h-10 w-10 text-destructive" />}
       />
     </>
   );

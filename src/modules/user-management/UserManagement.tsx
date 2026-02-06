@@ -5,21 +5,34 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, UserX, Trash2, Gift } from 'lucide-react';
+import { UserPlus, UserX, Trash2, Gift, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { AvailableFilter, ActiveFilter, BulkAction } from '@/components/GenericToolbar/types';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { UsersTable } from './UsersTable';
+import UniversalSearchRequest from '@/types/search';
 
 export function UserManagement() {
   const navigate = useNavigate();
+  const { bulkDeleteUsers, bulkDeactivateUsers, bulkEnableUsers } = useUserManagement();
 
   // State management
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
   // Column visibility state - minimal columns visible by default
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
@@ -194,12 +207,34 @@ export function UserManagement() {
 
   // Bulk action handlers
   const handleBulkDelete = useCallback(() => {
-    if (selectedIds.length > 0) {
-      console.log('Bulk delete users:', selectedIds);
-      // TODO: Implement bulk delete dialog and functionality
-      handleClearSelection();
-    }
-  }, [selectedIds, handleClearSelection]);
+    if (selectedIds.length === 0) return;
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Selected Users',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to delete <strong>{selectedIds.length}</strong> selected user(s)?
+          </p>
+          <p className="text-destructive text-xs">
+            This action cannot be undone. All user data will be permanently removed.
+          </p>
+        </div>
+      ),
+      variant: 'destructive',
+      onConfirm: async () => {
+        // Build UniversalSearchRequest with idsList
+        const searchRequest = {
+          idsList: selectedIds,
+        };
+        const success = await bulkDeleteUsers(searchRequest);
+        if (success) {
+          handleClearSelection();
+        }
+      },
+    });
+  }, [selectedIds, bulkDeleteUsers, handleClearSelection]);
 
   const handleBulkCreditLeaves = useCallback(() => {
     if (selectedIds.length > 0) {
@@ -210,12 +245,64 @@ export function UserManagement() {
   }, [selectedIds, handleClearSelection]);
 
   const handleBulkDeactivate = useCallback(() => {
-    if (selectedIds.length > 0) {
-      console.log('Bulk deactivate users:', selectedIds);
-      // TODO: Implement bulk deactivate functionality
-      handleClearSelection();
-    }
-  }, [selectedIds, handleClearSelection]);
+    if (selectedIds.length === 0) return;
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Deactivate Selected Users',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to deactivate <strong>{selectedIds.length}</strong> selected user(s)?
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Deactivated users will not be able to access the system until reactivated.
+          </p>
+        </div>
+      ),
+      variant: 'default',
+      onConfirm: async () => {
+        // Build UniversalSearchRequest with idsList
+        const searchRequest:UniversalSearchRequest = {
+          idsList: selectedIds,
+        };
+        const success = await bulkDeactivateUsers(searchRequest);
+        if (success) {
+          handleClearSelection();
+        }
+      },
+    });
+  }, [selectedIds]);
+
+  const handleBulkEnable = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    
+    setConfirmDialog({
+      open: true,
+      title: 'Enable Selected Users',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to enable <strong>{selectedIds.length}</strong> selected user(s)?
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Enabled users will be able to access the system.
+          </p>
+        </div>
+      ),
+      variant: 'default',
+      onConfirm: async () => {
+        // Build UniversalSearchRequest with idsList
+        const searchRequest = {
+          idsList: selectedIds,
+        };
+        const success = await bulkEnableUsers(searchRequest);
+        if (success) {
+          handleClearSelection();
+        }
+      },
+    });
+  }, [selectedIds, bulkEnableUsers, handleClearSelection]);
 
   // Memoize activeFilters to prevent unnecessary re-renders of UsersTable
   const memoizedActiveFilters = useMemo(() => activeFilters, [activeFilters]);
@@ -231,14 +318,6 @@ export function UserManagement() {
       onClick: handleBulkDelete,
     },
     {
-      id: 'credit-leaves',
-      label: 'Credit Leaves',
-      icon: <Gift className="h-4 w-4" />,
-      type: 'button',
-      variant: 'outline',
-      onClick: handleBulkCreditLeaves,
-    },
-    {
       id: 'deactivate',
       label: 'Deactivate',
       icon: <UserX className="h-4 w-4" />,
@@ -246,7 +325,23 @@ export function UserManagement() {
       variant: 'outline',
       onClick: handleBulkDeactivate,
     },
-  ], [handleBulkDelete, handleBulkCreditLeaves, handleBulkDeactivate]);
+    {
+      id: 'enable',
+      label: 'Enable Users',
+      icon: <UserCheck className="h-4 w-4" />,
+      type: 'button',
+      variant: 'outline',
+      onClick: handleBulkEnable,
+    },
+    {
+      id: 'credit-leaves',
+      label: 'Credit Leaves',
+      icon: <Gift className="h-4 w-4" />,
+      type: 'button',
+      variant: 'outline',
+      onClick: handleBulkCreditLeaves,
+    },
+  ], [handleBulkDelete, handleBulkDeactivate, handleBulkEnable, handleBulkCreditLeaves]);
 
   return (
     <>
@@ -302,6 +397,17 @@ export function UserManagement() {
         onSelectionChange={handleSelectionChange}
       />
     </PageLayout>
+
+    {/* Confirmation Dialog */}
+    <ConfirmationDialog
+      open={confirmDialog.open}
+      onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+      onConfirm={confirmDialog.onConfirm}
+      title={confirmDialog.title}
+      description={confirmDialog.description}
+      variant={confirmDialog.variant}
+      confirmText={confirmDialog.variant === 'destructive' ? 'Delete' : 'Confirm'}
+    />
   </>
   );
 }
