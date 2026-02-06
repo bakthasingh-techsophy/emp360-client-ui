@@ -41,6 +41,14 @@ import {
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
   apiBulkEnableUsers,
+  apiUpdateEmployeeTypeViaUsers,
+  apiDeleteEmployeeTypeViaUsers,
+  apiUpdateDepartmentViaUsers,
+  apiDeleteDepartmentViaUsers,
+  apiUpdateDesignationViaUsers,
+  apiDeleteDesignationViaUsers,
+  apiUpdateWorkLocationViaUsers,
+  apiDeleteWorkLocationViaUsers,
 } from '@/services/userManagementService';
 
 // Employee Aggregate Service
@@ -129,6 +137,35 @@ import {
   KeycloakUserItem,
 } from '@/services/keycloakUserService';
 
+// Employee Type Service
+import {
+  apiCreateEmployeeType,
+  apiGetEmployeeType,
+  apiSearchEmployeeTypes,
+  apiBulkDeleteEmployeeTypes,
+} from '@/services/employeeTypeService';
+
+// Department Service
+import {
+  apiCreateDepartment,
+  apiGetDepartment,
+  apiSearchDepartments,
+} from '@/services/departmentService';
+
+// Designation Service
+import {
+  apiCreateDesignation,
+  apiGetDesignation,
+  apiSearchDesignations,
+} from '@/services/designationService';
+
+// Work Location Service
+import {
+  apiCreateWorkLocation,
+  apiGetWorkLocation,
+  apiSearchWorkLocations,
+} from '@/services/workLocationService';
+
 // Types
 import Pagination from '@/types/pagination';
 import UniversalSearchRequest from '@/types/search';
@@ -147,6 +184,7 @@ import {
   BankingDetails,
   BankingDetailsCarrier
 } from '@/modules/user-management/types/onboarding.types';
+import { EmployeeType, EmployeeTypeCarrier, Department, DepartmentCarrier, Designation, DesignationCarrier, WorkLocation, WorkLocationCarrier } from '@/modules/user-management/types/settings.types';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 /**
@@ -239,6 +277,35 @@ interface UserManagementContextType {
   getKeycloakUserById: (id: string) => Promise<KeycloakUserItem | null>;
   updateKeycloakUser: (id: string, payload: UpdatePayload) => Promise<KeycloakUserItem | null>;
   deleteKeycloakUser: (id: string) => Promise<boolean>;
+
+  // Employee Type Methods
+  createEmployeeType: (carrier: EmployeeTypeCarrier) => Promise<EmployeeType | null>;
+  getEmployeeType: (id: string) => Promise<EmployeeType | null>;
+  updateEmployeeType: (id: string, payload: UpdatePayload) => Promise<EmployeeType | null>;
+  refreshEmployeeTypes: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<EmployeeType> | null>;
+  deleteEmployeeType: (id: string) => Promise<boolean>;
+  bulkDeleteEmployeeTypes: (ids: string[]) => Promise<boolean>;
+
+  // Department Methods
+  createDepartment: (carrier: DepartmentCarrier) => Promise<Department | null>;
+  getDepartment: (id: string) => Promise<Department | null>;
+  updateDepartment: (id: string, payload: UpdatePayload) => Promise<Department | null>;
+  refreshDepartments: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<Department> | null>;
+  deleteDepartment: (id: string) => Promise<boolean>;
+
+  // Designation Methods
+  createDesignation: (carrier: DesignationCarrier) => Promise<Designation | null>;
+  getDesignation: (id: string) => Promise<Designation | null>;
+  updateDesignation: (id: string, payload: UpdatePayload) => Promise<Designation | null>;
+  refreshDesignations: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<Designation> | null>;
+  deleteDesignation: (id: string) => Promise<boolean>;
+
+  // Work Location Methods
+  createWorkLocation: (carrier: WorkLocationCarrier) => Promise<WorkLocation | null>;
+  getWorkLocation: (id: string) => Promise<WorkLocation | null>;
+  updateWorkLocation: (id: string, payload: UpdatePayload) => Promise<WorkLocation | null>;
+  refreshWorkLocations: (searchRequest: UniversalSearchRequest, page?: number, pageSize?: number) => Promise<Pagination<WorkLocation> | null>;
+  deleteWorkLocation: (id: string) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -935,6 +1002,208 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== EMPLOYEE TYPE METHODS ====================
+
+  const createEmployeeType = async (carrier: EmployeeTypeCarrier): Promise<EmployeeType | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateEmployeeType(carrier, tenant, accessToken),
+      'Create Employee Type',
+      'Employee type created successfully'
+    ) as Promise<EmployeeType | null>;
+  };
+
+  const getEmployeeType = async (id: string): Promise<EmployeeType | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetEmployeeType(id, tenant, accessToken),
+      'Fetch Employee Type',
+      ''
+    ) as Promise<EmployeeType | null>;
+  };
+
+  const updateEmployeeType = async (id: string, payload: UpdatePayload): Promise<EmployeeType | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateEmployeeTypeViaUsers(id, payload, tenant, accessToken),
+      'Update Employee Type',
+      'Employee type updated successfully'
+    ) as Promise<EmployeeType | null>;
+  };
+
+  const refreshEmployeeTypes = async (
+    searchRequest: UniversalSearchRequest = {},
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<EmployeeType> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchEmployeeTypes(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Employee Types',
+      ''
+    ) as Promise<Pagination<EmployeeType> | null>;
+  };
+
+  const deleteEmployeeType = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteEmployeeTypeViaUsers(id, tenant, accessToken),
+      'Delete Employee Type',
+      'Employee type deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteEmployeeTypes = async (ids: string[]): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkDeleteEmployeeTypes(ids, tenant, accessToken),
+      'Bulk Delete Employee Types',
+      `${ids.length} employee type(s) deleted successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== DEPARTMENT METHODS ====================
+
+  const createDepartment = async (carrier: DepartmentCarrier): Promise<Department | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateDepartment(carrier, tenant, accessToken),
+      'Create Department',
+      'Department created successfully'
+    ) as Promise<Department | null>;
+  };
+
+  const getDepartment = async (id: string): Promise<Department | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetDepartment(id, tenant, accessToken),
+      'Fetch Department',
+      ''
+    ) as Promise<Department | null>;
+  };
+
+  const updateDepartment = async (id: string, payload: UpdatePayload): Promise<Department | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateDepartmentViaUsers(id, payload, tenant, accessToken),
+      'Update Department',
+      'Department updated successfully'
+    ) as Promise<Department | null>;
+  };
+
+  const refreshDepartments = async (
+    searchRequest: UniversalSearchRequest = {},
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<Department> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchDepartments(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Departments',
+      ''
+    ) as Promise<Pagination<Department> | null>;
+  };
+
+  const deleteDepartment = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteDepartmentViaUsers(id, tenant, accessToken),
+      'Delete Department',
+      'Department deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== DESIGNATION METHODS ====================
+
+  const createDesignation = async (carrier: DesignationCarrier): Promise<Designation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateDesignation(carrier, tenant, accessToken),
+      'Create Designation',
+      'Designation created successfully'
+    ) as Promise<Designation | null>;
+  };
+
+  const getDesignation = async (id: string): Promise<Designation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetDesignation(id, tenant, accessToken),
+      'Fetch Designation',
+      ''
+    ) as Promise<Designation | null>;
+  };
+
+  const updateDesignation = async (id: string, payload: UpdatePayload): Promise<Designation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateDesignationViaUsers(id, payload, tenant, accessToken),
+      'Update Designation',
+      'Designation updated successfully'
+    ) as Promise<Designation | null>;
+  };
+
+  const refreshDesignations = async (
+    searchRequest: UniversalSearchRequest = {},
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<Designation> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchDesignations(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Designations',
+      ''
+    ) as Promise<Pagination<Designation> | null>;
+  };
+
+  const deleteDesignation = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteDesignationViaUsers(id, tenant, accessToken),
+      'Delete Designation',
+      'Designation deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
+  // ==================== WORK LOCATION METHODS ====================
+
+  const createWorkLocation = async (carrier: WorkLocationCarrier): Promise<WorkLocation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiCreateWorkLocation(carrier, tenant, accessToken),
+      'Create Work Location',
+      'Work location created successfully'
+    ) as Promise<WorkLocation | null>;
+  };
+
+  const getWorkLocation = async (id: string): Promise<WorkLocation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiGetWorkLocation(id, tenant, accessToken),
+      'Fetch Work Location',
+      ''
+    ) as Promise<WorkLocation | null>;
+  };
+
+  const updateWorkLocation = async (id: string, payload: UpdatePayload): Promise<WorkLocation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiUpdateWorkLocationViaUsers(id, payload, tenant, accessToken),
+      'Update Work Location',
+      'Work location updated successfully'
+    ) as Promise<WorkLocation | null>;
+  };
+
+  const refreshWorkLocations = async (
+    searchRequest: UniversalSearchRequest = {},
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<WorkLocation> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) => apiSearchWorkLocations(searchRequest, page, pageSize, tenant, accessToken),
+      'Refresh Work Locations',
+      ''
+    ) as Promise<Pagination<WorkLocation> | null>;
+  };
+
+  const deleteWorkLocation = async (id: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeleteWorkLocationViaUsers(id, tenant, accessToken),
+      'Delete Work Location',
+      'Work location deleted successfully',
+      true
+    );
+    return result as boolean;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: UserManagementContextType = {
@@ -1019,6 +1288,35 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     getKeycloakUserById,
     updateKeycloakUser,
     deleteKeycloakUser,
+
+    // Employee Types
+    createEmployeeType,
+    getEmployeeType,
+    updateEmployeeType,
+    refreshEmployeeTypes,
+    deleteEmployeeType,
+    bulkDeleteEmployeeTypes,
+
+    // Departments
+    createDepartment,
+    getDepartment,
+    updateDepartment,
+    refreshDepartments,
+    deleteDepartment,
+
+    // Designations
+    createDesignation,
+    getDesignation,
+    updateDesignation,
+    refreshDesignations,
+    deleteDesignation,
+
+    // Work Locations
+    createWorkLocation,
+    getWorkLocation,
+    updateWorkLocation,
+    refreshWorkLocations,
+    deleteWorkLocation,
 
     // Loading State
     isLoading,

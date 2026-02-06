@@ -104,6 +104,7 @@ export interface UserDetailsSnapshot {
 
   /** Org structure */
   department: string;
+  employeeType: EmployeeType;
 
   /** Employment status */
   status: UserStatus;
@@ -150,10 +151,10 @@ export interface JobDetailsCarrier {
   officialEmail: string;
   primaryPhone?: string;
   secondaryPhone?: string;
-  designation: string;
-  department?: string;
-  employeeType: EmployeeType;
-  workLocation?: string;
+  designationId: string;
+  departmentId?: string;
+  employeeTypeId: string;
+  workLocationId?: string;
   reportingManager?: string;
   joiningDate?: string;
   dateOfBirth?: string;
@@ -252,10 +253,10 @@ export interface JobDetails {
   email: string;
   phone: string;
   secondaryPhone: string;
-  designation: string;
-  department: string;
-  employeeType: EmployeeType;
-  location: string;
+  designationId: string;
+  departmentId: string;
+  employeeTypeId: string;
+  workLocationId: string;
   reportingTo: string;
   joiningDate: string;
   dateOfBirth: string;

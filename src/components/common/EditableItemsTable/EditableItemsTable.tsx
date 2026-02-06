@@ -50,6 +50,7 @@ export interface EditableItemsTableProps<T = any> {
   allowAdd?: boolean; // Allow adding items
   allowSave?: boolean; // Show save button for each row
   onSave?: (item: T, index: number) => void | Promise<void>; // Callback when save is clicked for an item
+  onDelete?: (item: T, index: number) => void | Promise<void>; // Callback when delete is clicked for an item
   errors?: Record<number, Record<string, string>>; // Validation errors by row index and column key
   onValidate?: (items: T[]) => Record<number, Record<string, string>>; // Optional validation function
 }
@@ -69,6 +70,7 @@ export function EditableItemsTable<T extends Record<string, any>>({
   allowAdd = true,
   allowSave = false,
   onSave,
+  onDelete,
   errors = {},
   onValidate,
 }: EditableItemsTableProps<T>) {
@@ -335,7 +337,13 @@ export function EditableItemsTable<T extends Record<string, any>>({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveItem(index)}
+                          onClick={() => {
+                            if (onDelete) {
+                              onDelete(items[index], index);
+                            } else {
+                              handleRemoveItem(index);
+                            }
+                          }}
                           disabled={items.length <= minItems}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Remove item"

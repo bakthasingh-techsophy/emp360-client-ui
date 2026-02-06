@@ -1,10 +1,14 @@
 /**
  * User Management Service
- * Handles all API operations for user management - onboarding and user lifecycle
+ * Handles all API operations for user management - onboarding, user lifecycle, and settings management
  * 
  * Endpoints:
  * - POST /emp-user-management/v1/users/onboard - Onboard a new user
  * - PATCH /emp-user-management/v1/users/{employeeId} - Update user details
+ * - PATCH /emp-user-management/v1/users/employee-types/{id} - Update employee type
+ * - PATCH /emp-user-management/v1/users/departments/{id} - Update department
+ * - PATCH /emp-user-management/v1/users/designations/{id} - Update designation
+ * - PATCH /emp-user-management/v1/users/work-locations/{id} - Update work location
  * 
  * All responses follow ApiResponse<T> wrapper format
  */
@@ -14,6 +18,7 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import { UserDetails, UserDetailsCarrier, SkillItem, SkillItemCarrier } from "@/modules/user-management/types/onboarding.types";
+import { EmployeeType, Department, Designation, WorkLocation } from "@/modules/user-management/types/settings.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
 
@@ -318,6 +323,250 @@ export const apiBulkEnableUsers = async (
 };
 
 /**
+ * Update Employee Type (via Users Endpoint)
+ * PATCH /emp-user-management/v1/users/employee-types/{id}
+ * 
+ * Updates an existing employee type via the users management endpoint.
+ * Partially updates employee type details - only provided fields are updated.
+ * 
+ * @param id - Employee type ID
+ * @param payload - Object with fields to update (e.g., { employeeType: "FULL_TIME", description: "Full-time Employee" })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<EmployeeType>>
+ * 
+ * @example
+ * const response = await apiUpdateEmployeeTypeViaUsers('FULL_TIME', {
+ *   employeeType: 'FULL_TIME',
+ *   description: 'Full-time Permanent Employee'
+ * }, 'tenant-001');
+ */
+export const apiUpdateEmployeeTypeViaUsers = async (
+  id: string,
+  payload: Partial<Pick<EmployeeType, 'employeeType' | 'description'>>,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<EmployeeType>> => {
+  return apiRequest<EmployeeType>({
+    method: "PATCH",
+    endpoint: `${BASE_ENDPOINT}/employee-types/${id}`,
+    tenant,
+    accessToken,
+    body: payload,
+  });
+};
+
+/**
+ * Update Department (via Users Endpoint)
+ * PATCH /emp-user-management/v1/users/departments/{id}
+ * 
+ * Updates an existing department via the users management endpoint.
+ * Partially updates department details - only provided fields are updated.
+ * 
+ * @param id - Department ID
+ * @param payload - Object with fields to update (e.g., { department: "Engineering", description: "Dept description" })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Department>>
+ * 
+ * @example
+ * const response = await apiUpdateDepartmentViaUsers('DEPT_001', {
+ *   department: 'Engineering & Development',
+ *   description: 'Engineering and product development department'
+ * }, 'tenant-001');
+ */
+export const apiUpdateDepartmentViaUsers = async (
+  id: string,
+  payload: Partial<Pick<Department, 'department' | 'description'>>,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Department>> => {
+  return apiRequest<Department>({
+    method: "PATCH",
+    endpoint: `${BASE_ENDPOINT}/departments/${id}`,
+    tenant,
+    accessToken,
+    body: payload,
+  });
+};
+
+/**
+ * Update Designation (via Users Endpoint)
+ * PATCH /emp-user-management/v1/users/designations/{id}
+ * 
+ * Updates an existing designation via the users management endpoint.
+ * Partially updates designation details - only provided fields are updated.
+ * 
+ * @param id - Designation ID
+ * @param payload - Object with fields to update (e.g., { designation: "Senior Engineer", description: "Description" })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Designation>>
+ * 
+ * @example
+ * const response = await apiUpdateDesignationViaUsers('DES_001', {
+ *   designation: 'Senior Software Engineer',
+ *   description: 'Senior level software engineer position'
+ * }, 'tenant-001');
+ */
+export const apiUpdateDesignationViaUsers = async (
+  id: string,
+  payload: Partial<Pick<Designation, 'designation' | 'description'>>,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Designation>> => {
+  return apiRequest<Designation>({
+    method: "PATCH",
+    endpoint: `${BASE_ENDPOINT}/designations/${id}`,
+    tenant,
+    accessToken,
+    body: payload,
+  });
+};
+
+/**
+ * Update Work Location (via Users Endpoint)
+ * PATCH /emp-user-management/v1/users/work-locations/{id}
+ * 
+ * Updates an existing work location via the users management endpoint.
+ * Partially updates work location details - only provided fields are updated.
+ * 
+ * @param id - Work Location ID
+ * @param payload - Object with fields to update (e.g., { location: "New York Office", description: "Description" })
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<WorkLocation>>
+ * 
+ * @example
+ * const response = await apiUpdateWorkLocationViaUsers('LOC_001', {
+ *   location: 'New York Headquarters',
+ *   description: 'Main office location in New York, USA'
+ * }, 'tenant-001');
+ */
+export const apiUpdateWorkLocationViaUsers = async (
+  id: string,
+  payload: Partial<Pick<WorkLocation, 'location' | 'description'>>,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<WorkLocation>> => {
+  return apiRequest<WorkLocation>({
+    method: "PATCH",
+    endpoint: `${BASE_ENDPOINT}/work-locations/${id}`,
+    tenant,
+    accessToken,
+    body: payload,
+  });
+};
+
+/**
+ * Delete Employee Type (via Users Endpoint)
+ * DELETE /emp-user-management/v1/users/employee-types/{id}
+ * 
+ * Deletes an existing employee type via the users management endpoint.
+ * 
+ * @param id - Employee Type ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteEmployeeTypeViaUsers('EMP_TYPE_001', 'tenant-001');
+ */
+export const apiDeleteEmployeeTypeViaUsers = async (
+  id: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/employee-types/${id}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Delete Designation (via Users Endpoint)
+ * DELETE /emp-user-management/v1/users/designations/{id}
+ * 
+ * Deletes an existing designation via the users management endpoint.
+ * 
+ * @param id - Designation ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteDesignationViaUsers('DES_001', 'tenant-001');
+ */
+export const apiDeleteDesignationViaUsers = async (
+  id: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/designations/${id}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Delete Department (via Users Endpoint)
+ * DELETE /emp-user-management/v1/users/departments/{id}
+ * 
+ * Deletes an existing department via the users management endpoint.
+ * 
+ * @param id - Department ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteDepartmentViaUsers('DEPT_001', 'tenant-001');
+ */
+export const apiDeleteDepartmentViaUsers = async (
+  id: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/departments/${id}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Delete Work Location (via Users Endpoint)
+ * DELETE /emp-user-management/v1/users/work-locations/{id}
+ * 
+ * Deletes an existing work location via the users management endpoint.
+ * 
+ * @param id - Work Location ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteWorkLocationViaUsers('LOC_001', 'tenant-001');
+ */
+export const apiDeleteWorkLocationViaUsers = async (
+  id: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/work-locations/${id}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const userManagementService = {
@@ -330,4 +579,12 @@ export const userManagementService = {
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
   apiBulkEnableUsers,
+  apiUpdateEmployeeTypeViaUsers,
+  apiDeleteEmployeeTypeViaUsers,
+  apiUpdateDepartmentViaUsers,
+  apiDeleteDepartmentViaUsers,
+  apiUpdateDesignationViaUsers,
+  apiDeleteDesignationViaUsers,
+  apiUpdateWorkLocationViaUsers,
+  apiDeleteWorkLocationViaUsers,
 };
