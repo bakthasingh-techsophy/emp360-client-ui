@@ -24,6 +24,7 @@ export function UserManagement() {
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -231,6 +232,7 @@ export function UserManagement() {
         const success = await bulkDeleteUsers(searchRequest);
         if (success) {
           handleClearSelection();
+          setRefreshTrigger(prev => prev + 1);
         }
       },
     });
@@ -269,6 +271,7 @@ export function UserManagement() {
         const success = await bulkDeactivateUsers(searchRequest);
         if (success) {
           handleClearSelection();
+          setRefreshTrigger(prev => prev + 1);
         }
       },
     });
@@ -299,6 +302,7 @@ export function UserManagement() {
         const success = await bulkEnableUsers(searchRequest);
         if (success) {
           handleClearSelection();
+          setRefreshTrigger(prev => prev + 1);
         }
       },
     });
@@ -395,6 +399,7 @@ export function UserManagement() {
         visibleColumns={visibleColumns}
         selectionMode={selectionMode}
         onSelectionChange={handleSelectionChange}
+        refreshTrigger={refreshTrigger}
       />
     </PageLayout>
 
