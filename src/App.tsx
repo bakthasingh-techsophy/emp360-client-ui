@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { UserManagementProvider } from './contexts/UserManagementContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { PolicyProvider } from './contexts/PolicyContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -75,6 +76,7 @@ import { AssetManagement } from './modules/expenses-assets/AssetManagement';
 // Policy & Document Center modules
 import { PolicyLibrary } from './modules/policy-documents/PolicyLibrary';
 import { PolicyForm } from './modules/policy-documents/PolicyForm';
+import { PolicyVersioning } from './modules/policy-documents/PolicyVersioning';
 import { Acknowledgements } from './modules/policy-documents/Acknowledgements';
 import { FormsTemplates } from './modules/policy-documents/FormsTemplates';
 
@@ -114,8 +116,9 @@ function App() {
         <LayoutProvider>
           <CompanyProvider>
             <UserManagementProvider>
-              <BrowserRouter>
-              <Routes>
+              <PolicyProvider>
+                <BrowserRouter>
+                <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
@@ -193,6 +196,7 @@ function App() {
                 {/* Policy & Document Center routes - Flat paths */}
                 <Route path="/policy-library" element={<PolicyLibrary />} />
                 <Route path="/policy-form" element={<PolicyForm />} />
+                <Route path="/policy-versions" element={<PolicyVersioning />} />
                 <Route path="/acknowledgements" element={<Acknowledgements />} />
                 <Route path="/forms-templates" element={<FormsTemplates />} />
 
@@ -239,11 +243,12 @@ function App() {
             </Routes>
           </BrowserRouter>
           <Toaster />
-        </UserManagementProvider>
-      </CompanyProvider>
-        </LayoutProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        </PolicyProvider>
+      </UserManagementProvider>
+    </CompanyProvider>
+      </LayoutProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 }
 

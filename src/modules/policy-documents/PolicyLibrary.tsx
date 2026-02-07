@@ -2,26 +2,114 @@
  * Policy Library Main Page
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { PolicyStatsCards } from './components/PolicyStatsCards';
 import { PolicyCard } from './components/PolicyCard';
-import { Policy, PolicyStats } from './types';
-import { mockPolicies } from './mockData';
-import { FileText } from 'lucide-react';
+import { Policy, PolicyVersion } from './types';
+import { FileText, Upload } from 'lucide-react';
 import { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { DefaultPagination } from '@/components/common/Pagination/DefaultPagination';
+import { usePolicy } from '@/contexts/PolicyContext';
+import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
+import { useLayoutContext } from '@/contexts/LayoutContext';
 
 export function PolicyLibrary() {
   const navigate = useNavigate();
+  const { refreshPolicies, deletePolicyById, refreshPolicyVersions, isLoading } = usePolicy();
+  const { selectedCompanyScope } = useLayoutContext();
 
   // State
-  const [policies] = useState<Policy[]>(mockPolicies);
-  const [loading] = useState(false);
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [policyVersions, setPolicyVersions] = useState<PolicyVersion[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<any[]>([]);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+
+  // Ref to track previous dependency values to detect actual changes
+  const prevDepsRef = useRef<{
+    activeFilters: ActiveFilter[];
+    searchQuery: string;
+    pageIndex: number;
+    pageSize: number;
+    refreshTrigger: number;
+    selectedCompanyScope: string | null | undefined;
+  } | null>(null);
+
+  const loadPolicies = async () => {
+    try {
+      // Build universal search request from filters and search query
+      const searchRequest = buildUniversalSearchRequest(
+        activeFilters,
+        searchQuery,
+        ['name', 'description', 'category', 'status'],
+      );
+
+      const result = await refreshPolicies(searchRequest, pageIndex, pageSize);
+      if (result) {
+        setPolicies(result.content || []);
+        setTotalItems(result.totalElements || 0);
+        
+        // Load all policy versions for displaying latest version info
+        const versionsResult = await refreshPolicyVersions({}, 0, 1000);
+        if (versionsResult) {
+          setPolicyVersions(versionsResult.content || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching policies:', error);
+    }
+  };
+
+  // Fetch data from API when filters or search change
+  useEffect(() => {
+    // Check if dependencies have actually changed
+    const depsChanged =
+      !prevDepsRef.current ||
+      JSON.stringify(prevDepsRef.current.activeFilters) !==
+        JSON.stringify(activeFilters) ||
+      prevDepsRef.current.searchQuery !== searchQuery ||
+      prevDepsRef.current.pageIndex !== pageIndex ||
+      prevDepsRef.current.pageSize !== pageSize ||
+      prevDepsRef.current.refreshTrigger !== refreshTrigger ||
+      prevDepsRef.current.selectedCompanyScope !== selectedCompanyScope;
+
+    if (!depsChanged) return;
+
+    // Update the ref with current values
+    prevDepsRef.current = {
+      activeFilters,
+      searchQuery,
+      pageIndex,
+      pageSize,
+      refreshTrigger,
+      selectedCompanyScope,
+    };
+
+    loadPolicies();
+  }, [
+    activeFilters,
+    searchQuery,
+    pageIndex,
+    pageSize,
+    refreshTrigger,
+    selectedCompanyScope,
+  ]);
+
+  // Get latest version for a policy
+  const getLatestVersion = (versionIds: string[]): PolicyVersion | undefined => {
+    if (versionIds.length === 0) return undefined;
+    return policyVersions.find(v => v.id === versionIds[0]);
+  };
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -41,82 +129,9 @@ export function PolicyLibrary() {
   // Mock user role - in real app, get from auth context
   const isAdmin = true; // Change to false to test employee view
 
-  // Calculate stats
-  const stats: PolicyStats = useMemo(() => {
-    return {
-      totalPolicies: policies.length,
-      publishedPolicies: policies.filter((p) => p.status === 'published').length,
-      draftPolicies: policies.filter((p) => p.status === 'draft').length,
-      mandatoryPolicies: policies.filter((p) => p.mandatory).length,
-    };
-  }, [policies]);
-
-  // Filter and search policies
-  const filteredPolicies = useMemo(() => {
-    let filtered = [...policies];
-
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply filters
-    activeFilters.forEach((filter) => {
-      switch (filter.id) {
-        case 'status':
-          filtered = filtered.filter((p) => p.status === filter.value);
-          break;
-        case 'category':
-          filtered = filtered.filter((p) => p.category === filter.value);
-          break;
-        case 'mandatory':
-          filtered = filtered.filter((p) => p.mandatory === (filter.value === 'true'));
-          break;
-        case 'effectiveDate':
-          if (filter.value?.from) {
-            filtered = filtered.filter((p) => {
-              const effectiveDate = new Date(p.effectiveDate);
-              const fromDate = new Date(filter.value.from);
-              return effectiveDate >= fromDate;
-            });
-          }
-          if (filter.value?.to) {
-            filtered = filtered.filter((p) => {
-              const effectiveDate = new Date(p.effectiveDate);
-              const toDate = new Date(filter.value.to);
-              return effectiveDate <= toDate;
-            });
-          }
-          break;
-        case 'expiryDate':
-          if (filter.value?.from) {
-            filtered = filtered.filter((p) => {
-              if (!p.expiryDate) return false;
-              const expiryDate = new Date(p.expiryDate);
-              const fromDate = new Date(filter.value.from);
-              return expiryDate >= fromDate;
-            });
-          }
-          if (filter.value?.to) {
-            filtered = filtered.filter((p) => {
-              if (!p.expiryDate) return false;
-              const expiryDate = new Date(p.expiryDate);
-              const toDate = new Date(filter.value.to);
-              return expiryDate <= toDate;
-            });
-          }
-          break;
-      }
-    });
-
-    return filtered;
-  }, [policies, searchQuery, activeFilters]);
+  // Calculate pagination values
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const canNextPage = pageIndex < totalPages - 1;
 
   // Handlers
   const handleAddPolicy = () => {
@@ -127,10 +142,14 @@ export function PolicyLibrary() {
     navigate(`/policy-form?mode=edit&id=${policy.id}`);
   };
 
+  const handleManageVersions = (policy: Policy) => {
+    navigate(`/policy-versions?id=${policy.id}`);
+  };
+
   const handleView = (policy: Policy) => {
     // Open document in new tab
-    const latestVersion = policy.versions[0];
-    if (latestVersion.documentUrl) {
+    const latestVersion = getLatestVersion(policy.versionsIds);
+    if (latestVersion?.documentUrl) {
       window.open(latestVersion.documentUrl, '_blank');
     }
   };
@@ -151,9 +170,12 @@ export function PolicyLibrary() {
       ),
       confirmText: 'Delete',
       variant: 'destructive',
-      action: () => {
-        console.log('Delete policy:', policy.id);
-        // API call here
+      action: async () => {
+        const success = await deletePolicyById(policy.id);
+        if (success) {
+          // Trigger refresh by incrementing refreshTrigger
+          setRefreshTrigger(prev => prev + 1);
+        }
       },
     });
   };
@@ -204,19 +226,24 @@ export function PolicyLibrary() {
     <>
       <PageLayout>
         <div className="space-y-6">
-          {/* Page Header */}
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <FileText className="h-8 w-8" />
-              Policy Library
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Centralized repository of company policies, procedures, and guidelines
-            </p>
+          {/* Page Header with Action Button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                <FileText className="h-8 w-8" />
+                Policy Library
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Centralized repository of company policies, procedures, and guidelines
+              </p>
+            </div>
+            {isAdmin && (
+              <Button onClick={handleAddPolicy} className="gap-2">
+                <Upload className="h-4 w-4" />
+                Upload Policy
+              </Button>
+            )}
           </div>
-
-          {/* Stats Cards */}
-          <PolicyStatsCards stats={stats} />
 
           {/* Toolbar */}
           <GenericToolbar
@@ -230,17 +257,14 @@ export function PolicyLibrary() {
             onFiltersChange={setActiveFilters}
             showExport={false}
             showConfigureView={false}
-            showAddButton={isAdmin}
-            addButtonLabel="Upload Policy"
-            onAdd={handleAddPolicy}
           />
 
           {/* Policy Cards Grid */}
-          {loading ? (
+          {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">
               Loading policies...
             </div>
-          ) : filteredPolicies.length === 0 ? (
+          ) : policies.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No policies found</h3>
@@ -253,20 +277,43 @@ export function PolicyLibrary() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredPolicies.map((policy) => (
-                <PolicyCard
-                  key={policy.id}
-                  policy={policy}
-                  onView={handleView}
-                  onEdit={isAdmin ? handleEdit : undefined}
-                  onDelete={isAdmin ? handleDelete : undefined}
-                  isAdmin={isAdmin}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {policies.map((policy) => (
+                  <PolicyCard
+                    key={policy.id}
+                    policy={policy}
+                    onView={handleView}
+                    onEdit={isAdmin ? handleEdit : undefined}
+                    onManageVersions={isAdmin ? handleManageVersions : undefined}
+                    onDelete={isAdmin ? handleDelete : undefined}
+                    isAdmin={isAdmin}
+                  />
+                ))}
+              </div>
+
+              {/* Fixed Bottom Pagination */}
+              <DefaultPagination
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                totalPages={totalPages}
+                canNextPage={canNextPage}
+                totalItems={totalItems}
+                onPageChange={setPageIndex}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPageIndex(0);
+                }}
+                pageSizeOptions={[12, 24, 36, 48]}
+                className="fixed bottom-0 left-0 right-0 z-10"
+                disabled={isLoading}
+              />
+            </>
           )}
         </div>
+
+        {/* Add padding at bottom to prevent content from being hidden behind fixed pagination */}
+        <div className="h-20" />
       </PageLayout>
 
       {/* Confirmation Dialog */}
