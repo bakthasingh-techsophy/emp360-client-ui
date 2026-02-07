@@ -34,7 +34,9 @@ import {
 import { DataTable } from "@/components/common/DataTable/DataTable";
 import { DataTableRef } from "@/components/common/DataTable/types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
+import { useLayoutContext } from "@/contexts/LayoutContext";
 import { ActiveFilter } from "@/components/GenericToolbar/types";
+import { buildUniversalSearchRequest } from "@/components/GenericToolbar/searchBuilder";
 import { UserStatus, UserDetailsSnapshot } from "./types/onboarding.types";
 import { EmployeeViewModal } from "./components/EmployeeViewModal";
 
@@ -58,6 +60,7 @@ export function UsersTable({
   const navigate = useNavigate();
   const { refreshUserDetailsSnapshots, deleteUser, isLoading } =
     useUserManagement();
+  const { selectedCompanyScope } = useLayoutContext();
   const tableRef = useRef<DataTableRef>(null);
 
   // Table state
@@ -84,6 +87,7 @@ export function UsersTable({
     pageIndex: number;
     pageSize: number;
     refreshTrigger: number;
+    selectedCompanyScope: string | null | undefined;
   } | null>(null);
 
   // Get status badge variant
@@ -139,9 +143,24 @@ export function UsersTable({
 
   const fetchData = async () => {
     try {
-      const result = await refreshUserDetailsSnapshots(
+      // Build universal search request from filters and search query
+      const searchRequest = buildUniversalSearchRequest(
         activeFilters,
         searchQuery,
+        [
+          "firstName",
+          "lastName",
+          "email",
+          "id",
+          "designation",
+          "phone",
+          "department",
+          "employeeType",
+        ],
+      );
+
+      const result = await refreshUserDetailsSnapshots(
+        searchRequest,
         pageIndex,
         pageSize,
       );
@@ -176,12 +195,20 @@ export function UsersTable({
       prevDepsRef.current.searchQuery !== searchQuery ||
       prevDepsRef.current.pageIndex !== pageIndex ||
       prevDepsRef.current.pageSize !== pageSize ||
-      prevDepsRef.current.refreshTrigger !== refreshTrigger;
+      prevDepsRef.current.refreshTrigger !== refreshTrigger ||
+      prevDepsRef.current.selectedCompanyScope !== selectedCompanyScope;
 
     if (!depsChanged) return;
 
     // Update the ref with current values
-    prevDepsRef.current = { activeFilters, searchQuery, pageIndex, pageSize, refreshTrigger };
+    prevDepsRef.current = {
+      activeFilters,
+      searchQuery,
+      pageIndex,
+      pageSize,
+      refreshTrigger,
+      selectedCompanyScope,
+    };
 
     fetchData();
   }, [
@@ -190,7 +217,7 @@ export function UsersTable({
     pageIndex,
     pageSize,
     refreshTrigger,
-    refreshUserDetailsSnapshots,
+    selectedCompanyScope,
   ]);
 
   // Define table columns - memoized to prevent unnecessary re-renders

@@ -81,6 +81,7 @@ export interface UserDetails {
   email: string;
   phone: string;
   status: UserStatus;
+  companyId?: string; // Optional company/studio ID
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }
@@ -142,6 +143,7 @@ export interface UserDetailsCarrier {
   email: string;
   phone?: string;
   employeeIdChanged?: boolean;
+  companyId?: string; // Optional company/studio ID
   status: UserStatus;
   createdAt: string; // ISO instant
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { UserDetails, UserStatus } from "../../types/onboarding.types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
+import { useCompany } from "@/contexts/CompanyContext";
 
 // Zod schema for UserDetails validation
 export const userDetailsSchema = z.object({
@@ -21,6 +22,7 @@ export const userDetailsSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
   phone: z.string().min(1, "Phone number is required"),
   status: z.nativeEnum(UserStatus, { required_error: "Status is required" }),
+  companyId: z.string().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -45,6 +47,7 @@ export function UserDetailsFormComponent({
   } = form;
 
   const { getUserDetailsById } = useUserManagement();
+  const { companies, loading: isLoadingCompanies } = useCompany();
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchUserDetails = async () => {
@@ -59,6 +62,7 @@ export function UserDetailsFormComponent({
           email: data.email || "",
           phone: data.phone || "",
           status: data.status || UserStatus.ACTIVE,
+          companyId: data.companyId || "",
           createdAt: data.createdAt || "",
           updatedAt: data.updatedAt || "",
         });
@@ -98,6 +102,33 @@ export function UserDetailsFormComponent({
           />
           {errors.id && (
             <p className="text-sm text-destructive">{errors.id.message}</p>
+          )}
+        </div>
+
+        {/* Company Dropdown */}
+        <div className="space-y-2">
+          <Label htmlFor="companyId">Company</Label>
+          <Select
+            value={watch("companyId")}
+            onValueChange={(value) => {
+              setValue("companyId", value);
+              trigger("companyId");
+            }}
+            disabled={isLoadingCompanies}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={isLoadingCompanies ? "Loading companies..." : "Select company (optional)"} />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.filter(c => c).map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.companyId && (
+            <p className="text-sm text-destructive">{errors.companyId.message}</p>
           )}
         </div>
 

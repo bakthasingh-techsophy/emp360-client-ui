@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { UserManagementProvider } from './contexts/UserManagementContext';
+import { CompanyProvider } from './contexts/CompanyContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -93,6 +94,8 @@ import { RoomManagement } from './modules/visitor-room';
 import { UserManagement } from './modules/user-management/UserManagement';
 import { UserManagementSettings } from './modules/user-management/UserManagementSettings';
 import { EmployeeOnboarding } from './modules/user-management/EmployeeOnboarding';
+import { CompanyManagement } from './modules/administration/CompanyManagement';
+import { CompanyForm } from './modules/administration/CompanyForm';
 import { RolePermissions } from './modules/user-management/RolePermissions';
 import { AuditLogs } from './modules/user-management/AuditLogs';
 import { Integrations } from './modules/user-management/Integrations';
@@ -108,10 +111,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <UserManagementProvider>
-          <LayoutProvider>
-            <BrowserRouter>
-            <Routes>
+        <LayoutProvider>
+          <CompanyProvider>
+            <UserManagementProvider>
+              <BrowserRouter>
+              <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
@@ -215,6 +219,8 @@ function App() {
                 <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/user-management/settings" element={<UserManagementSettings />} />
                 <Route path="/employee-onboarding" element={<EmployeeOnboarding />} />
+                <Route path="/company-management" element={<CompanyManagement />} />
+                <Route path="/company-form" element={<CompanyForm />} />
                 <Route path="/role-permissions" element={<RolePermissions />} />
                 <Route path="/audit-logs" element={<AuditLogs />} />
                 <Route path="/integrations" element={<Integrations />} />
@@ -233,10 +239,11 @@ function App() {
             </Routes>
           </BrowserRouter>
           <Toaster />
+        </UserManagementProvider>
+      </CompanyProvider>
         </LayoutProvider>
-      </UserManagementProvider>
-    </AuthProvider>
-  </ThemeProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

@@ -363,6 +363,13 @@ export const allMenuItems: AppShellMenuItem[] = [
     category: 'Administration',
   },
   {
+    id: 'company-management',
+    to: '/company-management',
+    icon: Building2,
+    label: 'Company Management',
+    category: 'Administration',
+  },
+  {
     id: 'role-permissions',
     to: '/role-permissions',
     icon: Shield,
