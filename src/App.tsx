@@ -87,6 +87,7 @@ import { ProjectAttendance } from './modules/projects/ProjectAttendance';
 
 // Visitor & Room Management modules
 import { VisitorManagement } from './modules/visitor-management';
+import { NotificationsPage } from './modules/visitor-management/NotificationsPage';
 import { RoomBrowse } from './modules/visitor-room/RoomBrowse';
 import { RoomForm } from './modules/visitor-room/RoomForm';
 import { BookingPage } from './modules/visitor-room/BookingPage';
@@ -207,6 +208,7 @@ function App() {
 
                 {/* Visitor & Room Management routes */}
                 <Route path="/visitor-management" element={<VisitorManagement />} />
+                <Route path="/visitor-management/notifications" element={<NotificationsPage />} />
                 
                 {/* Room Management Routes - Role-based entry point */}
                 {/* Default route shows appropriate dashboard based on role */}

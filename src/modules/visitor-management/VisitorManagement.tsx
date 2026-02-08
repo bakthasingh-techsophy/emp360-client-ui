@@ -2,85 +2,52 @@
  * Visitor Management Main Page
  */
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ColumnDef } from '@tanstack/react-table';
-import { 
-  Eye, Edit, CheckCircle, XCircle, UserCheck, UserX,
-  MoreHorizontal
-} from 'lucide-react';
-import { ReactNode } from 'react';
+import { UserPlus, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { PageLayout } from '@/components/PageLayout';
-import { DataTable } from '@/components/common/DataTable/DataTable';
-import { DataTableRef } from '@/components/common/DataTable/types';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
-import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { VisitorStatsCards } from './components/VisitorStatsCards';
-import { ViewVisitorModal } from './components/ViewVisitorModal';
 import { VisitorRegistrationForm } from './components/VisitorRegistrationForm';
-import { Visitor, VisitorStats } from './types';
+import { VisitorsTable } from './VisitorsTable';
+import { SpaceSetup } from './SpaceSetup';
+import { ActiveFilter, AvailableFilter } from '@/components/GenericToolbar/types';
 import { 
   VISITOR_STATUS_LABELS, 
-  VISITOR_STATUS_COLORS, 
   PURPOSE_LABELS 
 } from './constants';
-import { mockVisitors, mockEmployees } from './mockData';
-import { format } from 'date-fns';
+import { mockEmployees } from './mockData';
+import { SpaceConfiguration } from './spaceTypes';
 
 export function VisitorManagement() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tableRef = useRef<DataTableRef>(null);
 
   // Check if we're in registration mode
   const mode = searchParams?.get('mode') as 'create' | 'edit' | null;
   const visitorId = searchParams?.get('id');
   const isRegistrationMode = mode === 'create' || mode === 'edit';
 
-  // State
-  const [visitors] = useState<Visitor[]>(mockVisitors);
-  const [loading] = useState(false);
+  // Space configuration state
+  const [spaceConfig, setSpaceConfig] = useState<SpaceConfiguration | null>(null);
+  const [pendingNotifications, setPendingNotifications] = useState(0);
+  const [isLoadingSpace, setIsLoadingSpace] = useState(true);
+
+  // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<any[]>([]);
-  const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [refreshTrigger] = useState(0); // Reserved for future bulk operations
+
+  // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'name', 'phone', 'company', 'purpose', 'hostEmployeeName', 'expectedArrivalDate', 'status', 'checkInOut', 'registrationType', 'actions'
+    'name', 'contactInfo', 'purpose', 'hostEmployeeName', 'expectedArrivalDate', 'status', 'checkInOut', 'actions'
   ]);
-
-  // Confirmation dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    title: string;
-    description: string | ReactNode;
-    action: () => void;
-    variant?: 'default' | 'destructive';
-    confirmText?: string;
-  }>({
-    open: false,
-    title: '',
-    description: '',
-    action: () => {},
-  });
-
-  // Pagination
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
 
   // Available columns for configure view
   const allColumns = [
     { id: 'name', label: 'Visitor Name' },
-    { id: 'phone', label: 'Phone' },
+    { id: 'contactInfo', label: 'Contact Info' },
     { id: 'company', label: 'Company' },
     { id: 'purpose', label: 'Purpose' },
     { id: 'hostEmployeeName', label: 'Host' },
@@ -91,430 +58,60 @@ export function VisitorManagement() {
     { id: 'actions', label: 'Actions' },
   ];
 
-  // Calculate stats
-  const stats: VisitorStats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return {
-      totalVisitors: visitors?.length,
-      checkedIn: visitors?.filter((v) => v?.status === 'checked-in').length,
-      pending: visitors?.filter((v) => v?.status === 'pending').length,
-      expectedToday: visitors?.filter((v) => v?.expectedArrivalDate === today).length,
-    };
-  }, [visitors]);
+  // Load space configuration and notifications
+  useEffect(() => {
+    loadSpaceConfiguration();
+    loadNotifications();
+  }, []);
 
-  // Filter and search visitors
-  const filteredVisitors = useMemo(() => {
-    let filtered = [...visitors];
-
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery?.toLowerCase();
-      filtered = filtered?.filter(
-        (v) =>
-          v?.name?.toLowerCase().includes(query) ||
-          v?.email?.toLowerCase().includes(query) ||
-          v?.phone?.toLowerCase().includes(query) ||
-          v?.company?.toLowerCase().includes(query) ||
-          v?.hostEmployeeName?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply filters
-    activeFilters?.forEach((filter) => {
-      if (!filter?.value) return;
-
-      switch (filter?.filterId) {
-        case 'status':
-          if (Array?.isArray(filter?.value) && filter?.value?.length > 0) {
-            filtered = filtered?.filter((v) => filter?.value?.includes(v?.status));
-          }
-          break;
-        case 'purpose':
-          if (Array?.isArray(filter?.value) && filter?.value?.length > 0) {
-            filtered = filtered?.filter((v) => filter?.value?.includes(v?.purpose));
-          }
-          break;
-        case 'registrationType':
-          if (filter?.value) {
-            filtered = filtered?.filter((v) => v?.registrationType === filter?.value);
-          }
-          break;
-        case 'hostEmployee':
-          if (Array?.isArray(filter?.value) && filter?.value?.length > 0) {
-            filtered = filtered?.filter((v) => filter?.value?.includes(v?.hostEmployeeId));
-          }
-          break;
-        case 'company':
-          if (filter?.value && typeof filter?.value === 'string') {
-            const query = filter?.value?.toLowerCase();
-            filtered = filtered?.filter((v) => 
-              v?.company?.toLowerCase().includes(query)
-            );
-          }
-          break;
-        case 'phone':
-          if (filter?.value && typeof filter?.value === 'string') {
-            const query = filter?.value?.toLowerCase();
-            filtered = filtered?.filter((v) => 
-              v?.phone?.toLowerCase().includes(query)
-            );
-          }
-          break;
-        case 'expectedDate':
-          if (filter?.value) {
-            const date = new Date(filter?.value).toISOString().split('T')[0];
-            filtered = filtered?.filter((v) => v?.expectedArrivalDate === date);
-          }
-          break;
-        case 'hasCheckedIn':
-          if (typeof filter?.value === 'boolean') {
-            filtered = filtered?.filter((v) => 
-              filter?.value ? v?.checkInTime !== null : v?.checkInTime === null
-            );
-          }
-          break;
-        case 'hasCheckedOut':
-          if (typeof filter?.value === 'boolean') {
-            filtered = filtered?.filter((v) => 
-              filter?.value ? v?.checkOutTime !== null : v?.checkOutTime === null
-            );
-          }
-          break;
+  const loadSpaceConfiguration = () => {
+    setIsLoadingSpace(true);
+    try {
+      // Load from localStorage (TODO: Replace with API call)
+      const stored = localStorage.getItem('visitorManagementSpace');
+      if (stored) {
+        setSpaceConfig(JSON.parse(stored));
       }
-    });
-
-    return filtered;
-  }, [visitors, searchQuery, activeFilters]);
-
-  // Paginated data
-  const paginatedVisitors = useMemo(() => {
-    const start = pageIndex * pageSize;
-    const end = start + pageSize;
-    return filteredVisitors?.slice(start, end);
-  }, [filteredVisitors, pageIndex, pageSize]);
-
-  // Actions
-  const handleView = (visitor: Visitor) => {
-    setSelectedVisitor(visitor);
-    setViewModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load space configuration:', error);
+    } finally {
+      setIsLoadingSpace(false);
+    }
   };
 
-  const handleEdit = (visitor: Visitor) => {
-    navigate(`/visitor-management?mode=edit&id=${visitor?.id}`);
-    setViewModalOpen(false);
+  const loadNotifications = () => {
+    try {
+      // Load from localStorage (TODO: Replace with API call)
+      const stored = localStorage.getItem('spaceNotifications');
+      if (stored) {
+        const notifications = JSON.parse(stored);
+        const pending = notifications.filter((n: { status: string }) => n.status === 'pending').length;
+        setPendingNotifications(pending);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
   };
 
+  const handleSpaceSetupComplete = () => {
+    loadSpaceConfiguration();
+  };
+
+  // Handlers
   const handleAddVisitor = () => {
     navigate('/visitor-management?mode=create');
   };
 
-  const handleApprove = (visitor: Visitor) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Approve Visitor',
-      description: `Are you sure you want to approve ${visitor.name}? They will be allowed to check-in.`,
-      confirmText: 'Approve',
-      variant: 'default',
-      action: () => {
-        console?.log('Approve visitor:', visitor?.id);
-        // API call here
-      },
-    });
+  const handleVisibleColumnsChange = (columns: string[]) => {
+    setVisibleColumns(columns);
   };
 
-  const handleReject = (visitor: Visitor) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Reject Visitor',
-      description: `Are you sure you want to reject ${visitor.name}? This action will prevent them from checking in.`,
-      confirmText: 'Reject',
-      variant: 'destructive',
-      action: () => {
-        console?.log('Reject visitor:', visitor?.id);
-        // API call here
-      },
-    });
+  const handleNotificationsClick = () => {
+    navigate('/visitor-management/notifications');
   };
-
-  const handleCheckIn = (visitor: Visitor) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Check-In Visitor',
-      description: (
-        <div className="space-y-2">
-          <p>Confirm check-in for <strong>{visitor.name}</strong></p>
-          <div className="text-xs space-y-1 bg-muted/50 p-3 rounded-md">
-            <div><strong>Email:</strong> {visitor.email}</div>
-            <div><strong>Phone:</strong> {visitor.phone}</div>
-            {visitor.company && <div><strong>Company:</strong> {visitor.company}</div>}
-            <div><strong>Purpose:</strong> {PURPOSE_LABELS[visitor.purpose]}</div>
-          </div>
-        </div>
-      ),
-      confirmText: 'Check In',
-      variant: 'default',
-      action: () => {
-        console?.log('Check-in visitor:', visitor?.id);
-        // API call here
-      },
-    });
-  };
-
-  const handleCheckOut = (visitor: Visitor) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Check-Out Visitor',
-      description: (
-        <div className="space-y-2">
-          <p>Confirm check-out for <strong>{visitor.name}</strong></p>
-          {visitor.checkInTime && (
-            <div className="text-xs text-muted-foreground">
-              Checked in at: {format(new Date(visitor.checkInTime), 'MMM dd, yyyy hh:mm a')}
-            </div>
-          )}
-        </div>
-      ),
-      confirmText: 'Check Out',
-      variant: 'default',
-      action: () => {
-        console?.log('Check-out visitor:', visitor?.id);
-        // API call here
-      },
-    });
-  };
-
-  const handleDelete = (visitor: Visitor) => {
-    setConfirmDialog({
-      open: true,
-      title: 'Delete Visitor',
-      description: (
-        <div className="space-y-2">
-          <p>Are you sure you want to delete <strong>{visitor.name}</strong>?</p>
-          <p className="text-destructive text-xs">This action cannot be undone. All visitor data will be permanently removed.</p>
-        </div>
-      ),
-      confirmText: 'Delete',
-      variant: 'destructive',
-      action: () => {
-        console?.log('Delete visitor:', visitor?.id);
-        // API call here
-      },
-    });
-  };
-
-  // Table columns
-  const columns: ColumnDef<Visitor>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Visitor Name',
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row?.original?.name}</span>
-          <span className="text-xs text-muted-foreground">{row?.original?.email}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'phone',
-      header: 'Phone',
-      cell: ({ row }) => row?.original?.phone || '-',
-    },
-    {
-      accessorKey: 'company',
-      header: 'Company',
-      cell: ({ row }) => row?.original?.company || '-',
-    },
-    {
-      accessorKey: 'purpose',
-      header: 'Purpose',
-      cell: ({ row }) => PURPOSE_LABELS[row?.original?.purpose],
-    },
-    {
-      accessorKey: 'hostEmployeeName',
-      header: 'Host',
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row?.original?.hostEmployeeName}</span>
-          {row?.original?.hostDepartment && (
-            <span className="text-xs text-muted-foreground">{row?.original?.hostDepartment}</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'expectedArrivalDate',
-      header: 'Expected Arrival',
-      cell: ({ row }) => {
-        try {
-          const date = format(new Date(row?.original?.expectedArrivalDate), 'MMM dd, yyyy');
-          return (
-            <div className="flex flex-col">
-              <span>{date}</span>
-              <span className="text-xs text-muted-foreground">{row?.original?.expectedArrivalTime}</span>
-            </div>
-          );
-        } catch {
-          return row?.original?.expectedArrivalDate;
-        }
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: () => <div className="text-center">Status</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <Badge className={VISITOR_STATUS_COLORS[row?.original?.status]}>
-            {VISITOR_STATUS_LABELS[row?.original?.status]}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      id: 'checkInOut',
-      header: 'Check In/Out',
-      cell: ({ row }) => {
-        const visitor = row?.original;
-        const formatTime = (isoString: string | null) => {
-          if (!isoString) return null;
-          try {
-            const date = new Date(isoString);
-            return format(date, 'hh:mm a');
-          } catch {
-            return null;
-          }
-        };
-        
-        const checkIn = formatTime(visitor?.checkInTime);
-        const checkOut = formatTime(visitor?.checkOutTime);
-        
-        if (!checkIn && !checkOut) return <span className="text-muted-foreground text-xs">-</span>;
-        
-        return (
-          <div className="flex flex-col text-xs">
-            {checkIn && (
-              <span className="text-green-600 dark:text-green-400">
-                In: {checkIn}
-              </span>
-            )}
-            {checkOut && (
-              <span className="text-orange-600 dark:text-orange-400">
-                Out: {checkOut}
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'registrationType',
-      header: () => <div className="text-center">Type</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <Badge variant="outline">
-            {row?.original?.registrationType === 'pre-registered' ? 'Pre-registered' : 'Instant'}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      id: 'actions',
-      header: () => <div className="text-center">Actions</div>,
-      cell: ({ row }) => {
-        const visitor = row?.original;
-        const hasCheckedIn = visitor?.checkInTime !== null;
-        const hasCheckedOut = visitor?.checkOutTime !== null;
-        const canCheckIn = (visitor?.status === 'approved' || visitor?.status === 'pending') && !hasCheckedIn;
-        const canCheckOut = visitor?.status === 'checked-in' && !hasCheckedOut;
-        
-        return (
-          <div className="flex items-center justify-center gap-1">
-            {/* View Details Button */}
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => handleView(visitor)}
-              className="h-8 px-2"
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </Button>
-            
-            {/* Check-in Button - Always show, disabled if already checked in */}
-            <Button 
-              variant={canCheckIn ? "default" : "secondary"}
-              size="sm"
-              onClick={() => handleCheckIn(visitor)}
-              disabled={!canCheckIn}
-              className="h-8 px-2 text-xs"
-            >
-              <UserCheck className="h-3.5 w-3.5 mr-1" />
-              In
-            </Button>
-            
-            {/* Check-out Button - Always show, disabled if not checked in or already checked out */}
-            <Button 
-              variant={canCheckOut ? "default" : "secondary"}
-              size="sm"
-              onClick={() => handleCheckOut(visitor)}
-              disabled={!canCheckOut}
-              className="h-8 px-2 text-xs"
-            >
-              <UserX className="h-3.5 w-3.5 mr-1" />
-              Out
-            </Button>
-            
-            {/* More Actions Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>More Actions</DropdownMenuLabel>
-                {/* Only show Edit if not checked in */}
-                {!hasCheckedIn && (
-                  <DropdownMenuItem onClick={() => handleEdit(visitor)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                )}
-                {visitor?.status === 'pending' && (
-                  <>
-                    {!hasCheckedIn && <DropdownMenuSeparator />}
-                    <DropdownMenuItem onClick={() => handleApprove(visitor)}>
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                      Approve
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleReject(visitor)}>
-                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                      Reject
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => handleDelete(visitor)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
-    },
-  ];
-
-  // Filter columns based on visibility
-  const visibleTableColumns = columns.filter(col => {
-    const columnId = ('accessorKey' in col ? col.accessorKey as string : col.id) || '';
-    return visibleColumns.includes(columnId);
-  });
 
   // Filter configuration
-  const filterConfig: any[] = [
+  const filterConfig: AvailableFilter[] = [
     {
       id: 'status',
       label: 'Status',
@@ -569,6 +166,16 @@ export function VisitorManagement() {
       type: 'date',
     },
     {
+      id: 'checkInDate',
+      label: 'Check-In Date',
+      type: 'date',
+    },
+    {
+      id: 'checkOutDate',
+      label: 'Check-Out Date',
+      type: 'date',
+    },
+    {
       id: 'hasCheckedIn',
       label: 'Checked In',
       type: 'boolean',
@@ -590,20 +197,65 @@ export function VisitorManagement() {
     );
   }
 
+  // Show space setup if loading
+  if (isLoadingSpace) {
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center h-[400px]">
+          <div className="text-center space-y-2">
+            <div className="text-muted-foreground">Loading space configuration...</div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Show space setup if no space configured or pending
+  if (!spaceConfig || spaceConfig.status === 'pending') {
+    return <SpaceSetup onComplete={handleSpaceSetupComplete} isPending={spaceConfig?.status === 'pending'} />;
+  }
+
   // Main visitor management view
   return (
     <>
       <PageLayout>
         <div className="space-y-6">
-          {/* Page Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Visitor Management</h1>
-            <p className="text-muted-foreground mt-1">
-              Track and manage visitor registrations, approvals, and check-ins
-            </p>
+          {/* Page Header with Action Button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                <Users className="h-8 w-8" />
+                Visitor Management
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Track and manage visitor registrations, approvals, and check-ins
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Notifications Button */}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="relative"
+                onClick={handleNotificationsClick}
+              >
+                <Bell className="h-4 w-4" />
+                {pendingNotifications > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {pendingNotifications}
+                  </Badge>
+                )}
+              </Button>
+              {/* Register Visitor Button */}
+              <Button onClick={handleAddVisitor} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Register Visitor
+              </Button>
+            </div>
           </div>
-          {/* Stats Cards */}
-          <VisitorStatsCards stats={stats} loading={loading} />
 
           {/* Toolbar */}
           <GenericToolbar
@@ -614,70 +266,25 @@ export function VisitorManagement() {
             showConfigureView
             allColumns={allColumns}
             visibleColumns={visibleColumns}
-            onVisibleColumnsChange={setVisibleColumns}
+            onVisibleColumnsChange={handleVisibleColumnsChange}
             showFilters
             availableFilters={filterConfig}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             showExport
-            onExportAll={() => console?.log('Export all')}
-            onExportResults={() => console?.log('Export results')}
-            showAddButton
-            addButtonLabel="Register Visitor"
-            onAdd={handleAddVisitor}
+            onExportAll={() => console.log('Export all')}
+            onExportResults={() => console.log('Export results')}
           />
 
-          {/* Data Table */}
-          <DataTable
-            ref={tableRef}
-            data={paginatedVisitors}
-            columns={visibleTableColumns}
-            loading={loading}
-            pagination={{
-              pageIndex,
-              pageSize,
-              totalPages: Math?.ceil(filteredVisitors?.length / pageSize),
-              totalItems: filteredVisitors?.length,
-              onPageChange: setPageIndex,
-              onPageSizeChange: setPageSize,
-            }}
-            paginationVariant="default"
-            fixedPagination={true}
-            emptyState={{
-              title: 'No visitors found',
-              description: 'Get started by registering your first visitor',
-              action: {
-                label: 'Register Visitor',
-                onClick: handleAddVisitor,
-              },
-            }}
+          {/* Visitors Table */}
+          <VisitorsTable
+            searchQuery={searchQuery}
+            activeFilters={activeFilters}
+            visibleColumns={visibleColumns}
+            refreshTrigger={refreshTrigger}
           />
         </div>
       </PageLayout>
-
-      {/* View Visitor Modal */}
-      <ViewVisitorModal
-        visitor={selectedVisitor}
-        open={viewModalOpen}
-        onClose={() => {
-          setViewModalOpen(false);
-          setSelectedVisitor(null);
-        }}
-        onEdit={handleEdit}
-        onCheckIn={handleCheckIn}
-        onCheckOut={handleCheckOut}
-      />
-
-      {/* Confirmation Dialog */}
-      <ConfirmationDialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
-        onConfirm={confirmDialog.action}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
-        confirmText={confirmDialog.confirmText}
-        variant={confirmDialog.variant}
-      />
     </>
   );
 }
