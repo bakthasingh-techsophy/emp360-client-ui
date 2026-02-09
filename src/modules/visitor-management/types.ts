@@ -3,69 +3,94 @@
  */
 
 export type VisitorStatus = 'pending' | 'approved' | 'rejected' | 'checked-in' | 'checked-out' | 'expired';
-export type RegistrationType = 'pre-registered' | 'instant';
 export type VisitorPurpose = 'meeting' | 'interview' | 'delivery' | 'maintenance' | 'vendor' | 'personal' | 'other';
 
 export interface Visitor {
   id: string;
   
   // Form fields - Basic Information
-  name: string;
-  email: string;
-  phone: string;
-  company: string | null;
+  visitorName: string;
+  visitorEmail: string;
+  visitorPhone: string;
+  companyId: string | null;
   photoUrl: string | null;
   
   // Form fields - Visit Details
   purpose: VisitorPurpose;
-  hostEmployeeId: string;
+  employeeId: string;
   
   // Form fields - Visit Schedule
-  expectedArrivalDate: string; // ISO date string
-  expectedArrivalTime: string; // 12-hour format (e.g., "02:00 PM")
-  expectedDepartureTime: string | null; // 12-hour format
+  expectedArrivalDate: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
+  expectedArrivalTime: string; // 12-hour format with AM/PM (e.g., "02:02 PM")
   
-  // Form fields - Registration Type & Notes
-  registrationType: RegistrationType;
+  // Form fields - Notes
   notes: string | null;
   
-  // Derived/System fields (not in form)
-  hostEmployeeName: string; // Derived from hostEmployeeId
-  hostEmployeeEmail: string; // Derived from hostEmployeeId
-  hostDepartment: string | null; // Derived from hostEmployeeId
-  
   // Status & Check-in/out
-  status: VisitorStatus;
+  visitorStatus: VisitorStatus;
   checkInTime: string | null; // ISO datetime
   checkOutTime: string | null; // ISO datetime
   
-  // Metadata
-  createdBy: string; // User ID who created/registered
-  createdByName: string; // Name of user who created
   createdAt: string; // ISO datetime
   updatedAt: string; // ISO datetime
 }
 
+/**
+ * Visitor Snapshot - extends Visitor with derived fields for table rendering
+ * Used for displaying visitor information in tables with enriched host details
+ */
+export interface VisitorSnapshot extends Visitor {
+  // Derived host information (populated from employeeId)
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
 // Form data type - picks only form fields from Visitor
 export type VisitorFormData = Pick<Visitor, 
-  | 'name' 
-  | 'email' 
-  | 'phone' 
-  | 'company'
+  | 'visitorName' 
+  | 'visitorEmail' 
+  | 'visitorPhone' 
+  | 'companyId'
   | 'purpose'
-  | 'hostEmployeeId'
-  | 'registrationType'
+  | 'employeeId'
   | 'expectedArrivalTime'
-  | 'expectedDepartureTime'
   | 'notes'
 > & {
   expectedArrivalDate: Date; // Date object for form, string in Visitor
   photoUrl?: string; // Optional in form, added after submission
 };
 
-export interface VisitorStats {
-  totalVisitors: number;
-  checkedIn: number;
-  pending: number;
-  expectedToday: number;
+/**
+ * Visitor Carrier - matches backend payload structure
+ * Used for API requests/responses
+ * Note: id is optional (not sent on create, backend generates it)
+ */
+export interface VisitorCarrier {
+  id?: string; // Optional: not required for create, backend generates it
+  
+  // Basic Information
+  name: string;
+  email: string;
+  phone: string;
+  companyId: string | null;
+  photoUrl: string | null;
+  
+  // Visit Details
+  purpose: VisitorPurpose;
+  hostEmployeeId: string;
+  
+  // Visit Schedule
+  expectedArrivalDate: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
+  expectedArrivalTime: string; // 12-hour format with AM/PM (e.g., "02:02 PM")
+  
+  // Notes
+  notes: string | null;
+  
+  // Status
+  visitorStatus: VisitorStatus;
+  
+  // Timestamps
+  createdAt: string; // ISO UTC timestamp
 }

@@ -8,6 +8,8 @@ import { LayoutProvider } from './contexts/LayoutContext';
 import { UserManagementProvider } from './contexts/UserManagementContext';
 import { CompanyProvider } from './contexts/CompanyContext';
 import { PolicyProvider } from './contexts/PolicyContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { VisitorManagementProvider } from './contexts/VisitorManagementContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -87,7 +89,6 @@ import { ProjectAttendance } from './modules/projects/ProjectAttendance';
 
 // Visitor & Room Management modules
 import { VisitorManagement } from './modules/visitor-management';
-import { NotificationsPage } from './modules/visitor-management/NotificationsPage';
 import { RoomBrowse } from './modules/visitor-room/RoomBrowse';
 import { RoomForm } from './modules/visitor-room/RoomForm';
 import { BookingPage } from './modules/visitor-room/BookingPage';
@@ -117,9 +118,10 @@ function App() {
         <LayoutProvider>
           <CompanyProvider>
             <UserManagementProvider>
-              <PolicyProvider>
-                <BrowserRouter>
-                <Routes>
+              <NotificationProvider>
+                <PolicyProvider>
+                  <BrowserRouter>
+                  <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
@@ -207,8 +209,11 @@ function App() {
                 <Route path="/project-attendance" element={<ProjectAttendance />} />
 
                 {/* Visitor & Room Management routes */}
-                <Route path="/visitor-management" element={<VisitorManagement />} />
-                <Route path="/visitor-management/notifications" element={<NotificationsPage />} />
+                <Route path="/visitor-management" element={
+                  <VisitorManagementProvider>
+                    <VisitorManagement />
+                  </VisitorManagementProvider>
+                } />
                 
                 {/* Room Management Routes - Role-based entry point */}
                 {/* Default route shows appropriate dashboard based on role */}
@@ -246,8 +251,9 @@ function App() {
           </BrowserRouter>
           <Toaster />
         </PolicyProvider>
-      </UserManagementProvider>
-    </CompanyProvider>
+      </NotificationProvider>
+    </UserManagementProvider>
+  </CompanyProvider>
       </LayoutProvider>
     </AuthProvider>
   </ThemeProvider>

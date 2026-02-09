@@ -13,52 +13,101 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PageLayout } from '@/components/PageLayout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Notification, SpaceConnectionRequestMetadata } from './notificationTypes';
+import { useNotification } from '@/contexts/NotificationContext';
 
-interface SpaceNotification {
-  id: string;
-  type: 'space_connection_request';
-  spaceId: string;
-  requestingCompany: string;
-  message: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-}
+// Type alias for space connection notifications
+type SpaceConnectionNotification = Notification<SpaceConnectionRequestMetadata>;
+
+// Track processed requests with their status
+type ProcessedRequest = {
+  notificationId: string;
+  decision: 'approved' | 'rejected';
+  timestamp: string;
+};
 
 export function NotificationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState<SpaceNotification[]>([]);
+  const { refreshNotifications, updateNotification } = useNotification();
+  const [notifications, setNotifications] = useState<SpaceConnectionNotification[]>([]);
+  const [processedRequests, setProcessedRequests] = useState<ProcessedRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadNotifications();
+    loadProcessedRequests();
   }, []);
 
-  const loadNotifications = () => {
-    // Load from localStorage (TODO: Replace with API call)
-    const stored = localStorage.getItem('spaceNotifications');
+  const loadProcessedRequests = () => {
+    const stored = localStorage.getItem('processedSpaceRequests');
     if (stored) {
-      setNotifications(JSON.parse(stored));
+      setProcessedRequests(JSON.parse(stored));
     }
   };
 
-  const handleApprove = async (notification: SpaceNotification) => {
+  const saveProcessedRequest = (notificationId: string, decision: 'approved' | 'rejected') => {
+    const newRequest: ProcessedRequest = {
+      notificationId,
+      decision,
+      timestamp: new Date().toISOString(),
+    };
+    const updated = [...processedRequests, newRequest];
+    setProcessedRequests(updated);
+    localStorage.setItem('processedSpaceRequests', JSON.stringify(updated));
+  };
+
+  const getRequestDecision = (notificationId: string): 'approved' | 'rejected' | null => {
+    const request = processedRequests.find(r => r.notificationId === notificationId);
+    return request?.decision || null;
+  };
+
+  const loadNotifications = async () => {
+    try {
+      // Use context to load notifications
+      const response = await refreshNotifications<SpaceConnectionRequestMetadata>(
+        {}, // Empty search criteria to get all
+        0,  // page
+        100 // pageSize
+      );
+      
+      if (response) {
+        // Filter for space connection request type
+        const spaceNotifications = response.content.filter(
+          n => n.type === 'space_connection_request'
+        ) as SpaceConnectionNotification[];
+        
+        setNotifications(spaceNotifications);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  };
+
+  const handleApprove = async (notification: SpaceConnectionNotification) => {
     setLoading(true);
     
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Update notification status
-      const updatedNotifications = notifications.map(n =>
-        n.id === notification.id ? { ...n, status: 'approved' as const } : n
+      // Mark notification as read using context
+      const updated = await updateNotification(
+        notification.id,
+        { status: 'read' }
       );
-      setNotifications(updatedNotifications);
-      localStorage.setItem('spaceNotifications', JSON.stringify(updatedNotifications));
+
+      if (updated) {
+        // Save the approval decision
+        saveProcessedRequest(notification.id, 'approved');
+        
+        // Reload notifications to reflect changes
+        await loadNotifications();
+      }
 
       toast({
         title: 'Request Approved',
-        description: `${notification.requestingCompany} can now access the shared space.`,
+        description: `Company ${notification.metadata.requestingCompanyId} can now access the shared space.`,
       });
 
       // TODO: Send approval notification to requesting company
@@ -73,23 +122,30 @@ export function NotificationsPage() {
     }
   };
 
-  const handleReject = async (notification: SpaceNotification) => {
+  const handleReject = async (notification: SpaceConnectionNotification) => {
     setLoading(true);
     
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Update notification status
-      const updatedNotifications = notifications.map(n =>
-        n.id === notification.id ? { ...n, status: 'rejected' as const } : n
+      // Mark notification as read using context
+      const updated = await updateNotification(
+        notification.id,
+        { status: 'read' }
       );
-      setNotifications(updatedNotifications);
-      localStorage.setItem('spaceNotifications', JSON.stringify(updatedNotifications));
+
+      if (updated) {
+        // Save the rejection decision
+        saveProcessedRequest(notification.id, 'rejected');
+        
+        // Reload notifications to reflect changes
+        await loadNotifications();
+      }
 
       toast({
         title: 'Request Rejected',
-        description: `Connection request from ${notification.requestingCompany} has been rejected.`,
+        description: `Connection request from Company ${notification.metadata.requestingCompanyId} has been rejected.`,
       });
 
       // TODO: Send rejection notification to requesting company
@@ -104,8 +160,8 @@ export function NotificationsPage() {
     }
   };
 
-  const pendingNotifications = notifications.filter(n => n.status === 'pending');
-  const processedNotifications = notifications.filter(n => n.status !== 'pending');
+  const pendingNotifications = notifications.filter(n => n.status === 'unread');
+  const processedNotifications = notifications.filter(n => n.status === 'read');
 
   return (
     <PageLayout>
@@ -161,10 +217,10 @@ export function NotificationsPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="text-sm">
-                      <span className="font-medium">{notification.requestingCompany}</span> wants to connect to your space
+                      <span className="font-medium">Company {notification.metadata.requestingCompanyId}</span> wants to connect to your space
                     </div>
                     <div className="text-sm font-mono text-muted-foreground">
-                      Space ID: {notification.spaceId}
+                      Space ID: {notification.metadata.spaceId}
                     </div>
                   </div>
 
@@ -208,17 +264,19 @@ export function NotificationsPage() {
 
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-3">
-                {processedNotifications.map((notification) => (
+                {processedNotifications.map((notification) => {
+                  const decision = getRequestDecision(notification.id);
+                  return (
                   <Card key={notification.id}>
                     <CardContent className="pt-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3 flex-1">
                           <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                            notification.status === 'approved' 
+                            decision === 'approved' 
                               ? 'bg-green-500/10' 
                               : 'bg-red-500/10'
                           }`}>
-                            {notification.status === 'approved' ? (
+                            {decision === 'approved' ? (
                               <Check className="h-4 w-4 text-green-500" />
                             ) : (
                               <X className="h-4 w-4 text-red-500" />
@@ -226,7 +284,7 @@ export function NotificationsPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">
-                              {notification.requestingCompany}
+                              Company {notification.metadata.requestingCompanyId}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {format(new Date(notification.createdAt), 'MMM dd, yyyy')}
@@ -234,15 +292,16 @@ export function NotificationsPage() {
                           </div>
                         </div>
                         <Badge 
-                          variant={notification.status === 'approved' ? 'default' : 'destructive'}
+                          variant={decision === 'approved' ? 'default' : 'destructive'}
                           className="ml-2"
                         >
-                          {notification.status}
+                          {decision}
                         </Badge>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>

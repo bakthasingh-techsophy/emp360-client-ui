@@ -23,9 +23,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { useNotification } from '@/contexts/NotificationContext';
+import { NotificationCarrier } from '@/services/notificationApiService';
+import { SpaceConnectionRequestMetadata } from '../spaceTypes';
 
 const connectionFormSchema = z.object({
-  spaceId: z.string().min(1, 'Space ID is required'),
+  spaceId: z.string()
+    .min(3, 'Space ID must be at least 3 characters')
+    .regex(/^[a-z_]+$/, 'Space ID can only contain lowercase letters and underscores')
+    .transform(val => val.toLowerCase().replace(/\s+/g, '_')),
   requestMessage: z.string().min(10, 'Please provide a message (minimum 10 characters)'),
 });
 
@@ -39,6 +45,7 @@ interface SpaceConnectionFormProps {
 export function SpaceConnectionForm({ onSuccess, onBack }: SpaceConnectionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { createNotification } = useNotification();
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionFormSchema),
@@ -52,31 +59,40 @@ export function SpaceConnectionForm({ onSuccess, onBack }: SpaceConnectionFormPr
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Generate timestamp
+      const now = new Date().toISOString();
 
-      // TODO: Send connection request to backend
-      console.log('Sending connection request:', data);
-
-      // Create notification for space owner (simulate)
-      const existingNotifications = JSON.parse(localStorage.getItem('spaceNotifications') || '[]');
-      const newNotification = {
-        id: `NOTIF-${Date.now()}`,
-        type: 'space_connection_request',
+      // Create notification metadata (simplified)
+      const metadata: SpaceConnectionRequestMetadata = {
         spaceId: data.spaceId,
-        requestingCompany: 'Your Company Name', // TODO: Get from company context
-        message: data.requestMessage,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
+        requestingTenantId: 'TENANT-ID', // TODO: Get from auth context
+        requestingCompanyId: 'COMPANY-ID', // TODO: Get from company context
       };
-      localStorage.setItem('spaceNotifications', JSON.stringify([...existingNotifications, newNotification]));
+
+      // Create notification carrier for API
+      const notificationCarrier: NotificationCarrier<SpaceConnectionRequestMetadata> = {
+        id: `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'space_connection_request',
+        subject: 'New Space Connection Request',
+        message: data.requestMessage,
+        status: 'unread',
+        metadata,
+        createdAt: now,
+      };
+
+      // Create notification using context
+      const notification = await createNotification(notificationCarrier);
+      
+      if (!notification) {
+        throw new Error('Failed to create notification');
+      }
 
       // Save pending request for current company
       localStorage.setItem('visitorManagementSpace', JSON.stringify({
         spaceId: data.spaceId,
         status: 'pending',
-        requestedAt: new Date().toISOString(),
         isOwner: false,
+        joinedAt: now,
       }));
 
       toast({
@@ -138,14 +154,20 @@ export function SpaceConnectionForm({ onSuccess, onBack }: SpaceConnectionFormPr
                     </FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="e.g., TECH-TOWER-01" 
-                        className="font-mono uppercase"
+                        placeholder="e.g., tech_tower_01" 
+                        className="font-mono lowercase"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          const transformed = e.target.value
+                            .toLowerCase()
+                            .replace(/\s+/g, '_')
+                            .replace(/[^a-z_]/g, '');
+                          field.onChange(transformed);
+                        }}
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter the unique Space ID provided by the space owner
+                      Enter the unique Space ID provided by the space owner (lowercase letters and underscores only)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

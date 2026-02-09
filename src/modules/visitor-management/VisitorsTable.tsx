@@ -9,10 +9,17 @@ import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   Eye, Edit, CheckCircle, XCircle, UserCheck, UserX,
-  MoreHorizontal, Copy
+  MoreHorizontal, Copy, User, Mail, Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +32,16 @@ import { DataTableRef } from '@/components/common/DataTable/types';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { ViewVisitorModal } from './components/ViewVisitorModal';
 import { ActiveFilter } from '@/components/GenericToolbar/types';
-import { Visitor } from './types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
+import { useVisitorManagement } from '@/contexts/VisitorManagementContext';
+import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useToast } from '@/hooks/use-toast';
+import { VisitorSnapshot } from './types';
 import { 
   VISITOR_STATUS_LABELS, 
   VISITOR_STATUS_COLORS, 
   PURPOSE_LABELS 
 } from './constants';
-import { mockVisitors } from './mockData';
 import { format } from 'date-fns';
 import { ReactNode } from 'react';
 
@@ -49,15 +59,17 @@ export function VisitorsTable({
   refreshTrigger = 0,
 }: Props) {
   const navigate = useNavigate();
+  const { refreshVisitors, updateVisitor, deleteVisitorById, isLoading } = useVisitorManagement();
+  const { selectedCompanyScope } = useLayoutContext();
+  const { toast } = useToast();
   const tableRef = useRef<DataTableRef>(null);
 
   // Table state
-  const [tableData, setTableData] = useState<Visitor[]>([]);
+  const [tableData, setTableData] = useState<VisitorSnapshot[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
+  const [selectedVisitor, setSelectedVisitor] = useState<VisitorSnapshot | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
   // Confirmation dialog state
@@ -82,6 +94,7 @@ export function VisitorsTable({
     pageIndex: number;
     pageSize: number;
     refreshTrigger: number;
+    selectedCompanyScope: string | null | undefined;
   } | null>(null);
 
   // Copy to clipboard handler
@@ -91,122 +104,37 @@ export function VisitorsTable({
 
   // Fetch data function
   const fetchData = async () => {
-    setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // For now using mock data with filtering
-      let filtered = [...mockVisitors];
+      // Build universal search request from filters and search query
+      const searchRequest = buildUniversalSearchRequest(
+        activeFilters,
+        searchQuery,
+        [
+          "visitorName",
+          "visitorEmail",
+          "visitorPhone",
+          "companyId",
+          "purpose",
+          "firstName",
+          "lastName",
+          "employeeId",
+          "notes",
+        ],
+      );
 
-      // Apply search
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(
-          (v) =>
-            v.name.toLowerCase().includes(query) ||
-            v.email.toLowerCase().includes(query) ||
-            v.phone.toLowerCase().includes(query) ||
-            v.company?.toLowerCase().includes(query) ||
-            v.hostEmployeeName.toLowerCase().includes(query)
-        );
+      const result = await refreshVisitors(
+        searchRequest,
+        pageIndex,
+        pageSize,
+      );
+
+      if (result) {
+        // Backend search endpoint returns VisitorSnapshot[] directly
+        setTableData(result.content || []);
+        setTotalItems(result.totalElements || 0);
       }
-
-      // Apply filters
-      activeFilters.forEach((filter) => {
-        if (!filter.value) return;
-
-        switch (filter.filterId) {
-          case 'status':
-            if (Array.isArray(filter.value) && filter.value.length > 0) {
-              filtered = filtered.filter((v) => filter.value.includes(v.status));
-            }
-            break;
-          case 'purpose':
-            if (Array.isArray(filter.value) && filter.value.length > 0) {
-              filtered = filtered.filter((v) => filter.value.includes(v.purpose));
-            }
-            break;
-          case 'registrationType':
-            if (filter.value) {
-              filtered = filtered.filter((v) => v.registrationType === filter.value);
-            }
-            break;
-          case 'hostEmployee':
-            if (Array.isArray(filter.value) && filter.value.length > 0) {
-              filtered = filtered.filter((v) => filter.value.includes(v.hostEmployeeId));
-            }
-            break;
-          case 'company':
-            if (filter.value && typeof filter.value === 'string') {
-              const query = filter.value.toLowerCase();
-              filtered = filtered.filter((v) => 
-                v.company?.toLowerCase().includes(query)
-              );
-            }
-            break;
-          case 'phone':
-            if (filter.value && typeof filter.value === 'string') {
-              const query = filter.value.toLowerCase();
-              filtered = filtered.filter((v) => 
-                v.phone.toLowerCase().includes(query)
-              );
-            }
-            break;
-          case 'expectedDate':
-            if (filter.value) {
-              const date = new Date(filter.value).toISOString().split('T')[0];
-              filtered = filtered.filter((v) => v.expectedArrivalDate === date);
-            }
-            break;
-          case 'checkInDate':
-            if (filter.value) {
-              const date = new Date(filter.value).toISOString().split('T')[0];
-              filtered = filtered.filter((v) => {
-                if (!v.checkInTime) return false;
-                const checkInDate = new Date(v.checkInTime).toISOString().split('T')[0];
-                return checkInDate === date;
-              });
-            }
-            break;
-          case 'checkOutDate':
-            if (filter.value) {
-              const date = new Date(filter.value).toISOString().split('T')[0];
-              filtered = filtered.filter((v) => {
-                if (!v.checkOutTime) return false;
-                const checkOutDate = new Date(v.checkOutTime).toISOString().split('T')[0];
-                return checkOutDate === date;
-              });
-            }
-            break;
-          case 'hasCheckedIn':
-            if (typeof filter.value === 'boolean') {
-              filtered = filtered.filter((v) => 
-                filter.value ? v.checkInTime !== null : v.checkInTime === null
-              );
-            }
-            break;
-          case 'hasCheckedOut':
-            if (typeof filter.value === 'boolean') {
-              filtered = filtered.filter((v) => 
-                filter.value ? v.checkOutTime !== null : v.checkOutTime === null
-              );
-            }
-            break;
-        }
-      });
-
-      // Set total items
-      setTotalItems(filtered.length);
-
-      // Apply pagination
-      const start = pageIndex * pageSize;
-      const end = start + pageSize;
-      const paginatedData = filtered.slice(start, end);
-
-      setTableData(paginatedData);
     } catch (error) {
-      console.error('Error fetching visitors:', error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching visitors:", error);
     }
   };
 
@@ -220,7 +148,8 @@ export function VisitorsTable({
       prevDepsRef.current.searchQuery !== searchQuery ||
       prevDepsRef.current.pageIndex !== pageIndex ||
       prevDepsRef.current.pageSize !== pageSize ||
-      prevDepsRef.current.refreshTrigger !== refreshTrigger;
+      prevDepsRef.current.refreshTrigger !== refreshTrigger ||
+      prevDepsRef.current.selectedCompanyScope !== selectedCompanyScope;
 
     if (!depsChanged) return;
 
@@ -231,6 +160,7 @@ export function VisitorsTable({
       pageIndex,
       pageSize,
       refreshTrigger,
+      selectedCompanyScope,
     };
 
     fetchData();
@@ -240,81 +170,91 @@ export function VisitorsTable({
     pageIndex,
     pageSize,
     refreshTrigger,
+    selectedCompanyScope,
   ]);
 
   // Actions
-  const handleView = useCallback((visitor: Visitor) => {
+  const handleView = useCallback((visitor: VisitorSnapshot) => {
     setSelectedVisitor(visitor);
     setViewModalOpen(true);
   }, []);
 
-  const handleEdit = useCallback((visitor: Visitor) => {
+  const handleEdit = useCallback((visitor: VisitorSnapshot) => {
     navigate(`/visitor-management?mode=edit&id=${visitor.id}`);
     setViewModalOpen(false);
   }, [navigate]);
 
-  const handleApprove = useCallback((visitor: Visitor) => {
+  const handleApprove = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
       open: true,
       title: 'Approve Visitor',
-      description: `Are you sure you want to approve ${visitor.name}? They will be allowed to check-in.`,
+      description: `Are you sure you want to approve ${visitor.visitorName}? They will be allowed to check-in.`,
       confirmText: 'Approve',
       variant: 'default',
-      action: () => {
-        console.log('Approve visitor:', visitor.id);
-        // API call here
-        fetchData();
+      action: async () => {
+        // Update status - all values sent to API are strings/primitives
+        const success = await updateVisitor(visitor.id, { status: 'approved' });
+        if (success) {
+          fetchData();
+        }
       },
     });
-  }, []);
+  }, [updateVisitor]);
 
-  const handleReject = useCallback((visitor: Visitor) => {
+  const handleReject = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
       open: true,
       title: 'Reject Visitor',
-      description: `Are you sure you want to reject ${visitor.name}? This action will prevent them from checking in.`,
+      description: `Are you sure you want to reject ${visitor.visitorName}? This action will prevent them from checking in.`,
       confirmText: 'Reject',
       variant: 'destructive',
-      action: () => {
-        console.log('Reject visitor:', visitor.id);
-        // API call here
-        fetchData();
+      action: async () => {
+        // Update status - all values sent to API are strings/primitives
+        const success = await updateVisitor(visitor.id, { status: 'rejected' });
+        if (success) {
+          fetchData();
+        }
       },
     });
-  }, []);
+  }, [updateVisitor]);
 
-  const handleCheckIn = useCallback((visitor: Visitor) => {
+  const handleCheckIn = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
       open: true,
       title: 'Check-In Visitor',
       description: (
         <div className="space-y-2">
-          <p>Confirm check-in for <strong>{visitor.name}</strong></p>
+          <p>Confirm check-in for <strong>{visitor.visitorName}</strong></p>
           <div className="text-xs space-y-1 bg-muted/50 p-3 rounded-md">
-            <div><strong>Email:</strong> {visitor.email}</div>
-            <div><strong>Phone:</strong> {visitor.phone}</div>
-            {visitor.company && <div><strong>Company:</strong> {visitor.company}</div>}
+            <div><strong>Email:</strong> {visitor.visitorEmail}</div>
+            <div><strong>Phone:</strong> {visitor.visitorPhone}</div>
+            {visitor.companyId && <div><strong>Company:</strong> {visitor.companyId}</div>}
             <div><strong>Purpose:</strong> {PURPOSE_LABELS[visitor.purpose]}</div>
           </div>
         </div>
       ),
       confirmText: 'Check In',
       variant: 'default',
-      action: () => {
-        console.log('Check-in visitor:', visitor.id);
-        // API call here
-        fetchData();
+      action: async () => {
+        // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
+        const success = await updateVisitor(visitor.id, {
+          status: 'checked-in',
+          checkInTime: new Date().toISOString(), // ISO string, not Date object
+        });
+        if (success) {
+          fetchData();
+        }
       },
     });
-  }, []);
+  }, [updateVisitor]);
 
-  const handleCheckOut = useCallback((visitor: Visitor) => {
+  const handleCheckOut = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
       open: true,
       title: 'Check-Out Visitor',
       description: (
         <div className="space-y-2">
-          <p>Confirm check-out for <strong>{visitor.name}</strong></p>
+          <p>Confirm check-out for <strong>{visitor.visitorName}</strong></p>
           {visitor.checkInTime && (
             <div className="text-xs text-muted-foreground">
               Checked in at: {format(new Date(visitor.checkInTime), 'MMM dd, yyyy hh:mm a')}
@@ -324,42 +264,80 @@ export function VisitorsTable({
       ),
       confirmText: 'Check Out',
       variant: 'default',
-      action: () => {
-        console.log('Check-out visitor:', visitor.id);
-        // API call here
-        fetchData();
+      action: async () => {
+        // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
+        const success = await updateVisitor(visitor.id, {
+          status: 'checked-out',
+          checkOutTime: new Date().toISOString(), // ISO string, not Date object
+        });
+        if (success) {
+          fetchData();
+        }
       },
     });
-  }, []);
+  }, [updateVisitor]);
 
-  const handleDelete = useCallback((visitor: Visitor) => {
+  const handleDelete = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
       open: true,
       title: 'Delete Visitor',
       description: (
         <div className="space-y-2">
-          <p>Are you sure you want to delete <strong>{visitor.name}</strong>?</p>
+          <p>Are you sure you want to delete <strong>{visitor.visitorName}</strong>?</p>
           <p className="text-destructive text-xs">This action cannot be undone. All visitor data will be permanently removed.</p>
         </div>
       ),
       confirmText: 'Delete',
       variant: 'destructive',
-      action: () => {
-        console.log('Delete visitor:', visitor.id);
-        // API call here
-        fetchData();
+      action: async () => {
+        const success = await deleteVisitorById(visitor.id);
+        if (success) {
+          fetchData();
+        }
       },
     });
-  }, []);
+  }, [deleteVisitorById]);
 
   // Define table columns - memoized to prevent unnecessary re-renders
-  const columns: ColumnDef<Visitor>[] = useMemo(
+  const columns: ColumnDef<VisitorSnapshot>[] = useMemo(
     () => [
       {
-        accessorKey: 'name',
+        accessorKey: 'visitorName',
         header: 'Visitor Name',
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.name}</span>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={row.original.photoUrl ?? undefined} alt={row.original.visitorName} />
+              <AvatarFallback>
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-medium">{row.original.visitorName}</span>
+              <div className="flex items-center gap-1.5">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-xs text-muted-foreground font-mono max-w-[120px] truncate cursor-help">
+                        ID: {row.original.id}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs font-mono">{row.original.id}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0"
+                  onClick={() => handleCopy(row.original.id)}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
         ),
       },
       {
@@ -368,23 +346,23 @@ export function VisitorsTable({
         cell: ({ row }) => (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm">{row.original.email}</span>
+              <span className="text-sm">{row.original.visitorEmail}</span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-5 w-5 p-0"
-                onClick={() => handleCopy(row.original.email)}
+                onClick={() => handleCopy(row.original.visitorEmail)}
               >
                 <Copy className="h-3 w-3" />
               </Button>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-muted-foreground">{row.original.phone}</span>
+              <span className="text-sm text-muted-foreground">{row.original.visitorPhone}</span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-5 w-5 p-0"
-                onClick={() => handleCopy(row.original.phone)}
+                onClick={() => handleCopy(row.original.visitorPhone)}
               >
                 <Copy className="h-3 w-3" />
               </Button>
@@ -393,23 +371,75 @@ export function VisitorsTable({
         ),
       },
       {
-        accessorKey: 'company',
+        accessorKey: 'companyId',
         header: 'Company',
-        cell: ({ row }) => row.original.company || '-',
+        cell: ({ row }) => row.original.companyId || '-',
       },
       {
         accessorKey: 'purpose',
         header: 'Purpose',
-        cell: ({ row }) => PURPOSE_LABELS[row.original.purpose],
+        cell: ({ row }) => {
+          const notes = row.original.notes;
+          const hasNotes = notes && notes.trim().length > 0;
+          
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-sm">{PURPOSE_LABELS[row.original.purpose]}</span>
+              {hasNotes && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground line-clamp-1 cursor-help">
+                        {notes}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs whitespace-pre-wrap">{notes}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          );
+        },
       },
       {
-        accessorKey: 'hostEmployeeName',
+        accessorKey: 'firstName',
         header: 'Host',
         cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span className="font-medium">{row.original.hostEmployeeName}</span>
-            {row.original.hostDepartment && (
-              <span className="text-xs text-muted-foreground">{row.original.hostDepartment}</span>
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">{row.original.firstName} {row.original.lastName}</span>
+            {row.original.email && (
+              <div className="flex items-center gap-1">
+                <Mail className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate cursor-pointer hover:text-foreground" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(row.original.email);
+                    toast({
+                      description: 'Email copied to clipboard',
+                      duration: 2000,
+                    });
+                  }}
+                  title={row.original.email}>
+                  {row.original.email}
+                </span>
+              </div>
+            )}
+            {row.original.phone && (
+              <div className="flex items-center gap-1">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground cursor-pointer hover:text-foreground"
+                  onClick={() => {
+                    navigator.clipboard.writeText(row.original.phone);
+                    toast({
+                      description: 'Phone copied to clipboard',
+                      duration: 2000,
+                    });
+                  }}
+                  title={row.original.phone}>
+                  {row.original.phone}
+                </span>
+              </div>
             )}
           </div>
         ),
@@ -436,8 +466,8 @@ export function VisitorsTable({
         header: () => <div className="text-center">Status</div>,
         cell: ({ row }) => (
           <div className="flex justify-center">
-            <Badge className={VISITOR_STATUS_COLORS[row.original.status]}>
-              {VISITOR_STATUS_LABELS[row.original.status]}
+            <Badge className={VISITOR_STATUS_COLORS[row.original.visitorStatus]}>
+              {VISITOR_STATUS_LABELS[row.original.visitorStatus]}
             </Badge>
           </div>
         ),
@@ -463,41 +493,31 @@ export function VisitorsTable({
           if (!checkIn && !checkOut) return <span className="text-muted-foreground text-xs">-</span>;
           
           return (
-            <div className="flex flex-col text-xs">
+            <div className="flex flex-col gap-1">
               {checkIn && (
-                <span className="text-green-600 dark:text-green-400">
+                <Badge variant="outline" className="text-xs justify-center bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
                   In: {checkIn}
-                </span>
+                </Badge>
               )}
               {checkOut && (
-                <span className="text-orange-600 dark:text-orange-400">
+                <Badge variant="outline" className="text-xs justify-center bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20">
                   Out: {checkOut}
-                </span>
+                </Badge>
               )}
             </div>
           );
         },
       },
       {
-        accessorKey: 'registrationType',
-        header: () => <div className="text-center">Type</div>,
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            <Badge variant="outline">
-              {row.original.registrationType === 'pre-registered' ? 'Pre-registered' : 'Instant'}
-            </Badge>
-          </div>
-        ),
-      },
-      {
+
         id: 'actions',
         header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => {
           const visitor = row.original;
           const hasCheckedIn = visitor.checkInTime !== null;
           const hasCheckedOut = visitor.checkOutTime !== null;
-          const canCheckIn = (visitor.status === 'approved' || visitor.status === 'pending') && !hasCheckedIn;
-          const canCheckOut = visitor.status === 'checked-in' && !hasCheckedOut;
+          const canCheckIn = (visitor.visitorStatus === 'approved' || visitor.visitorStatus === 'pending') && !hasCheckedIn;
+          const canCheckOut = visitor.visitorStatus === 'checked-in' && !hasCheckedOut;
           
           return (
             <div className="flex items-center justify-center gap-1">
@@ -506,7 +526,7 @@ export function VisitorsTable({
                 variant="ghost" 
                 size="sm"
                 onClick={() => handleView(visitor)}
-                className="h-8 px-2"
+                className="h-8 w-8 p-0"
               >
                 <Eye className="h-3.5 w-3.5" />
               </Button>
@@ -516,11 +536,19 @@ export function VisitorsTable({
                 variant={canCheckIn ? "default" : "secondary"}
                 size="sm"
                 onClick={() => handleCheckIn(visitor)}
-                disabled={!canCheckIn}
-                className="h-8 px-2 text-xs"
+                disabled={!canCheckIn || hasCheckedIn}
+                className="h-8 w-[90px] text-xs px-2"
               >
-                <UserCheck className="h-3.5 w-3.5 mr-1" />
-                In
+                {hasCheckedIn ? (
+                  <span className="whitespace-nowrap truncate">
+                    {visitor.checkInTime ? format(new Date(visitor.checkInTime), 'hh:mm a') : 'Checked In'}
+                  </span>
+                ) : (
+                  <>
+                    <UserCheck className="h-3.5 w-3.5 mr-1" />
+                    Check In
+                  </>
+                )}
               </Button>
               
               {/* Check-out Button */}
@@ -528,11 +556,19 @@ export function VisitorsTable({
                 variant={canCheckOut ? "default" : "secondary"}
                 size="sm"
                 onClick={() => handleCheckOut(visitor)}
-                disabled={!canCheckOut}
-                className="h-8 px-2 text-xs"
+                disabled={!canCheckOut || hasCheckedOut}
+                className="h-8 w-[90px] text-xs px-2"
               >
-                <UserX className="h-3.5 w-3.5 mr-1" />
-                Out
+                {hasCheckedOut ? (
+                  <span className="whitespace-nowrap truncate">
+                    {visitor.checkOutTime ? format(new Date(visitor.checkOutTime), 'hh:mm a') : 'Checked Out'}
+                  </span>
+                ) : (
+                  <>
+                    <UserX className="h-3.5 w-3.5 mr-1" />
+                    Check Out
+                  </>
+                )}
               </Button>
               
               {/* More Actions Dropdown */}
@@ -550,7 +586,7 @@ export function VisitorsTable({
                       Edit
                     </DropdownMenuItem>
                   )}
-                  {visitor.status === 'pending' && (
+                  {visitor.visitorStatus === 'pending' && (
                     <>
                       {!hasCheckedIn && <DropdownMenuSeparator />}
                       <DropdownMenuItem onClick={() => handleApprove(visitor)}>
@@ -563,7 +599,7 @@ export function VisitorsTable({
                       </DropdownMenuItem>
                     </>
                   )}
-                  {((!hasCheckedIn) || (visitor.status === 'pending')) && <DropdownMenuSeparator />}
+                  {((!hasCheckedIn) || (visitor.visitorStatus === 'pending')) && <DropdownMenuSeparator />}
                   <DropdownMenuItem 
                     onClick={() => handleDelete(visitor)}
                     className="text-destructive focus:text-destructive"
@@ -594,7 +630,7 @@ export function VisitorsTable({
         ref={tableRef}
         data={tableData}
         columns={visibleTableColumns}
-        loading={loading}
+        loading={isLoading}
         pagination={{
           pageIndex,
           pageSize,

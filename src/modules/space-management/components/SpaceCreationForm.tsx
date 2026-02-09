@@ -22,12 +22,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { useSpace } from '@/contexts/SpaceContext';
+import { SpaceCarrier } from '@/services/spaceService';
 
 const spaceFormSchema = z.object({
   spaceId: z.string()
     .min(3, 'Space ID must be at least 3 characters')
-    .regex(/^\S+$/, 'Space ID cannot contain spaces')
-    .toUpperCase(),
+    .regex(/^[a-z_]+$/, 'Space ID can only contain lowercase letters and underscores')
+    .transform(val => val.toLowerCase().replace(/\s+/g, '_')),
   spaceName: z.string().min(3, 'Space name must be at least 3 characters'),
   address: z.string().min(5, 'Address is required'),
   description: z.string().optional(),
@@ -43,6 +45,7 @@ interface SpaceCreationFormProps {
 export function SpaceCreationForm({ onSuccess, onBack }: SpaceCreationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { createSpace } = useSpace();
 
   const form = useForm<SpaceFormValues>({
     resolver: zodResolver(spaceFormSchema),
@@ -58,18 +61,32 @@ export function SpaceCreationForm({ onSuccess, onBack }: SpaceCreationFormProps)
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const now = new Date().toISOString();
 
-      // TODO: Save space configuration to backend
-      console.log('Creating space:', data);
+      // Create space carrier
+      const spaceCarrier: SpaceCarrier = {
+        id: data.spaceId,
+        spaceName: data.spaceName,
+        address: data.address,
+        description: data.description,
+        ownerId: 'COMPANY-ID', // TODO: Get from company context
+        ownerCompany: 'Your Company Name', // TODO: Get from company context
+        createdAt: now,
+      };
 
-      // Save to localStorage for now
+      // Create space using context
+      const space = await createSpace(spaceCarrier);
+      
+      if (!space) {
+        throw new Error('Failed to create space');
+      }
+
+      // Save user's space configuration to localStorage
       localStorage.setItem('visitorManagementSpace', JSON.stringify({
-        ...data,
-        createdAt: new Date().toISOString(),
-        isOwner: true,
+        spaceId: data.spaceId,
         status: 'active',
+        isOwner: true,
+        joinedAt: now,
       }));
 
       toast({
@@ -122,14 +139,20 @@ export function SpaceCreationForm({ onSuccess, onBack }: SpaceCreationFormProps)
                     </FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="e.g., TECH-TOWER-01" 
-                        className="font-mono uppercase"
+                        placeholder="e.g., tech_tower_01" 
+                        className="font-mono lowercase"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          const transformed = e.target.value
+                            .toLowerCase()
+                            .replace(/\s+/g, '_')
+                            .replace(/[^a-z_]/g, '');
+                          field.onChange(transformed);
+                        }}
                       />
                     </FormControl>
                     <FormDescription>
-                      A unique identifier for this space (no spaces allowed). This will be shared with other companies.
+                      Database-safe identifier using only lowercase letters and underscores. Spaces will be converted to underscores.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -5,7 +5,7 @@
 import { VisitorPurpose, VisitorStatus } from './types';
 
 export const VISITOR_STATUS_LABELS: Record<VisitorStatus, string> = {
-  pending: 'Pending Approval',
+  pending: 'Pending',
   approved: 'Approved',
   rejected: 'Rejected',
   'checked-in': 'Checked In',

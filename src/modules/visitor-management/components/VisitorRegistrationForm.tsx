@@ -9,20 +9,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   ArrowLeft,
-  CalendarIcon,
   Upload,
   Camera,
   User,
   X,
   Loader2,
 } from "lucide-react";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -31,11 +26,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -46,18 +36,26 @@ import {
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
-import { TimePicker } from "./TimePicker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { useVisitorManagement } from "@/contexts/VisitorManagementContext";
+import { useUserManagement } from "@/contexts/UserManagementContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import { PURPOSE_OPTIONS } from "../constants";
-import { mockEmployees, mockVisitors } from "../mockData";
 import { VisitorPurpose } from "../types";
-import { cn } from "@/lib/utils";
+import { UserDetails } from "@/modules/user-management/types/onboarding.types";
 
-// Form schema - matches Visitor type fields used in form
+// Form schema - structure matches VisitorCarrierInput (backend payload)
+// This ensures form data can be directly used for API requests
 const visitorFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "Phone number is required"),
-  company: z
+  companyId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => val || null),
+  photoUrl: z
     .string()
     .nullable()
     .optional()
@@ -66,14 +64,7 @@ const visitorFormSchema = z.object({
     .string()
     .min(1, "Purpose is required") as z.ZodType<VisitorPurpose>,
   hostEmployeeId: z.string().min(1, "Host employee is required"),
-  registrationType: z.enum(["pre-registered", "instant"]),
-  expectedArrivalDate: z.date({ required_error: "Arrival date is required" }),
-  expectedArrivalTime: z.string().min(1, "Arrival time is required"),
-  expectedDepartureTime: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => val || null),
+  expectedArrivalDateTime: z.string().min(1, "Arrival date and time is required"),
   notes: z
     .string()
     .nullable()
@@ -86,20 +77,20 @@ type VisitorFormValues = z.infer<typeof visitorFormSchema>;
 interface VisitorRegistrationFormProps {
   mode: "create" | "edit";
   visitorId?: string;
-  currentUserRole?: "admin" | "employee";
-  currentUserId?: string;
 }
 
 export function VisitorRegistrationForm({
   mode,
   visitorId,
-  currentUserRole = "employee",
-  currentUserId = "emp001",
 }: VisitorRegistrationFormProps) {
   const navigate = useNavigate();
+  const { createVisitor, updateVisitor, getVisitorById, isLoading } = useVisitorManagement();
+  const { refreshUsers } = useUserManagement();
+  const { companies, loading: isLoadingCompanies } = useCompany();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registeringForOther, setRegisteringForOther] = useState(false);
   const [visitorPhoto, setVisitorPhoto] = useState<string>("");
+  const [users, setUsers] = useState<UserDetails[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [cameraState, setCameraState] = useState<
     "idle" | "starting" | "active"
   >("idle");
@@ -114,61 +105,129 @@ export function VisitorRegistrationForm({
       name: "",
       email: "",
       phone: "",
-      company: "",
+      companyId: "",
+      photoUrl: "",
       purpose: "" as VisitorPurpose,
-      hostEmployeeId: currentUserRole === "employee" ? currentUserId : "",
-      registrationType:
-        currentUserRole === "admin" ? "instant" : "pre-registered",
-      expectedArrivalTime: "",
-      expectedDepartureTime: "",
+      hostEmployeeId: "",
+      expectedArrivalDateTime: "",
       notes: "",
     },
   });
 
   const selectedHostId = form.watch("hostEmployeeId");
-  const isAdmin = currentUserRole === "admin";
+
+  // Load all users for host selection
+  useEffect(() => {
+    const loadUsers = async () => {
+      setIsLoadingUsers(true);
+      const result = await refreshUsers({ filters: {} }, 0, 1000);
+      if (result && result.content) {
+        setUsers(result.content);
+      }
+      setIsLoadingUsers(false);
+    };
+    loadUsers();
+  }, []);
 
   // Load visitor data in edit mode
   useEffect(() => {
     if (mode === "edit" && visitorId) {
-      const foundVisitor = mockVisitors.find((v) => v.id === visitorId);
-      if (foundVisitor) {
-        form.reset({
-          name: foundVisitor.name,
-          email: foundVisitor.email,
-          phone: foundVisitor.phone,
-          company: foundVisitor.company || "",
-          purpose: foundVisitor.purpose,
-          hostEmployeeId: foundVisitor.hostEmployeeId,
-          registrationType: foundVisitor.registrationType,
-          expectedArrivalDate: new Date(foundVisitor.expectedArrivalDate),
-          expectedArrivalTime: foundVisitor.expectedArrivalTime,
-          expectedDepartureTime: foundVisitor.expectedDepartureTime || "",
-          notes: foundVisitor.notes || "",
-        });
-      }
+      const loadVisitor = async () => {
+        const foundVisitor = await getVisitorById(visitorId);
+        if (foundVisitor) {
+          // Combine expectedArrivalDate and expectedArrivalTime into ISO string
+          const arrivalDate = new Date(foundVisitor.expectedArrivalDate);
+          const [hours, minutes] = foundVisitor.expectedArrivalTime.match(/(\d+):(\d+)\s*(AM|PM)/i)?.slice(1, 3) || ['12', '00'];
+          const isPM = foundVisitor.expectedArrivalTime.toUpperCase().includes('PM');
+          let hours24 = parseInt(hours, 10);
+          if (isPM && hours24 !== 12) hours24 += 12;
+          else if (!isPM && hours24 === 12) hours24 = 0;
+          arrivalDate.setHours(hours24, parseInt(minutes, 10), 0, 0);
+          
+          form.reset({
+            name: foundVisitor.visitorName,
+            email: foundVisitor.visitorEmail,
+            phone: foundVisitor.visitorPhone,
+            companyId: foundVisitor.companyId || "",
+            photoUrl: foundVisitor.photoUrl || "",
+            purpose: foundVisitor.purpose,
+            hostEmployeeId: foundVisitor.employeeId,
+            expectedArrivalDateTime: arrivalDate.toISOString(),
+            notes: foundVisitor.notes || "",
+          });
+          // Set visitor photo state for display
+          if (foundVisitor.photoUrl) {
+            setVisitorPhoto(foundVisitor.photoUrl);
+          }
+        }
+      };
+      loadVisitor();
     }
   }, [mode, visitorId, form]);
-
-  // Handle registeringForOther checkbox
-  useEffect(() => {
-    if (currentUserRole === "employee" && !registeringForOther) {
-      form.setValue("hostEmployeeId", currentUserId);
-    }
-  }, [registeringForOther, currentUserRole, currentUserId, form]);
 
   const onSubmit = async (data: VisitorFormValues) => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // ===== DateTimePicker returns ISO UTC string =====
+      // Parse the ISO string to extract date and time components
+      const arrivalDateTime = new Date(data.expectedArrivalDateTime);
+      const expectedArrivalDateISO = arrivalDateTime.toISOString();
+      
+      // Convert to 12-hour format for expectedArrivalTime
+      const hours = arrivalDateTime.getHours();
+      const minutes = arrivalDateTime.getMinutes();
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      const expectedArrivalTime12hr = `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+      
+      if (mode === "create") {
+        // Create payload - ALL fields are strings/primitives, NO Date objects
+        // ID is generated by backend, so we DON'T send it
+        const visitorCarrier = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          companyId: data.companyId || null,
+          photoUrl: data.photoUrl || null,
+          purpose: data.purpose,
+          hostEmployeeId: data.hostEmployeeId,
+          expectedArrivalDate: expectedArrivalDateISO, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
+          expectedArrivalTime: expectedArrivalTime12hr, // 12-hour format: "02:02 PM"
+          notes: data.notes || null,
+          visitorStatus: "pending" as const,
+          createdAt: new Date().toISOString(), // ISO UTC timestamp
+        };
 
-    console.log("Form data:", { ...data, photoUrl: visitorPhoto });
+        const result = await createVisitor(visitorCarrier);
+        if (result) {
+          navigate("/visitor-management");
+        }
+      } else {
+        // Update payload - ALL fields are strings/primitives, NO Date objects
+        const updatePayload = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          companyId: data.companyId || null,
+          photoUrl: data.photoUrl || null,
+          purpose: data.purpose,
+          hostEmployeeId: data.hostEmployeeId,
+          expectedArrivalDate: expectedArrivalDateISO, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
+          expectedArrivalTime: expectedArrivalTime12hr, // 12-hour format: "02:02 PM"
+          notes: data.notes || null,
+        };
 
-    setIsSubmitting(false);
-
-    // Navigate back to visitor management
-    navigate("/visitor-management");
+        const result = await updateVisitor(visitorId!, updatePayload);
+        if (result) {
+          navigate("/visitor-management");
+        }
+      }
+    } catch (error) {
+      console.error("Error submitting visitor:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -233,6 +292,7 @@ export function VisitorRegistrationForm({
         ctx.drawImage(video, 0, 0);
         const imageUrl = canvas.toDataURL("image/jpeg", 0.8);
         setVisitorPhoto(imageUrl);
+        form.setValue("photoUrl", imageUrl);
         stopCamera();
       }
     }
@@ -248,13 +308,14 @@ export function VisitorRegistrationForm({
       const reader = new FileReader();
       reader.onloadend = () => {
         setVisitorPhoto(reader.result as string);
+        form.setValue("photoUrl", reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const selectedEmployee = mockEmployees.find(
-    (emp) => emp.id === selectedHostId
+  const selectedEmployee = users.find(
+    (user) => user.id === selectedHostId
   );
 
   return (
@@ -282,46 +343,13 @@ export function VisitorRegistrationForm({
       </div>
 
       {/* Form */}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Registration Type - Only show for admin */}
-          {isAdmin && (
-            <Card className="p-4">
-              <FormField
-                control={form.control}
-                name="registrationType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pre-registered">
-                          Pre-registered
-                        </SelectItem>
-                        <SelectItem value="instant">
-                          Instant Check-in
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </Card>
-          )}
-
-          {/* Basic Information */}
-          <Card className="p-4">
-            <h3 className="text-sm font-medium mb-3">Basic Information</h3>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Visitor Photo */}
-              <div className="flex flex-col items-center gap-2">
+      <Card className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Visitor Photo Section */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Visitor Photo */}
+            <div className="flex flex-col items-center gap-2">
                 <div className="relative">
                   <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed border-muted-foreground/25">
                     <AvatarImage
@@ -336,7 +364,10 @@ export function VisitorRegistrationForm({
                   {visitorPhoto && (
                     <button
                       type="button"
-                      onClick={() => setVisitorPhoto("")}
+                      onClick={() => {
+                        setVisitorPhoto("");
+                        form.setValue("photoUrl", "");
+                      }}
                       className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-md"
                     >
                       <X className="w-3 h-3" />
@@ -480,30 +511,37 @@ export function VisitorRegistrationForm({
 
                 <FormField
                   control={form.control}
-                  name="company"
+                  name="companyId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Company</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Company name"
-                          className="h-8 text-sm"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        disabled={isLoadingCompanies}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder={isLoadingCompanies ? "Loading companies..." : "Select company (optional)"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {companies.filter(c => c).map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
-          </Card>
 
-          {/* Visit Details */}
-          <Card className="p-4">
-            <h3 className="text-sm font-medium mb-3">Visit Details</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
+          {/* Visit Details Fields */}
+          <div className="grid gap-3 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="purpose"
@@ -536,48 +574,23 @@ export function VisitorRegistrationForm({
                 name="hostEmployeeId"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between mb-1">
-                      <FormLabel className="text-xs">
-                        Host <span className="text-destructive">*</span>
-                        {!isAdmin && !registeringForOther && (
-                          <span className="text-muted-foreground ml-1">
-                            (You)
-                          </span>
-                        )}
-                      </FormLabel>
-                      {!isAdmin && (
-                        <div className="flex items-center gap-1.5">
-                          <Checkbox
-                            id="registerForOther"
-                            checked={registeringForOther}
-                            onCheckedChange={(checked) =>
-                              setRegisteringForOther(!!checked)
-                            }
-                            className="h-3.5 w-3.5"
-                          />
-                          <Label
-                            htmlFor="registerForOther"
-                            className="text-xs cursor-pointer font-normal"
-                          >
-                            For other
-                          </Label>
-                        </div>
-                      )}
-                    </div>
+                    <FormLabel className="text-xs">
+                      Host <span className="text-destructive">*</span>
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={field.onChange}
-                      disabled={!isAdmin && !registeringForOther}
+                      disabled={isLoadingUsers}
                     >
                       <FormControl>
                         <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Select host" />
+                          <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select host"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {mockEmployees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name} - {emp.department}
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -592,124 +605,61 @@ export function VisitorRegistrationForm({
                 )}
               />
             </div>
-          </Card>
 
-          {/* Schedule */}
-          <Card className="p-4">
-            <h3 className="text-sm font-medium mb-3">Visit Schedule</h3>
-            <div className="mx-auto space-y-3">
-              <FormField
-                control={form.control}
-                name="expectedArrivalDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs">
-                      Arrival Date <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "h-8 text-sm font-normal w-full",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick date</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="expectedArrivalTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        Entry Time <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <TimePicker
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+          {/* Visit Schedule Field */}
+          <FormField
+            control={form.control}
+            name="expectedArrivalDateTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">
+                  Arrival Date & Time <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <DateTimePicker
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Pick arrival date and time"
+                    timePosition="right"
+                    mode="accessible"
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
-                <FormField
-                  control={form.control}
-                  name="expectedDepartureTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Exit Time</FormLabel>
-                      <FormControl>
-                        <TimePicker
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Notes */}
-          <Card className="p-4">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Additional notes or requirements..."
-                      className="text-sm min-h-[120px] resize-y"
-                      {...field}
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-          </Card>
+          {/* Notes Field */}
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs">Notes</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Additional notes or requirements..."
+                    className="text-sm min-h-[120px] resize-y"
+                    {...field}
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
           {/* Form Action Bar */}
           <FormActionBar
             mode={mode}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || isLoading}
             onCancel={handleCancel}
             submitText={mode === "edit" ? "Update" : "Register"}
           />
         </form>
       </Form>
+      </Card>
     </div>
   );
 }
