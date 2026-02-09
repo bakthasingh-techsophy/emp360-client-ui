@@ -31,8 +31,9 @@ import { DataTable } from '@/components/common/DataTable/DataTable';
 import { DataTableRef } from '@/components/common/DataTable/types';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { ViewVisitorModal } from './components/ViewVisitorModal';
-import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { ActiveFilter, CurrentSort } from '@/components/GenericToolbar/types';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
+import { SortMap } from '@/types/search';
 import { useVisitorManagement } from '@/contexts/VisitorManagementContext';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +51,7 @@ type Props = {
   activeFilters: ActiveFilter[];
   visibleColumns: string[];
   refreshTrigger?: number;
+  currentSort?: CurrentSort | null;
 };
 
 export function VisitorsTable({
@@ -57,6 +59,7 @@ export function VisitorsTable({
   activeFilters,
   visibleColumns,
   refreshTrigger = 0,
+  currentSort = null,
 }: Props) {
   const navigate = useNavigate();
   const { refreshVisitors, updateVisitor, deleteVisitorById, isLoading } = useVisitorManagement();
@@ -94,6 +97,7 @@ export function VisitorsTable({
     pageIndex: number;
     pageSize: number;
     refreshTrigger: number;
+    currentSort: CurrentSort | null | undefined;
     selectedCompanyScope: string | null | undefined;
   } | null>(null);
 
@@ -102,9 +106,14 @@ export function VisitorsTable({
     navigator.clipboard.writeText(text);
   };
 
-  // Fetch data function
-  const fetchData = async () => {
+  // Fetch data function - memoized to prevent unnecessary recreations
+  const fetchData = useCallback(async () => {
     try {
+      // Build sort map from currentSort
+      const sortMap: SortMap | undefined = currentSort
+        ? { [currentSort.field]: currentSort.direction }
+        : undefined;
+
       // Build universal search request from filters and search query
       const searchRequest = buildUniversalSearchRequest(
         activeFilters,
@@ -120,6 +129,7 @@ export function VisitorsTable({
           "employeeId",
           "notes",
         ],
+        sortMap
       );
 
       const result = await refreshVisitors(
@@ -136,7 +146,7 @@ export function VisitorsTable({
     } catch (error) {
       console.error("Error fetching visitors:", error);
     }
-  };
+  }, [activeFilters, searchQuery, pageIndex, pageSize, refreshTrigger, currentSort, refreshVisitors]);
 
   // Fetch data from API when filters or search change
   useEffect(() => {
@@ -149,21 +159,22 @@ export function VisitorsTable({
       prevDepsRef.current.pageIndex !== pageIndex ||
       prevDepsRef.current.pageSize !== pageSize ||
       prevDepsRef.current.refreshTrigger !== refreshTrigger ||
+      JSON.stringify(prevDepsRef.current.currentSort) !==
+        JSON.stringify(currentSort) ||
       prevDepsRef.current.selectedCompanyScope !== selectedCompanyScope;
 
     if (!depsChanged) return;
 
     // Update the ref with current values
-    prevDepsRef.current = {
-      activeFilters,
-      searchQuery,
-      pageIndex,
-      pageSize,
-      refreshTrigger,
-      selectedCompanyScope,
-    };
-
-    fetchData();
+      prevDepsRef.current = {
+        activeFilters,
+        searchQuery,
+        pageIndex,
+        pageSize,
+        refreshTrigger,
+        currentSort,
+        selectedCompanyScope,
+      };    fetchData();
   }, [
     activeFilters,
     searchQuery,
@@ -192,14 +203,17 @@ export function VisitorsTable({
       confirmText: 'Approve',
       variant: 'default',
       action: async () => {
-        // Update status - all values sent to API are strings/primitives
-        const success = await updateVisitor(visitor.id, { status: 'approved' });
-        if (success) {
-          fetchData();
+        try {
+          // Update status - all values sent to API are strings/primitives
+          await updateVisitor(visitor.id, { visitorStatus: 'approved' });
+          // Always refresh data after update attempt
+          await fetchData();
+        } catch (error) {
+          console.error('Error approving visitor:', error);
         }
       },
     });
-  }, [updateVisitor]);
+  }, [updateVisitor, fetchData]);
 
   const handleReject = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
@@ -209,14 +223,17 @@ export function VisitorsTable({
       confirmText: 'Reject',
       variant: 'destructive',
       action: async () => {
-        // Update status - all values sent to API are strings/primitives
-        const success = await updateVisitor(visitor.id, { status: 'rejected' });
-        if (success) {
-          fetchData();
+        try {
+          // Update status - all values sent to API are strings/primitives
+          await updateVisitor(visitor.id, { visitorStatus: 'rejected' });
+          // Always refresh data after update attempt
+          await fetchData();
+        } catch (error) {
+          console.error('Error rejecting visitor:', error);
         }
       },
     });
-  }, [updateVisitor]);
+  }, [updateVisitor, fetchData]);
 
   const handleCheckIn = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
@@ -236,17 +253,20 @@ export function VisitorsTable({
       confirmText: 'Check In',
       variant: 'default',
       action: async () => {
-        // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
-        const success = await updateVisitor(visitor.id, {
-          status: 'checked-in',
-          checkInTime: new Date().toISOString(), // ISO string, not Date object
-        });
-        if (success) {
-          fetchData();
+        try {
+          // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
+          await updateVisitor(visitor.id, {
+            visitorStatus: 'checked-in',
+            checkInTime: new Date().toISOString(), // ISO string, not Date object
+          });
+          // Always refresh data after update attempt
+          await fetchData();
+        } catch (error) {
+          console.error('Error checking in visitor:', error);
         }
       },
     });
-  }, [updateVisitor]);
+  }, [updateVisitor, fetchData]);
 
   const handleCheckOut = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
@@ -265,17 +285,20 @@ export function VisitorsTable({
       confirmText: 'Check Out',
       variant: 'default',
       action: async () => {
-        // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
-        const success = await updateVisitor(visitor.id, {
-          status: 'checked-out',
-          checkOutTime: new Date().toISOString(), // ISO string, not Date object
-        });
-        if (success) {
-          fetchData();
+        try {
+          // Send ISO timestamp string to API (e.g., "2024-01-15T10:30:00.000Z")
+          await updateVisitor(visitor.id, {
+            visitorStatus: 'checked-out',
+            checkOutTime: new Date().toISOString(), // ISO string, not Date object
+          });
+          // Always refresh data after update attempt
+          await fetchData();
+        } catch (error) {
+          console.error('Error checking out visitor:', error);
         }
       },
     });
-  }, [updateVisitor]);
+  }, [updateVisitor, fetchData]);
 
   const handleDelete = useCallback((visitor: VisitorSnapshot) => {
     setConfirmDialog({
@@ -290,13 +313,16 @@ export function VisitorsTable({
       confirmText: 'Delete',
       variant: 'destructive',
       action: async () => {
-        const success = await deleteVisitorById(visitor.id);
-        if (success) {
-          fetchData();
+        try {
+          await deleteVisitorById(visitor.id);
+          // Always refresh data after delete attempt
+          await fetchData();
+        } catch (error) {
+          console.error('Error deleting visitor:', error);
         }
       },
     });
-  }, [deleteVisitorById]);
+  }, [deleteVisitorById, fetchData]);
 
   // Define table columns - memoized to prevent unnecessary re-renders
   const columns: ColumnDef<VisitorSnapshot>[] = useMemo(
@@ -445,19 +471,21 @@ export function VisitorsTable({
         ),
       },
       {
-        accessorKey: 'expectedArrivalDate',
+        accessorKey: 'expectedArrivalDateTime',
         header: 'Expected Arrival',
         cell: ({ row }) => {
           try {
-            const date = format(new Date(row.original.expectedArrivalDate), 'MMM dd, yyyy');
+            const dateTime = new Date(row.original.expectedArrivalDateTime);
+            const date = format(dateTime, 'MMM dd, yyyy');
+            const time = format(dateTime, 'hh:mm a');
             return (
               <div className="flex flex-col">
                 <span>{date}</span>
-                <span className="text-xs text-muted-foreground">{row.original.expectedArrivalTime}</span>
+                <span className="text-xs text-muted-foreground">{time}</span>
               </div>
             );
           } catch {
-            return row.original.expectedArrivalDate;
+            return row.original.expectedArrivalDateTime;
           }
         },
       },

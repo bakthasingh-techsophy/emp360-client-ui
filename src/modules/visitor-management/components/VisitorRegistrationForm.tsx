@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -37,12 +38,10 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { UsersSelector, CompanySelector } from "@/components/context-aware";
 import { useVisitorManagement } from "@/contexts/VisitorManagementContext";
-import { useUserManagement } from "@/contexts/UserManagementContext";
-import { useCompany } from "@/contexts/CompanyContext";
-import { PURPOSE_OPTIONS } from "../constants";
-import { VisitorPurpose } from "../types";
-import { UserDetails } from "@/modules/user-management/types/onboarding.types";
+import { PURPOSE_OPTIONS, VISITOR_STATUS_LABELS } from "../constants";
+import { VisitorPurpose, VisitorStatus } from "../types";
 
 // Form schema - structure matches VisitorCarrierInput (backend payload)
 // This ensures form data can be directly used for API requests
@@ -65,6 +64,10 @@ const visitorFormSchema = z.object({
     .min(1, "Purpose is required") as z.ZodType<VisitorPurpose>,
   hostEmployeeId: z.string().min(1, "Host employee is required"),
   expectedArrivalDateTime: z.string().min(1, "Arrival date and time is required"),
+  visitorStatus: z
+    .string()
+    .min(1, "Status is required") as z.ZodType<VisitorStatus>,
+  instantCheckIn: z.boolean().default(false),
   notes: z
     .string()
     .nullable()
@@ -85,12 +88,8 @@ export function VisitorRegistrationForm({
 }: VisitorRegistrationFormProps) {
   const navigate = useNavigate();
   const { createVisitor, updateVisitor, getVisitorById, isLoading } = useVisitorManagement();
-  const { refreshUsers } = useUserManagement();
-  const { companies, loading: isLoadingCompanies } = useCompany();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitorPhoto, setVisitorPhoto] = useState<string>("");
-  const [users, setUsers] = useState<UserDetails[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [cameraState, setCameraState] = useState<
     "idle" | "starting" | "active"
   >("idle");
@@ -110,24 +109,11 @@ export function VisitorRegistrationForm({
       purpose: "" as VisitorPurpose,
       hostEmployeeId: "",
       expectedArrivalDateTime: "",
+      visitorStatus: "pending" as VisitorStatus,
+      instantCheckIn: false,
       notes: "",
     },
   });
-
-  const selectedHostId = form.watch("hostEmployeeId");
-
-  // Load all users for host selection
-  useEffect(() => {
-    const loadUsers = async () => {
-      setIsLoadingUsers(true);
-      const result = await refreshUsers({ filters: {} }, 0, 1000);
-      if (result && result.content) {
-        setUsers(result.content);
-      }
-      setIsLoadingUsers(false);
-    };
-    loadUsers();
-  }, []);
 
   // Load visitor data in edit mode
   useEffect(() => {
@@ -135,15 +121,6 @@ export function VisitorRegistrationForm({
       const loadVisitor = async () => {
         const foundVisitor = await getVisitorById(visitorId);
         if (foundVisitor) {
-          // Combine expectedArrivalDate and expectedArrivalTime into ISO string
-          const arrivalDate = new Date(foundVisitor.expectedArrivalDate);
-          const [hours, minutes] = foundVisitor.expectedArrivalTime.match(/(\d+):(\d+)\s*(AM|PM)/i)?.slice(1, 3) || ['12', '00'];
-          const isPM = foundVisitor.expectedArrivalTime.toUpperCase().includes('PM');
-          let hours24 = parseInt(hours, 10);
-          if (isPM && hours24 !== 12) hours24 += 12;
-          else if (!isPM && hours24 === 12) hours24 = 0;
-          arrivalDate.setHours(hours24, parseInt(minutes, 10), 0, 0);
-          
           form.reset({
             name: foundVisitor.visitorName,
             email: foundVisitor.visitorEmail,
@@ -152,7 +129,8 @@ export function VisitorRegistrationForm({
             photoUrl: foundVisitor.photoUrl || "",
             purpose: foundVisitor.purpose,
             hostEmployeeId: foundVisitor.employeeId,
-            expectedArrivalDateTime: arrivalDate.toISOString(),
+            expectedArrivalDateTime: foundVisitor.expectedArrivalDateTime,
+            visitorStatus: foundVisitor.visitorStatus,
             notes: foundVisitor.notes || "",
           });
           // Set visitor photo state for display
@@ -169,22 +147,9 @@ export function VisitorRegistrationForm({
     setIsSubmitting(true);
 
     try {
-      // ===== DateTimePicker returns ISO UTC string =====
-      // Parse the ISO string to extract date and time components
-      const arrivalDateTime = new Date(data.expectedArrivalDateTime);
-      const expectedArrivalDateISO = arrivalDateTime.toISOString();
-      
-      // Convert to 12-hour format for expectedArrivalTime
-      const hours = arrivalDateTime.getHours();
-      const minutes = arrivalDateTime.getMinutes();
-      const period = hours >= 12 ? 'PM' : 'AM';
-      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-      const expectedArrivalTime12hr = `${hours12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
-      
       if (mode === "create") {
-        // Create payload - ALL fields are strings/primitives, NO Date objects
-        // ID is generated by backend, so we DON'T send it
-        const visitorCarrier = {
+        // Create payload - expectedArrivalDateTime is already ISO UTC string from DateTimePicker
+        const visitorCarrier: any = {
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -192,19 +157,23 @@ export function VisitorRegistrationForm({
           photoUrl: data.photoUrl || null,
           purpose: data.purpose,
           hostEmployeeId: data.hostEmployeeId,
-          expectedArrivalDate: expectedArrivalDateISO, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
-          expectedArrivalTime: expectedArrivalTime12hr, // 12-hour format: "02:02 PM"
+          expectedArrivalDateTime: data.expectedArrivalDateTime, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
+          visitorStatus: data.instantCheckIn ? "checked-in" : data.visitorStatus,
           notes: data.notes || null,
-          visitorStatus: "pending" as const,
           createdAt: new Date().toISOString(), // ISO UTC timestamp
         };
+
+        // If instant check-in is enabled, set checkInTime to current time
+        if (data.instantCheckIn) {
+          visitorCarrier.checkInTime = new Date().toISOString();
+        }
 
         const result = await createVisitor(visitorCarrier);
         if (result) {
           navigate("/visitor-management");
         }
       } else {
-        // Update payload - ALL fields are strings/primitives, NO Date objects
+        // Update payload - expectedArrivalDateTime is already ISO UTC string
         const updatePayload = {
           name: data.name,
           email: data.email,
@@ -213,8 +182,8 @@ export function VisitorRegistrationForm({
           photoUrl: data.photoUrl || null,
           purpose: data.purpose,
           hostEmployeeId: data.hostEmployeeId,
-          expectedArrivalDate: expectedArrivalDateISO, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
-          expectedArrivalTime: expectedArrivalTime12hr, // 12-hour format: "02:02 PM"
+          expectedArrivalDateTime: data.expectedArrivalDateTime, // ISO UTC timestamp: "2026-02-09T14:02:00.000Z"
+          visitorStatus: data.visitorStatus,
           notes: data.notes || null,
         };
 
@@ -313,10 +282,6 @@ export function VisitorRegistrationForm({
       reader.readAsDataURL(file);
     }
   };
-
-  const selectedEmployee = users.find(
-    (user) => user.id === selectedHostId
-  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 pb-24">
@@ -512,28 +477,17 @@ export function VisitorRegistrationForm({
                 <FormField
                   control={form.control}
                   name="companyId"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Company</FormLabel>
-                      <Select
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
-                        disabled={isLoadingCompanies}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder={isLoadingCompanies ? "Loading companies..." : "Select company (optional)"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {companies.filter(c => c).map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              {company.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
+                      <FormControl>
+                        <CompanySelector
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Search and select company (optional)"
+                          error={fieldState.error?.message}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -572,40 +526,92 @@ export function VisitorRegistrationForm({
               <FormField
                 control={form.control}
                 name="hostEmployeeId"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel className="text-xs">
                       Host <span className="text-destructive">*</span>
                     </FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      disabled={isLoadingUsers}
-                    >
+                    <FormControl>
+                      <UsersSelector
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Search and select host"
+                        disabled={isSubmitting || isLoading}
+                        error={fieldState.error?.message}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="visitorStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">
+                      Status <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select host"} />
+                          <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="pending">{VISITOR_STATUS_LABELS.pending}</SelectItem>
+                        <SelectItem value="approved">{VISITOR_STATUS_LABELS.approved}</SelectItem>
+                        <SelectItem value="rejected">{VISITOR_STATUS_LABELS.rejected}</SelectItem>
+                        <SelectItem value="checked-in">{VISITOR_STATUS_LABELS['checked-in']}</SelectItem>
+                        <SelectItem value="checked-out">{VISITOR_STATUS_LABELS['checked-out']}</SelectItem>
+                        <SelectItem value="expired">{VISITOR_STATUS_LABELS.expired}</SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedEmployee && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {selectedEmployee.email}
-                      </p>
-                    )}
                     <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
             </div>
 
+
+          {/* Instant Check-In Checkbox - Only in Create Mode */}
+          {mode === "create" && (
+            <FormField
+              control={form.control}
+              name="instantCheckIn"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-muted/30">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        // Automatically set status to checked-in when instant check-in is enabled
+                        if (checked) {
+                          form.setValue("visitorStatus", "checked-in");
+                          // Set arrival date & time to current instant
+                          form.setValue("expectedArrivalDateTime", new Date().toISOString());
+                        } else {
+                          // Reset to pending when unchecked
+                          form.setValue("visitorStatus", "pending");
+                          // Clear the arrival date & time
+                          form.setValue("expectedArrivalDateTime", "");
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-medium cursor-pointer">
+                      Instant Check-In
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Check this to immediately check in the visitor. Status will be set to "Checked-In" and check-in time will be recorded automatically.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          )}
 
           {/* Visit Schedule Field */}
           <FormField

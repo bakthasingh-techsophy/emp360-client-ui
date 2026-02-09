@@ -185,7 +185,7 @@ export function ViewVisitorModal({
                 <InfoRow 
                   icon={Calendar} 
                   label="Expected Arrival" 
-                  value={`${format(new Date(visitor.expectedArrivalDate), 'MMM dd, yyyy')} at ${visitor.expectedArrivalTime}`}
+                  value={format(new Date(visitor.expectedArrivalDateTime), 'MMM dd, yyyy hh:mm a')}
                 />
               </div>
             </div>
