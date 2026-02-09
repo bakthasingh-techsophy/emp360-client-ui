@@ -56,6 +56,21 @@ export interface ActiveFilter {
   value: any;
 }
 
+// Sorting types
+export type SortFieldType = 'text' | 'date' | 'number';
+export type SortDirection = 1 | -1; // 1 for ascending, -1 for descending
+
+export interface SortableField {
+  id: string;
+  label: string;
+  type: SortFieldType;
+}
+
+export interface CurrentSort {
+  field: string;
+  direction: SortDirection;
+}
+
 export interface ToolbarAction {
   id: string;
   label: string;
@@ -100,6 +115,11 @@ export interface ToolbarConfig {
   onExportAll?: (sendEmail: boolean, email?: string) => void;
   onExportResults?: (sendEmail: boolean, email?: string) => void;
   
+  showSort?: boolean;
+  sortableFields?: SortableField[];
+  currentSort?: CurrentSort | null;
+  onSortChange?: (sort: CurrentSort | null) => void;
+  
   showFilters?: boolean;
   availableFilters?: AvailableFilter[];
   activeFilters?: ActiveFilter[];
@@ -114,7 +134,6 @@ export interface ToolbarConfig {
   showBulkActions?: boolean;
   bulkActions?: BulkAction[];
   selectedCount?: number;
-  selectedIds?: string[];
   onToggleSelection?: () => void;
   selectionMode?: boolean;
   

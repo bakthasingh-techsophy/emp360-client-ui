@@ -6,6 +6,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { UserManagementProvider } from './contexts/UserManagementContext';
+import { CompanyProvider } from './contexts/CompanyContext';
+import { PolicyProvider } from './contexts/PolicyContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { VisitorManagementProvider } from './contexts/VisitorManagementContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -74,6 +78,7 @@ import { AssetManagement } from './modules/expenses-assets/AssetManagement';
 // Policy & Document Center modules
 import { PolicyLibrary } from './modules/policy-documents/PolicyLibrary';
 import { PolicyForm } from './modules/policy-documents/PolicyForm';
+import { PolicyVersioning } from './modules/policy-documents/PolicyVersioning';
 import { Acknowledgements } from './modules/policy-documents/Acknowledgements';
 import { FormsTemplates } from './modules/policy-documents/FormsTemplates';
 
@@ -91,7 +96,10 @@ import { RoomManagement } from './modules/visitor-room';
 
 // Administration & Security modules
 import { UserManagement } from './modules/user-management/UserManagement';
+import { UserManagementSettings } from './modules/user-management/UserManagementSettings';
 import { EmployeeOnboarding } from './modules/user-management/EmployeeOnboarding';
+import { CompanyManagement } from './modules/administration/CompanyManagement';
+import { CompanyForm } from './modules/administration/CompanyForm';
 import { RolePermissions } from './modules/user-management/RolePermissions';
 import { AuditLogs } from './modules/user-management/AuditLogs';
 import { Integrations } from './modules/user-management/Integrations';
@@ -107,10 +115,13 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <UserManagementProvider>
-          <LayoutProvider>
-            <BrowserRouter>
-            <Routes>
+        <LayoutProvider>
+          <CompanyProvider>
+            <UserManagementProvider>
+              <NotificationProvider>
+                <PolicyProvider>
+                  <BrowserRouter>
+                  <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
@@ -188,6 +199,7 @@ function App() {
                 {/* Policy & Document Center routes - Flat paths */}
                 <Route path="/policy-library" element={<PolicyLibrary />} />
                 <Route path="/policy-form" element={<PolicyForm />} />
+                <Route path="/policy-versions" element={<PolicyVersioning />} />
                 <Route path="/acknowledgements" element={<Acknowledgements />} />
                 <Route path="/forms-templates" element={<FormsTemplates />} />
 
@@ -197,7 +209,11 @@ function App() {
                 <Route path="/project-attendance" element={<ProjectAttendance />} />
 
                 {/* Visitor & Room Management routes */}
-                <Route path="/visitor-management" element={<VisitorManagement />} />
+                <Route path="/visitor-management" element={
+                  <VisitorManagementProvider>
+                    <VisitorManagement />
+                  </VisitorManagementProvider>
+                } />
                 
                 {/* Room Management Routes - Role-based entry point */}
                 {/* Default route shows appropriate dashboard based on role */}
@@ -212,7 +228,10 @@ function App() {
 
                 {/* Administration & Security routes - Flat paths */}
                 <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/user-management/settings" element={<UserManagementSettings />} />
                 <Route path="/employee-onboarding" element={<EmployeeOnboarding />} />
+                <Route path="/company-management" element={<CompanyManagement />} />
+                <Route path="/company-form" element={<CompanyForm />} />
                 <Route path="/role-permissions" element={<RolePermissions />} />
                 <Route path="/audit-logs" element={<AuditLogs />} />
                 <Route path="/integrations" element={<Integrations />} />
@@ -231,8 +250,11 @@ function App() {
             </Routes>
           </BrowserRouter>
           <Toaster />
-        </LayoutProvider>
-      </UserManagementProvider>
+        </PolicyProvider>
+      </NotificationProvider>
+    </UserManagementProvider>
+  </CompanyProvider>
+      </LayoutProvider>
     </AuthProvider>
   </ThemeProvider>
   );

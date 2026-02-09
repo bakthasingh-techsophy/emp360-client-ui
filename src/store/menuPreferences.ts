@@ -22,6 +22,7 @@ const DEFAULT_PINNED_MENUS = [
   'policy-library',
   'expense-management',
   'user-management',
+  'company-management',
   'my-profile',
   'leave-holiday',
   'system-settings',

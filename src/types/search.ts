@@ -26,6 +26,27 @@ export type ComparisonOp = "eq" | "lt" | "lte" | "gt" | "gte";
 export type CollectionOp = "in" | "all" | "nin";
 
 /**
+ * Sort direction:
+ *  1  => ASC
+ * -1  => DESC
+ */
+export type SortDirection = 1 | -1;
+
+/**
+ * Sort map:
+ *  key   = field name (supports nested paths like "activity.actionAt")
+ *  value = direction (1 | -1)
+ *
+ * Example:
+ * {
+ *   "activity.actionAt": -1,
+ *   "createdAt": 1
+ * }
+ */
+export type SortMap = Record<string, SortDirection>;
+
+
+/**
  * Structured operator variants accepted by backend QueryBuilderUtil
  */
 export interface InAllNinOperator {
@@ -105,6 +126,8 @@ export interface UniversalSearchRequest {
   searchFields?: string[];        // fields to apply searchText to (e.g. ["name","email"]) 
   filters?: Filters;              // AND / OR structured filters
   dateFilter?: DateFilter;        // date-based filters (on, between, >=, <=, today)
+   /** NEW: sorting */
+  sort?: SortMap;
 }
 
 export default UniversalSearchRequest;

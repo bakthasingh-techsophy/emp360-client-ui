@@ -39,20 +39,11 @@ export const generalDetailsSchema = z.object({
   permanentAddress: z.string().min(1, "Permanent address is required"),
   sameAsContactAddress: z.boolean().optional(),
   emergencyContacts: z.array(z.object({
-    id: z.string().optional(),
-    name: z.string(),
-    relation: z.string(),
-    phone: z.string(),
-  })).refine((contacts) => {
-    // Check if at least one contact has all fields filled
-    return contacts.some(contact => 
-      contact.name && contact.name.trim() !== '' &&
-      contact.relation && contact.relation.trim() !== '' &&
-      contact.phone && contact.phone.trim() !== ''
-    );
-  }, {
-    message: "At least one emergency contact must be completely filled (name, relation, and phone)"
-  }),
+    id: z.string().nullable().optional(),
+    name: z.string().min(1, "Name is required"),
+    relation: z.string().min(1, "Relation is required"),
+    phone: z.string().min(1, "Phone is required").regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number"),
+  })).min(1, "At least one emergency contact is required"),
   personalEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   nationality: z.string().optional(),
   physicallyChallenged: z.boolean().optional(),
@@ -559,10 +550,29 @@ export function GeneralDetailsFormComponent({ form, employeeId }: GeneralDetails
           emptyItemTemplate={emptyEmergencyContact}
           minItems={1}
           maxItems={5}
+          errors={
+            errors.emergencyContacts
+              ? Object.fromEntries(
+                  (errors.emergencyContacts as any[])
+                    .map((error, index) => [
+                      index,
+                      error
+                        ? Object.fromEntries(
+                            Object.entries(error).map(([key, val]: [string, any]) => [
+                              key,
+                              val?.message || '',
+                            ])
+                          )
+                        : {},
+                    ])
+                    .filter(([_, err]) => Object.keys(err as any).length > 0)
+                )
+              : {}
+          }
         />
-        {errors.emergencyContacts && (
+        {errors.emergencyContacts?.message && (
           <p className="text-sm text-destructive">
-            {errors.emergencyContacts.message}
+            {errors.emergencyContacts.message as string}
           </p>
         )}
       </div>

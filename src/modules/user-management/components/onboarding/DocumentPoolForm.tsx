@@ -3,9 +3,10 @@
  * Document management with grid layout and upload modal
  */
 
-import { useState } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { DocumentPool, DocumentItem, DocumentType } from '../../types/onboarding.types';
+import { useState, useEffect } from 'react';
+import { DocumentType } from '../../types/onboarding.types';
+import { DocumentItem } from '@/services/documentPoolService';
+import { useUserManagement } from '@/contexts/UserManagementContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -16,68 +17,99 @@ import { FileText, Link as LinkIcon, Trash2, Upload, Download } from 'lucide-rea
 import { Badge } from '@/components/ui/badge';
 
 interface DocumentPoolFormProps {
-  form: UseFormReturn<DocumentPool>;
+  employeeId?: string;
 }
 
-export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
-  const { watch, setValue } = form;
+export function DocumentPoolFormComponent({ employeeId }: DocumentPoolFormProps) {
+  const { refreshDocuments, createDocument, updateDocument, deleteDocument } = useUserManagement();
   
-  const documents = watch('documents') || [];
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
   const [docName, setDocName] = useState('');
   const [docType, setDocType] = useState<DocumentType>(DocumentType.URL);
   const [docUrl, setDocUrl] = useState('');
 
-  const handleAddDocument = () => {
-    const newDoc: DocumentItem = {
-      id: `doc-${Date.now()}`,
-      employeeId: '',
-      name: docName,
-      type: docType,
-      url: docType === DocumentType.URL ? docUrl : '',
-      fileName: docType === DocumentType.FILE ? docName : '',
-      uploadedDate: new Date().toISOString(),
-      fileSize: '0 KB',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setValue('documents', [...documents, newDoc]);
-    handleCloseModal();
+  const fetchDocuments = async () => {
+    if (!employeeId) return;
+    
+    setIsLoading(true);
+    try {
+      const searchRequest = {
+        filters: {
+          and: {
+            employeeId: employeeId,
+          },
+        },
+      };
+      const data = await refreshDocuments(searchRequest, 0, 100);
+      if (data && data.content) {
+        setDocuments(data.content);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEditDocument = () => {
-    if (!editingDoc) return;
+  useEffect(() => {
+    fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId]);
 
-    const updatedDocs = documents.map((doc) =>
-      doc.id === editingDoc.id
-        ? {
-            ...doc,
-            name: docName,
-            type: docType,
-            url: docType === DocumentType.URL ? docUrl : doc.url,
-            updatedAt: new Date().toISOString(),
-          }
-        : doc
-    );
+  const handleAddDocument = async () => {
+    if (!employeeId || !docName) return;
 
-    setValue('documents', updatedDocs);
-    handleCloseModal();
+    try {
+      // Create new - use carrier
+      // fileName is always required by backend, use docName for both URL and FILE types
+      await createDocument({
+        employeeId,
+        name: docName,
+        type: docType,
+        url: docType === DocumentType.URL ? docUrl : '',
+        fileName: docName, // Always populate fileName with document name
+        uploadedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+
+      await fetchDocuments();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error adding document:', error);
+    }
   };
 
-  const handleDeleteDocument = (id: string) => {
-    setValue(
-      'documents',
-      documents.filter((doc) => doc.id !== id)
-    );
+  const handleEditDocument = async () => {
+    if (!editingDoc || !editingDoc.id || !docName) return;
+
+    try {
+      // Update existing - use record (plain object)
+      await updateDocument(editingDoc.id, {
+        name: docName,
+        type: docType,
+        url: docType === DocumentType.URL ? docUrl : editingDoc.url,
+      });
+      
+      await fetchDocuments();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error editing document:', error);
+    }
+  };
+
+  const handleDeleteDocument = async (id: string) => {
+    if (!id) return;
+    
+    await deleteDocument(id);
+    await fetchDocuments();
   };
 
   const handleOpenModal = (doc?: DocumentItem) => {
     if (doc) {
       setEditingDoc(doc);
       setDocName(doc.name);
-      setDocType(doc.type);
+      setDocType(doc.type as DocumentType);
       setDocUrl(doc.url || '');
     }
     setIsModalOpen(true);
@@ -90,6 +122,17 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
     setDocType(DocumentType.URL);
     setDocUrl('');
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Loading documents...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -240,7 +283,7 @@ export function DocumentPoolFormComponent({ form }: DocumentPoolFormProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteDocument(doc.id)}
+                      onClick={() => doc.id && handleDeleteDocument(doc.id)}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

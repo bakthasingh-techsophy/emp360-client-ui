@@ -82,17 +82,13 @@ function DataTableInner<TData, TFilters = any>(
   // Notify parent of selection changes
   useEffect(() => {
     if (selection?.enabled && selection.onSelectionChange) {
+      // When getRowId is provided, React Table uses those IDs as keys in rowSelection
+      // So the keys ARE the IDs, not array indices
       const selectedIds = Object.keys(rowSelection)
-        .filter(key => rowSelection[key as keyof typeof rowSelection])
-        .map(key => {
-          const index = parseInt(key);
-          const row = data[index];
-          return selection.getRowId ? selection.getRowId(row) : (row as any).id;
-        })
-        .filter(Boolean);
+        .filter(key => rowSelection[key as keyof typeof rowSelection]);
       selection.onSelectionChange(selectedIds);
     }
-  }, [rowSelection, data, selection]);
+  }, [rowSelection, selection]);
 
   // Initialize table
   const table = useReactTable({
@@ -131,7 +127,7 @@ function DataTableInner<TData, TFilters = any>(
     } : {}),
   });
 
-  // Expose methods via ref
+  //Expose methods via ref
   useImperativeHandle(ref, () => ({
     refresh: () => {
       if (context?.refresh && pagination) {
@@ -140,14 +136,9 @@ function DataTableInner<TData, TFilters = any>(
     },
     clearSelection: () => setRowSelection({}),
     getSelectedIds: () => {
+      // When getRowId is provided, React Table uses those IDs as keys in rowSelection
       return Object.keys(rowSelection)
-        .filter(key => rowSelection[key as keyof typeof rowSelection])
-        .map(key => {
-          const index = parseInt(key);
-          const row = data[index];
-          return selection?.getRowId ? selection.getRowId(row) : (row as any).id;
-        })
-        .filter(Boolean);
+        .filter(key => rowSelection[key as keyof typeof rowSelection]);
     },
     setPage: (pageIndex: number) => {
       if (pagination) {

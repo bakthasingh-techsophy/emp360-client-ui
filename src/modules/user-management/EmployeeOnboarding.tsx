@@ -47,7 +47,13 @@ export function EmployeeOnboarding() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { onboardUser, updateUser, isLoading } = useUserManagement();
+  const { 
+    onboardUser, 
+    updateUser, 
+    createBankingDetails, 
+    updateBankingDetails, 
+    isLoading 
+  } = useUserManagement();
 
   // Determine mode and employee ID from URL params
   const mode = searchParams.get("mode") === "edit" ? "edit" : "create";
@@ -80,10 +86,11 @@ export function EmployeeOnboarding() {
       email: "",
       phone: "",
       secondaryPhone: "",
-      designation: "",
-      employeeType: EmployeeType.PERMANENT,
-      workLocation: "",
-      reportingManager: "",
+      designationId: "",
+      departmentId: "",
+      employeeTypeId: "",
+      workLocationId: "",
+      reportingTo: "",
       joiningDate: "",
       dateOfBirth: "",
       celebrationDOB: "",
@@ -135,7 +142,8 @@ export function EmployeeOnboarding() {
     defaultValues: {
       id: "",
       employeeId: "",
-      accountHolderName: "",
+      firstName: "",
+      lastName: "",
       accountNumber: "",
       ifscCode: "",
       bankName: "",
@@ -252,6 +260,9 @@ export function EmployeeOnboarding() {
   // Note: getCurrentForm() was removed to avoid TypeScript union type complexity issues
   // Handle form submission for current tab
   const handleSubmit = async () => {
+    // List of tabs that don't need save (handle their own CRUD)
+    const selfManagedTabs = ["employment-history", "skills-set", "document-pool"];
+    
     // List of forms that have validation implemented
     const formsWithValidation = [
       "user-details",
@@ -273,6 +284,8 @@ export function EmployeeOnboarding() {
         isValid = await bankingDetailsForm.trigger();
       } else if (activeTab === "general-details") {
         isValid = await generalDetailsForm.trigger();
+        console.log('General Details Validation:', isValid);
+        console.log('General Details Errors:', generalDetailsForm.formState.errors);
       } else if (activeTab === "employment-history") {
         isValid = await employmentHistoryForm.trigger();
       } else if (activeTab === "skills-set") {
@@ -280,7 +293,10 @@ export function EmployeeOnboarding() {
       }
     }
 
-    if (!isValid) return;
+    if (!isValid) {
+      console.log('Form validation failed for tab:', activeTab);
+      return;
+    }
 
     try {
       if (activeTab === "user-details") {
@@ -329,6 +345,15 @@ export function EmployeeOnboarding() {
         // All other tabs - use updateUser
         if (!employeeId) return;
 
+        // Skip save for self-managed tabs (they handle their own CRUD operations)
+        if (selfManagedTabs.includes(activeTab)) {
+          toast({
+            title: "Info",
+            description: "Changes are saved automatically for this section",
+          });
+          return;
+        }
+
         let formData: any;
         switch (activeTab) {
           case "job-details":
@@ -340,28 +365,37 @@ export function EmployeeOnboarding() {
           case "banking-details":
             formData = bankingDetailsForm.getValues();
             break;
-          case "employment-history":
-            formData = employmentHistoryForm.getValues();
-            break;
-          case "skills-set":
-            formData = skillsSetForm.getValues();
-            break;
-          case "document-pool":
-            formData = documentPoolForm.getValues();
-            break;
           case "promotion-history":
             formData = promotionHistoryForm.getValues();
             break;
           default:
             return;
         }
-         const finalPayload: any = {
-            ...formData,
-            updatedAt: new Date().toISOString(),
-          };
 
-        // Update user with form data from any tab
-        await updateUser(employeeId, finalPayload);
+        const finalPayload: any = {
+          ...formData,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Handle banking details separately with dedicated API
+        if (activeTab === "banking-details") {
+          const bankingData = formData as BankingDetails;
+          if (bankingData.id) {
+            // Update existing banking details
+            await updateBankingDetails(bankingData.id, finalPayload);
+          } else {
+            // Create new banking details
+            const newBankingDetails = {
+              ...finalPayload,
+              employeeId: employeeId,
+              createdAt: new Date().toISOString(),
+            };
+            await createBankingDetails(newBankingDetails);
+          }
+        } else {
+          // Update user with form data from other tabs
+          await updateUser(employeeId, finalPayload);
+        }
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -497,7 +531,10 @@ export function EmployeeOnboarding() {
                     reimbursements.
                   </p>
                 </div>
-                <BankingDetailsFormComponent form={bankingDetailsForm} />
+                <BankingDetailsFormComponent 
+                  form={bankingDetailsForm} 
+                  employeeId={employeeId || undefined}
+                />
               </Card>
             </div>
           </TabsContent>
@@ -548,7 +585,9 @@ export function EmployeeOnboarding() {
                     Upload and manage employee documents.
                   </p>
                 </div>
-                <DocumentPoolFormComponent form={documentPoolForm} />
+                <DocumentPoolFormComponent 
+                  employeeId={employeeId || undefined}
+                />
               </Card>
             </div>
           </TabsContent>

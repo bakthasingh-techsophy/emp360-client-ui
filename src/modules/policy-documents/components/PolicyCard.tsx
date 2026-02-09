@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Download,
   MoreVertical,
+  History,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Policy } from '../types';
@@ -37,6 +38,7 @@ interface PolicyCardProps {
   policy: Policy;
   onView: (policy: Policy) => void;
   onEdit?: (policy: Policy) => void;
+  onManageVersions?: (policy: Policy) => void;
   onDelete?: (policy: Policy) => void;
   isAdmin?: boolean;
 }
@@ -45,11 +47,10 @@ export function PolicyCard({
   policy,
   onView,
   onEdit,
+  onManageVersions,
   onDelete,
   isAdmin = false,
 }: PolicyCardProps) {
-  const latestVersion = policy.versions[0]; // Current version is always first
-
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'N/A';
     const mb = bytes / (1024 * 1024);
@@ -64,7 +65,7 @@ export function PolicyCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{FILE_TYPE_ICONS[latestVersion.fileType || 'pdf']}</span>
+              <span className="text-2xl">{FILE_TYPE_ICONS['pdf']}</span>
               <h3 className="font-semibold text-base line-clamp-1">{policy.name}</h3>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
@@ -83,7 +84,13 @@ export function PolicyCard({
                 {onEdit && (
                   <DropdownMenuItem onClick={() => onEdit(policy)}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    Edit Details
+                  </DropdownMenuItem>
+                )}
+                {onManageVersions && (
+                  <DropdownMenuItem onClick={() => onManageVersions(policy)}>
+                    <History className="mr-2 h-4 w-4" />
+                    Manage Versions
                   </DropdownMenuItem>
                 )}
                 {onDelete && (
@@ -131,8 +138,6 @@ export function PolicyCard({
           <div className="flex items-center gap-2">
             <FileText className="h-3 w-3 flex-shrink-0" />
             <span>Version {policy.currentVersion}</span>
-            <span>•</span>
-            <span>{formatFileSize(latestVersion.fileSize)}</span>
           </div>
           
           <div className="flex items-center gap-2">
@@ -149,15 +154,10 @@ export function PolicyCard({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <User className="h-3 w-3 flex-shrink-0" />
-            <span>Uploaded by {latestVersion.uploadedByName}</span>
-          </div>
-
-          {policy.viewCount !== undefined && (
+          {policy.updatedAt && (
             <div className="flex items-center gap-2">
-              <Eye className="h-3 w-3 flex-shrink-0" />
-              <span>{policy.viewCount} views</span>
+              <User className="h-3 w-3 flex-shrink-0" />
+              <span>Updated {format(new Date(policy.updatedAt), 'MMM dd, yyyy')}</span>
             </div>
           )}
         </div>

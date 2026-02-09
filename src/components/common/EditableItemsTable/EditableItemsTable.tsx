@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Plus, Trash2, Paperclip, CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Paperclip, CalendarIcon, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DocumentUploadModal } from './DocumentUploadModal';
@@ -48,6 +48,9 @@ export interface EditableItemsTableProps<T = any> {
   showAddButton?: boolean; // Show add button in header
   allowRemove?: boolean; // Allow removing items
   allowAdd?: boolean; // Allow adding items
+  allowSave?: boolean; // Show save button for each row
+  onSave?: (item: T, index: number) => void | Promise<void>; // Callback when save is clicked for an item
+  onDelete?: (item: T, index: number) => void | Promise<void>; // Callback when delete is clicked for an item
   errors?: Record<number, Record<string, string>>; // Validation errors by row index and column key
   onValidate?: (items: T[]) => Record<number, Record<string, string>>; // Optional validation function
 }
@@ -65,11 +68,15 @@ export function EditableItemsTable<T extends Record<string, any>>({
   showAddButton = true,
   allowRemove = true,
   allowAdd = true,
+  allowSave = false,
+  onSave,
+  onDelete,
   errors = {},
   onValidate,
 }: EditableItemsTableProps<T>) {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
   const handleAddItem = () => {
     if (items.length >= maxItems) return;
@@ -95,6 +102,17 @@ export function EditableItemsTable<T extends Record<string, any>>({
   const handleOpenDocuments = (index: number) => {
     setSelectedItemIndex(index);
     setDocumentModalOpen(true);
+  };
+
+  const handleSave = async (item: T, index: number) => {
+    if (onSave) {
+      setSavingIndex(index);
+      try {
+        await onSave(item, index);
+      } finally {
+        setSavingIndex(null);
+      }
+    }
   };
 
   const handleDocumentsSave = (documents: File[]) => {
@@ -287,6 +305,19 @@ export function EditableItemsTable<T extends Record<string, any>>({
                   ))}
                   <TableCell className="text-center">
                     <div className="flex gap-1 justify-center">
+                      {allowSave && onSave && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSave(item, index)}
+                          disabled={savingIndex === index}
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Save item"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
                       {allowAdd && (
                         <Button
                           type="button"
@@ -300,12 +331,19 @@ export function EditableItemsTable<T extends Record<string, any>>({
                           <Plus className="h-4 w-4" />
                         </Button>
                       )}
+                      
                       {allowRemove && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveItem(index)}
+                          onClick={() => {
+                            if (onDelete) {
+                              onDelete(items[index], index);
+                            } else {
+                              handleRemoveItem(index);
+                            }
+                          }}
                           disabled={items.length <= minItems}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Remove item"

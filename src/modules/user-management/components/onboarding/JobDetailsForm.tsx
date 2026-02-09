@@ -6,7 +6,13 @@
 import { useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { JobDetails, EmployeeType } from "../../types/onboarding.types";
+import { JobDetails } from "../../types/onboarding.types";
+import { 
+  EmployeeType as EmployeeTypeSettings, 
+  Designation, 
+  Department, 
+  WorkLocation 
+} from "../../types/settings.types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,8 +38,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Zod schema for JobDetails validation
@@ -42,10 +54,11 @@ export const jobDetailsSchema = z.object({
   email: z.string().min(1, "Official email is required").email("Invalid email address"),
   phone: z.string().min(1, "Primary phone is required").regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number"),
   secondaryPhone: z.string().regex(/^[0-9]{10}$/, "Enter a valid 10-digit phone number").optional().or(z.literal("")),
-  designation: z.string().min(1, "Designation is required"),
-  employeeType: z.nativeEnum(EmployeeType, { required_error: "Employee type is required" }),
-  workLocation: z.string().min(1, "Work location is required"),
-  reportingManager: z.string().min(1, "Reporting manager is required"),
+  designationId: z.string().min(1, "Designation is required"),
+  departmentId: z.string().optional(),
+  employeeTypeId: z.string().min(1, "Employee type is required"),
+  workLocationId: z.string().min(1, "Work location is required"),
+  reportingTo: z.string().min(1, "Reporting manager is required"),
   joiningDate: z.string().min(1, "Joining date is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   celebrationDOB: z.string().optional(),
@@ -61,27 +74,7 @@ interface JobDetailsFormProps {
   employeeId?: string;
 }
 
-// Mock data for dropdowns
-const designations = [
-  { value: "software-engineer", label: "Software Engineer" },
-  { value: "senior-software-engineer", label: "Senior Software Engineer" },
-  { value: "tech-lead", label: "Tech Lead" },
-  { value: "engineering-manager", label: "Engineering Manager" },
-  { value: "product-manager", label: "Product Manager" },
-  { value: "ui-ux-designer", label: "UI/UX Designer" },
-  { value: "qa-engineer", label: "QA Engineer" },
-  { value: "devops-engineer", label: "DevOps Engineer" },
-];
-
-const locations = [
-  { value: "bangalore", label: "Bangalore" },
-  { value: "hyderabad", label: "Hyderabad" },
-  { value: "pune", label: "Pune" },
-  { value: "mumbai", label: "Mumbai" },
-  { value: "delhi", label: "Delhi" },
-  { value: "remote", label: "Remote" },
-];
-
+// Mock data for managers and shifts (these don't come from settings)
 const managers = [
   { value: "MGR001", label: "John Doe - Engineering Manager" },
   { value: "MGR002", label: "Jane Smith - Tech Lead" },
@@ -172,8 +165,30 @@ export function JobDetailsFormComponent({
   form,
   employeeId,
 }: JobDetailsFormProps) {
-  const { getJobDetailsById } = useUserManagement();
+  const { 
+    getJobDetailsById, 
+    refreshEmployeeTypes, 
+    refreshDesignations,
+    refreshDepartments,
+    refreshWorkLocations 
+  } = useUserManagement();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Employee Types
+  const [employeeTypesList, setEmployeeTypesList] = useState<EmployeeTypeSettings[]>([]);
+  const [isLoadingEmployeeTypes, setIsLoadingEmployeeTypes] = useState(true);
+  
+  // Designations
+  const [designationsList, setDesignationsList] = useState<Designation[]>([]);
+  const [isLoadingDesignations, setIsLoadingDesignations] = useState(true);
+  
+  // Departments
+  const [departmentsList, setDepartmentsList] = useState<Department[]>([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
+  
+  // Work Locations
+  const [workLocationsList, setWorkLocationsList] = useState<WorkLocation[]>([]);
+  const [isLoadingWorkLocations, setIsLoadingWorkLocations] = useState(true);
 
   // All hooks must be called before any conditional returns
   const {
@@ -187,6 +202,46 @@ export function JobDetailsFormComponent({
   const sameAsDOB = watch("sameAsDOB");
   const dateOfBirth = watch("dateOfBirth");
 
+  // Load employee types on component mount
+  const loadEmployeeTypes = async () => {
+    setIsLoadingEmployeeTypes(true);
+    const result = await refreshEmployeeTypes({}, 0, 100);
+    if (result?.content) {
+      setEmployeeTypesList(result.content);
+    }
+    setIsLoadingEmployeeTypes(false);
+  };
+
+  // Load designations on component mount
+  const loadDesignations = async () => {
+    setIsLoadingDesignations(true);
+    const result = await refreshDesignations({}, 0, 100);
+    if (result?.content) {
+      setDesignationsList(result.content);
+    }
+    setIsLoadingDesignations(false);
+  };
+
+  // Load departments on component mount
+  const loadDepartments = async () => {
+    setIsLoadingDepartments(true);
+    const result = await refreshDepartments({}, 0, 100);
+    if (result?.content) {
+      setDepartmentsList(result.content);
+    }
+    setIsLoadingDepartments(false);
+  };
+
+  // Load work locations on component mount
+  const loadWorkLocations = async () => {
+    setIsLoadingWorkLocations(true);
+    const result = await refreshWorkLocations({}, 0, 100);
+    if (result?.content) {
+      setWorkLocationsList(result.content);
+    }
+    setIsLoadingWorkLocations(false);
+  };
+
   const fetchJobDetails = async () => {
     if (employeeId) {
       setIsLoading(true);
@@ -197,10 +252,11 @@ export function JobDetailsFormComponent({
           email: data.email,
           phone: data.phone || "",
           secondaryPhone: data.secondaryPhone || "",
-          designation: data.designation || "",
-          employeeType: data.employeeType || EmployeeType.PERMANENT,
-          workLocation: data.workLocation || "",
-          reportingManager: data.reportingManager || "",
+          designationId: data.designationId || "",
+          departmentId: data.departmentId || "",
+          employeeTypeId: data.employeeTypeId || "",
+          workLocationId: data.workLocationId || "",
+          reportingTo: data.reportingTo || "",
           joiningDate: data.joiningDate || "",
           dateOfBirth: data.dateOfBirth || "",
           celebrationDOB: data.celebrationDOB || "",
@@ -215,8 +271,12 @@ export function JobDetailsFormComponent({
     }
   };
 
-  // Fetch job details when employeeId is available
+  // Load employee types and job details on component mount
   useEffect(() => {
+    loadEmployeeTypes();
+    loadDesignations();
+    loadDepartments();
+    loadWorkLocations();
     fetchJobDetails();
   }, [employeeId]);
 
@@ -298,46 +358,100 @@ export function JobDetailsFormComponent({
               Designation <span className="text-destructive">*</span>
             </Label>
             <Combobox
-              value={watch("designation")}
+              value={watch("designationId")}
               onChange={(value) => {
-                setValue("designation", value);
-                trigger("designation");
+                setValue("designationId", value);
+                trigger("designationId");
               }}
-              options={designations}
+              options={designationsList.map(d => ({
+                value: d.id,
+                label: d.designation
+              }))}
               placeholder="Select designation"
               searchPlaceholder="Search designation..."
+              disabled={isLoadingDesignations}
             />
-            {errors.designation && (
+            {errors.designationId && (
               <p className="text-sm text-destructive">
-                {errors.designation.message}
+                {errors.designationId.message}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label>
-              Employee Type <span className="text-destructive">*</span>
+              Department
             </Label>
-            <Select
-              value={watch("employeeType")}
-              onValueChange={(value) => {
-                setValue("employeeType", value as EmployeeType);
-                trigger("employeeType");
+            <Combobox
+              value={watch("departmentId")}
+              onChange={(value) => {
+                setValue("departmentId", value);
+                trigger("departmentId");
               }}
+              options={departmentsList.map(d => ({
+                value: d.id,
+                label: d.department
+              }))}
+              placeholder="Select department"
+              searchPlaceholder="Search department..."
+              disabled={isLoadingDepartments}
+            />
+            {errors.departmentId && (
+              <p className="text-sm text-destructive">
+                {errors.departmentId.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label>
+                Employee Type <span className="text-destructive">*</span>
+              </Label>
+              {isLoadingEmployeeTypes && (
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              )}
+              {!isLoadingEmployeeTypes && watch("employeeTypeId") && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent align="start">
+                      <p className="max-w-xs">
+                        {employeeTypesList.find((e) => e.id === watch("employeeTypeId"))?.description || "No description available"}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <Select
+              value={watch("employeeTypeId")}
+              onValueChange={(value) => {
+                setValue("employeeTypeId", value);
+                trigger("employeeTypeId");
+              }}
+              disabled={isLoadingEmployeeTypes}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select employee type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={EmployeeType.PERMANENT}>Full Time (Permanent)</SelectItem>
-                <SelectItem value={EmployeeType.CONTRACT}>Contract</SelectItem>
-                <SelectItem value={EmployeeType.TEMPORARY}>Part Time (Temporary)</SelectItem>
-                <SelectItem value={EmployeeType.INTERN}>Intern</SelectItem>
+                {employeeTypesList.length > 0 ? (
+                  employeeTypesList.map((empType) => (
+                    <SelectItem key={empType.id} value={empType.id}>
+                      {empType.employeeType}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground p-2">No employee types available</div>
+                )}
               </SelectContent>
             </Select>
-            {errors.employeeType && (
+            {errors.employeeTypeId && (
               <p className="text-sm text-destructive">
-                {errors.employeeType.message}
+                {errors.employeeTypeId.message}
               </p>
             )}
           </div>
@@ -347,18 +461,22 @@ export function JobDetailsFormComponent({
               Work Location <span className="text-destructive">*</span>
             </Label>
             <Combobox
-              value={watch("workLocation")}
+              value={watch("workLocationId")}
               onChange={(value) => {
-                setValue("workLocation", value);
-                trigger("workLocation");
+                setValue("workLocationId", value);
+                trigger("workLocationId");
               }}
-              options={locations}
+              options={workLocationsList.map(w => ({
+                value: w.id,
+                label: w.location
+              }))}
               placeholder="Select location"
               searchPlaceholder="Search location..."
+              disabled={isLoadingWorkLocations}
             />
-            {errors.workLocation && (
+            {errors.workLocationId && (
               <p className="text-sm text-destructive">
-                {errors.workLocation.message}
+                {errors.workLocationId.message}
               </p>
             )}
           </div>
@@ -368,18 +486,18 @@ export function JobDetailsFormComponent({
               Reporting Manager <span className="text-destructive">*</span>
             </Label>
             <Combobox
-              value={watch("reportingManager")}
+              value={watch("reportingTo")}
               onChange={(value) => {
-                setValue("reportingManager", value);
-                trigger("reportingManager");
+                setValue("reportingTo", value);
+                trigger("reportingTo");
               }}
               options={managers}
               placeholder="Select manager"
               searchPlaceholder="Search manager..."
             />
-            {errors.reportingManager && (
+            {errors.reportingTo && (
               <p className="text-sm text-destructive">
-                {errors.reportingManager.message}
+                {errors.reportingTo.message}
               </p>
             )}
           </div>

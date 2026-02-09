@@ -343,7 +343,7 @@ export const allMenuItems: AppShellMenuItem[] = [
     icon: Eye,
     label: 'Visitor Management',
     category: 'Visitor & Room',
-    order: 2,
+    order: 1,
   },
   {
     id: 'room-management',
@@ -351,7 +351,7 @@ export const allMenuItems: AppShellMenuItem[] = [
     icon: Building2,
     label: 'Room Management',
     category: 'Visitor & Room',
-    order: 3,
+    order: 2,
   },
 
   // Administration & Security
@@ -360,6 +360,13 @@ export const allMenuItems: AppShellMenuItem[] = [
     to: '/user-management',
     icon: Users,
     label: 'User Management',
+    category: 'Administration',
+  },
+  {
+    id: 'company-management',
+    to: '/company-management',
+    icon: Building2,
+    label: 'Company Management',
     category: 'Administration',
   },
   {

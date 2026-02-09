@@ -39,33 +39,16 @@
 
 import { useState } from 'react';
 import { AppShell, AppShellMenuItem } from '@/components/AppShell';
-import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import {
-  User,
-  LogOut,
-  Settings as SettingsIcon,
-  Code,
-} from 'lucide-react';
-import { useLayoutContext } from '@/contexts/LayoutContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { LoadingBar } from '@/components/LoadingBar';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { getAllMenuItems, menuCategories } from '@/config/menuConfig';
 import {
   addPinnedMenu,
   removePinnedMenu,
   getOrderedPinnedMenuIds,
 } from '@/store/menuPreferences';
+import { Header } from '@/components/Header';
 
 /**
  * Main application layout component using AppShell
@@ -78,12 +61,7 @@ import {
  * - Responsive mobile menu
  */
 export function LayoutWithAppShell() {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { activePage } = useLayoutContext();
-
-  const path = location.pathname || '';
 
   // ==================== MENU CONFIGURATION ====================
   // Get all available menu items from your config
@@ -118,6 +96,7 @@ export function LayoutWithAppShell() {
   };
 
   /**
+<<<<<<< HEAD
    * Get dynamic page title based on current route
    */
   const getPageTitle = () => {
@@ -137,6 +116,8 @@ export function LayoutWithAppShell() {
   };
 
   /**
+=======
+>>>>>>> master
    * Handle navigation when menu item is clicked
    */
   const handleNavigate = (item: AppShellMenuItem) => {
@@ -144,59 +125,6 @@ export function LayoutWithAppShell() {
       navigate(item.to);
     }
   };
-
-  // ==================== HEADER CONTENT ====================
-  // Custom header toolbar with page title and user menu
-  const headerContent = (
-    <>
-      {/* Page Title */}
-      <div className="flex-1 items-center gap-2 min-w-0">
-        <h1 className="text-lg font-semibold truncate">{getPageTitle()}</h1>
-      </div>
-
-      {/* Right Actions: Theme Toggle & User Menu */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <ThemeToggle />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="flex-shrink-0">
-              <User className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-2rem)]">
-            <DropdownMenuLabel>
-              <div className="min-w-0">
-                <div className="font-medium truncate">{user?.name}</div>
-                <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {user?.role}
-                </Badge>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link to="/account/profile" className="flex items-center">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                Account Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <Link to="/account/inspector" className="flex items-center">
-                <Code className="mr-2 h-4 w-4" />
-                Session Inspector
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </>
-  );
 
   // ==================== RENDER ====================
   return (
@@ -208,11 +136,17 @@ export function LayoutWithAppShell() {
       menuCategories={menuCategoriesForPicker}
 
       // Branding
-      logo={<User className="h-6 w-6 text-primary" />}
+      logo={undefined}
       brandName="Employee 360"
+<<<<<<< HEAD
 
       // Header & Loading
       headerContent={headerContent}
+=======
+      
+      // Header - Use the Header component as custom header content
+      headerContent={<Header />}
+>>>>>>> master
       loadingBar={<LoadingBar />}
 
       // Navigation

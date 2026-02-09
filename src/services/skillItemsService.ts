@@ -11,8 +11,11 @@
  * All responses follow ApiResponse<T> wrapper format
  */
 
+import { SkillItemCarrier } from "@/modules/user-management/types/onboarding.types";
 import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
+import Pagination from "@/types/pagination";
+import UniversalSearchRequest from "@/types/search";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/skills";
 
@@ -41,13 +44,13 @@ export type UpdatePayload = Record<string, any>;
  * Create Skill
  * POST /emp-user-management/v1/skills
  * 
- * @param item - SkillItem with skill information
+ * @param carrier - SkillItemCarrier with skill information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<SkillItem>>
  */
 export const apiCreateSkill = async (
-  item: SkillItem,
+  carrier: SkillItemCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<SkillItem>> => {
@@ -56,7 +59,7 @@ export const apiCreateSkill = async (
     endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
-    body: item,
+    body: carrier,
   });
 };
 
@@ -132,6 +135,35 @@ export const apiDeleteSkill = async (
 };
 
 /**
+ * Search Skills
+ * POST /emp-user-management/v1/skills/search
+ * 
+ * Universal search with filtering, sorting, and pagination
+ * 
+ * @param searchRequest - Universal search request with filters
+ * @param page - Page number (0-indexed)
+ * @param pageSize - Number of items per page
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Pagination<SkillItem>>>
+ */
+export const apiSearchSkills = async (
+  searchRequest: UniversalSearchRequest,
+  page: number = 0,
+  pageSize: number = 10,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Pagination<SkillItem>>> => {
+  return apiRequest<Pagination<SkillItem>>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/search?page=${page}&size=${pageSize}`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const skillItemsService = {
@@ -139,4 +171,5 @@ export const skillItemsService = {
   apiGetSkillById,
   apiUpdateSkill,
   apiDeleteSkill,
+  apiSearchSkills,
 };

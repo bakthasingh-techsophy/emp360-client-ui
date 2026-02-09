@@ -132,43 +132,45 @@ export const FilterFieldRenderer: React.FC<FilterFieldRendererProps> = ({
       );
 
     case 'multiselect':
+      const multiselectValue = Array.isArray(value) ? value : [];
       return (
-        <Select 
-          value={Array.isArray(value) && value.length > 0 ? value[0] : ''} 
-          onValueChange={(selected) => {
-            if (!selected) {
-              onChange([]);
-            } else {
-              const currentValues = Array.isArray(value) ? value : [];
-              if (currentValues.includes(selected)) {
-                onChange(currentValues.filter(v => v !== selected));
-              } else {
-                onChange([...currentValues, selected]);
-              }
-            }
-          }}
-        >
-          <SelectTrigger className="h-9 text-sm flex-1">
-            <SelectValue>
-              {Array.isArray(value) && value.length > 0 
-                ? `${value.length} selected` 
-                : filter.placeholder || `Select ${filter.label.toLowerCase()}`}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {filter.options?.map((option) => {
-              const isSelected = Array.isArray(value) && value.includes(option.value);
-              return (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex items-center gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-9 text-sm flex-1 justify-between font-normal"
+            >
+              <span className="truncate">
+                {multiselectValue.length > 0
+                  ? `${multiselectValue.length} selected`
+                  : filter.placeholder || `Select ${filter.label.toLowerCase()}`}
+              </span>
+              <ChevronDown className="h-4 w-4 opacity-50 ml-2 flex-shrink-0" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0" align="start">
+            <div className="max-h-[300px] overflow-y-auto p-1">
+              {filter.options?.map((option) => {
+                const isSelected = multiselectValue.includes(option.value);
+                return (
+                  <div
+                    key={option.value}
+                    className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-accent rounded-sm"
+                    onClick={() => {
+                      const newValues = isSelected
+                        ? multiselectValue.filter(v => v !== option.value)
+                        : [...multiselectValue, option.value];
+                      onChange(newValues);
+                    }}
+                  >
                     <Checkbox checked={isSelected} className="pointer-events-none" />
-                    {option.label}
+                    <span className="text-sm">{option.label}</span>
                   </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
       );
 
     case 'date':

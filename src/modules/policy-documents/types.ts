@@ -2,43 +2,49 @@
  * Policy Library Types
  */
 
-export type PolicyStatus = 'draft' | 'published' | 'archived';
-export type PolicyCategory = 'hr' | 'it' | 'security' | 'compliance' | 'general' | 'safety';
-export type DocumentSourceType = 'upload' | 'url';
+export type PolicyStatus = "draft" | "published" | "archived";
+export type PolicyCategory =
+  | "hr"
+  | "it"
+  | "security"
+  | "compliance"
+  | "general"
+  | "safety";
+export type DocumentSourceType = "upload" | "url";
 
 export interface PolicyVersion {
+  id: string;
+  policyId: string;
   versionNumber: string;
   documentId?: string; // For uploaded files
   documentUrl?: string; // For external URLs or uploaded file URL
   sourceType: DocumentSourceType;
-  fileType?: 'pdf' | 'docx';
+  fileType?: "pdf" | "docx";
   fileSize?: number; // in bytes
-  uploadedBy: string;
-  uploadedByName: string;
-  uploadedAt: string;
+  createdAt: string;
+  updatedAt?: string;
   changeNotes?: string;
 }
 
 export interface Policy {
-  id: string;
+  id: string; // policy id.
   name: string;
+  companyId: string;
   description?: string;
   category: PolicyCategory;
   status: PolicyStatus;
   currentVersion: string;
-  versions: PolicyVersion[]; // Version history
+  versionsIds: string[]; // Version history ids
   effectiveDate: string;
   expiryDate?: string;
-  createdBy: string;
-  createdByName: string;
   createdAt: string;
   updatedAt?: string;
-  viewCount?: number;
   mandatory?: boolean;
 }
 
 export interface PolicyFormData {
   name: string;
+  companyId?: string;
   description?: string;
   category: PolicyCategory;
   status: PolicyStatus;
@@ -46,7 +52,7 @@ export interface PolicyFormData {
   sourceType: DocumentSourceType;
   documentId?: string; // For uploaded files
   documentUrl?: string; // For URL
-  fileType?: 'pdf' | 'docx';
+  fileType?: "pdf" | "docx";
   changeNotes?: string;
   effectiveDate: Date;
   expiryDate?: Date;
@@ -58,4 +64,42 @@ export interface PolicyStats {
   publishedPolicies: number;
   draftPolicies: number;
   mandatoryPolicies: number;
+}
+
+/**
+ * API Carrier Types - for backend communication
+ */
+
+/**
+ * Policy Carrier
+ * Payload for creating/updating policies via API
+ */
+export interface PolicyCarrier {
+  name: string;
+  companyId: string;
+  description?: string;
+  category: PolicyCategory;
+  status: PolicyStatus;
+  currentVersion: string;
+  versionsIds: string[];
+  effectiveDate: string;
+  expiryDate?: string;
+  mandatory?: boolean;
+  createdAt: string;
+}
+
+/**
+ * Policy Version Carrier
+ * Payload for creating/updating policy versions via API
+ */
+export interface PolicyVersionCarrier {
+  policyId: string;
+  versionNumber: string;
+  documentId?: string;
+  documentUrl?: string;
+  sourceType: DocumentSourceType;
+  fileType?: "pdf" | "docx";
+  fileSize?: number; // in bytes
+  changeNotes?: string;
+  createdAt: string;
 }

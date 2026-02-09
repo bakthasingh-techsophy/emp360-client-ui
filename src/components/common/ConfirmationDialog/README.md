@@ -75,7 +75,7 @@ function MyComponent() {
       <div className="text-xs space-y-1 bg-muted/50 p-3 rounded-md">
         <div><strong>Email:</strong> {visitor.email}</div>
         <div><strong>Phone:</strong> {visitor.phone}</div>
-        <div><strong>Company:</strong> {visitor.company}</div>
+        <div><strong>Company:</strong> {visitor.companyId}</div>
       </div>
     </div>
   }

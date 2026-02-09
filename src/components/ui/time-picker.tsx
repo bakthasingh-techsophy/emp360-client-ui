@@ -1,253 +1,253 @@
-// src/components/ui/time-picker.tsx
-import React, { useEffect, useRef, useState } from "react";
-import { format, parse, isValid } from "date-fns";
+import * as React from 'react';
+import { Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-type TimePickerProps = {
-  /**
-   * value should be a 24-hour "HH:mm" string (e.g. "06:00") or null/undefined.
-   * If caller provides an ISO string, component will try to extract time part.
-   */
-  value?: string | null;
-  /**
-   * onChange receives a 24-hour "HH:mm" string (e.g. "18:30") or null.
-   */
-  onChange: (value: string | null) => void;
-  /**
-   * step in minutes (default 15)
-   */
-  stepMinutes?: number;
-  /**
-   * placeholder text
-   */
+interface TimePickerProps {
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
-  /**
-   * optional id for input
-   */
-  id?: string;
-  /**
-   * disable control
-   */
   disabled?: boolean;
-  /**
-   * additional className for the input container
-   */
-  className?: string;
-};
-
-/**
- * Helper - normalize various incoming forms to "HH:mm" 24-hour string or null.
- * Accepts:
- *  - "HH:mm" (24-hour)
- *  - "hh:mm a" (12-hour)
- *  - full ISO string "2025-11-19T06:00:00.000Z" => local time extracted and formatted as "HH:mm"
- */
-function normalizeToHHmm(input?: string | null): string | null {
-  if (!input) return null;
-  input = input.trim();
-  // If ISO-like (contains 'T' and digits), try parsing as Date
-  if (input.includes("T") || input.endsWith("Z")) {
-    const parsed = new Date(input);
-    if (isValid(parsed)) {
-      const hhmm = format(parsed, "HH:mm");
-      return hhmm;
-    }
-  }
-
-  // Try parse 24-hour "HH:mm"
-  const p24 = parse(input, "HH:mm", new Date());
-  if (isValid(p24) && /^\s*\d{1,2}:\d{2}\s*$/.test(input)) {
-    return format(p24, "HH:mm");
-  }
-
-  // Try parse 12-hour "hh:mm a" (e.g. "06:00 AM")
-  const p12 = parse(input.toUpperCase(), "hh:mm a", new Date());
-  if (isValid(p12)) {
-    return format(p12, "HH:mm");
-  }
-
-  return null;
 }
 
-/** Format a "HH:mm" string into a display like "06:00 AM" */
-function hhmmToDisplay(hhmm?: string | null): string {
-  if (!hhmm) return "";
-  const parsed = parse(hhmm, "HH:mm", new Date());
-  if (!isValid(parsed)) return hhmm;
-  return format(parsed, "hh:mm a");
-}
-
-/** generate time options from 00:00 to 23:59 stepping by minutes */
-function generateTimeOptions(stepMinutes = 15): string[] {
-  const out: string[] = [];
-  for (let m = 0; m < 24 * 60; m += stepMinutes) {
-    const h = Math.floor(m / 60);
-    const mm = m % 60;
-    const hhmm = `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-    out.push(hhmm);
-  }
-  return out;
-}
-
-export const TimePicker: React.FC<TimePickerProps> = ({
+export function TimePicker({
   value,
   onChange,
-  stepMinutes = 15,
-  placeholder = "Select time",
-  id,
+  placeholder = 'Select time',
   disabled = false,
-  className = "",
-}) => {
-  const normalized = normalizeToHHmm(value ?? null);
-  const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState<string>(() => hhmmToDisplay(normalized));
-  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+}: TimePickerProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  
+  const parseValue = (val?: string) => {
+    if (!val) return { hour: '', minute: '', period: 'AM' };
+    const [h, m] = val.split(':');
+    const hourNum = parseInt(h);
+    const period = hourNum >= 12 ? 'PM' : 'AM';
+    const hour12 = hourNum === 0 ? '12' : hourNum > 12 ? (hourNum - 12).toString() : hourNum.toString();
+    return { hour: hour12, minute: m, period };
+  };
 
-  const options = generateTimeOptions(stepMinutes);
+  const { hour: initialHour, minute: initialMinute, period: initialPeriod } = parseValue(value);
+  const [selectedHour, setSelectedHour] = React.useState(initialHour);
+  const [selectedMinute, setSelectedMinute] = React.useState(initialMinute);
+  const [selectedPeriod, setSelectedPeriod] = React.useState<'AM' | 'PM'>(initialPeriod as 'AM' | 'PM');
 
-  // keep input display in-sync when external value changes
-  useEffect(() => {
-    const n = normalizeToHHmm(value ?? null);
-    setInputValue(hhmmToDisplay(n));
+  const hourScrollRef = React.useRef<HTMLDivElement>(null);
+  const minuteScrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const { hour, minute, period } = parseValue(value);
+    setSelectedHour(hour);
+    setSelectedMinute(minute);
+    setSelectedPeriod(period as 'AM' | 'PM');
   }, [value]);
 
-  // close on outside click
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setHighlightIndex(-1);
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+    };
 
-  // keyboard navigation inside dropdown
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (disabled) return;
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      setOpen(true);
-      e.preventDefault();
-      return;
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
-    if (!open) return;
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIndex((idx) => Math.min(idx + 1, options.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIndex((idx) => Math.max(idx - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (highlightIndex >= 0 && highlightIndex < options.length) {
-        const opt = options[highlightIndex];
-        setInputValue(hhmmToDisplay(opt));
-        onChange(opt);
-        setOpen(false);
-        setHighlightIndex(-1);
-      } else {
-        // try to parse typed value
-        const parsed = normalizeToHHmm(inputValue);
-        if (parsed) {
-          setInputValue(hhmmToDisplay(parsed));
-          onChange(parsed);
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+  const to24Hour = (hour: string, period: 'AM' | 'PM') => {
+    let h = parseInt(hour);
+    if (period === 'AM' && h === 12) h = 0;
+    if (period === 'PM' && h !== 12) h += 12;
+    return h.toString().padStart(2, '0');
+  };
+
+  const updateTime = (hour?: string, minute?: string, period?: 'AM' | 'PM') => {
+    const h = hour || selectedHour;
+    const m = minute || selectedMinute;
+    const p = period || selectedPeriod;
+    
+    if (h && m) {
+      const hour24 = to24Hour(h, p);
+      onChange?.(`${hour24}:${m}`);
+    }
+  };
+
+  const handleHourSelect = (hour: string) => {
+    setSelectedHour(hour);
+    updateTime(hour, selectedMinute, selectedPeriod);
+  };
+
+  const handleMinuteSelect = (minute: string) => {
+    setSelectedMinute(minute);
+    if (selectedHour) {
+      updateTime(selectedHour, minute, selectedPeriod);
+    }
+  };
+
+  const handlePeriodToggle = (period: 'AM' | 'PM') => {
+    setSelectedPeriod(period);
+    if (selectedHour && selectedMinute) {
+      updateTime(selectedHour, selectedMinute, period);
+      setIsOpen(false);
+    }
+  };
+
+  const formatDisplay = () => {
+    if (!value) return placeholder;
+    const { hour, minute, period } = parseValue(value);
+    return `${hour}:${minute} ${period}`;
+  };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        if (selectedHour && hourScrollRef.current) {
+          const selected = hourScrollRef.current.querySelector(`[data-hour="${selectedHour}"]`);
+          selected?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
-        setOpen(false);
-      }
-    } else if (e.key === "Escape") {
-      setOpen(false);
-      setHighlightIndex(-1);
+        if (selectedMinute && minuteScrollRef.current) {
+          const selected = minuteScrollRef.current.querySelector(`[data-minute="${selectedMinute}"]`);
+          selected?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 50);
     }
-  };
-
-  // when user types, update inputValue; don't immediately call onChange until blur or Enter
-  const onInputChange = (v: string) => {
-    setInputValue(v);
-  };
-
-  const onInputBlur = () => {
-    // attempt to parse typed input
-    const parsed = normalizeToHHmm(inputValue);
-    if (parsed) {
-      setInputValue(hhmmToDisplay(parsed));
-      onChange(parsed);
-    } else {
-      // revert to last known value if parse fails
-      const n = normalizeToHHmm(value ?? null);
-      setInputValue(hhmmToDisplay(n));
-    }
-    setOpen(false);
-    setHighlightIndex(-1);
-  };
-
-  const handleOptionClick = (opt: string) => {
-    setInputValue(hhmmToDisplay(opt));
-    onChange(opt);
-    setOpen(false);
-    setHighlightIndex(-1);
-    inputRef.current?.focus();
-  };
+  }, [isOpen, selectedHour, selectedMinute]);
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
-      <input
-        id={id}
-        ref={inputRef}
-        type="text"
-        value={inputValue}
-        onChange={(e) => onInputChange(e.target.value)}
-        onFocus={() => !disabled && setOpen(true)}
-        onClick={() => !disabled && setOpen(true)}
-        onKeyDown={onKeyDown}
-        onBlur={onInputBlur}
-        placeholder={placeholder}
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground
-          ${disabled ? "bg-muted/40 cursor-not-allowed" : "bg-background"}
-        `}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={`${id ?? "timepicker"}-listbox`}
-        autoComplete="off"
-      />
+        className={cn(
+          'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background transition-colors',
+          'hover:bg-accent hover:text-accent-foreground',
+          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          '[&>span]:line-clamp-1',
+          !value && 'text-muted-foreground'
+        )}
+      >
+        <Clock className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+        <span className="flex-1 text-left">{formatDisplay()}</span>
+      </button>
 
-      {/* Dropdown */}
-      {open && !disabled && (
-        <div
-          role="listbox"
-          id={`${id ?? "timepicker"}-listbox`}
-          className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-md border bg-popover py-1 shadow-lg"
+      {isOpen && !disabled && (
+        <div 
+          className={cn(
+            'absolute left-0 z-50 mt-2 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            'data-[side=bottom]:slide-in-from-top-2',
+            'data-[side=left]:slide-in-from-right-2',
+            'data-[side=right]:slide-in-from-left-2',
+            'data-[side=top]:slide-in-from-bottom-2'
+          )}
+          data-state="open"
         >
-          {options.map((opt, idx) => {
-            const display = hhmmToDisplay(opt);
-            const isHighlighted = idx === highlightIndex;
-            const isSelected = normalizeToHHmm(value ?? null) === opt;
-            return (
-              <div
-                key={opt}
-                role="option"
-                aria-selected={isSelected}
-                onMouseDown={(e) => {
-                  // use onMouseDown so input blur doesn't fire before click
-                  e.preventDefault();
-                  handleOptionClick(opt);
-                }}
-                onMouseEnter={() => setHighlightIndex(idx)}
-                className={`cursor-pointer px-3 py-2 text-sm ${isHighlighted ? "bg-accent/30" : ""} ${isSelected ? "font-semibold" : ""}`}
-              >
-                {display}
+          <div className="flex">
+            {/* Hours Column */}
+            <div className="flex flex-col w-16 border-r border-border">
+              <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm px-2 py-2 text-xs font-semibold text-foreground border-b border-border text-center">
+                Hour
               </div>
-            );
-          })}
+              <div 
+                className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent" 
+                ref={hourScrollRef}
+              >
+                <div className="p-1">
+                  {hours.map((hour) => (
+                    <button
+                      key={hour}
+                      type="button"
+                      data-hour={hour}
+                      onClick={() => handleHourSelect(hour)}
+                      className={cn(
+                        'w-full px-2 py-1.5 text-sm rounded-sm transition-all duration-150',
+                        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1',
+                        selectedHour === hour
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                          : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      {hour}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Minutes Column */}
+            <div className="flex flex-col w-16 border-r border-border">
+              <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm px-2 py-2 text-xs font-semibold text-foreground border-b border-border text-center">
+                Min
+              </div>
+              <div 
+                className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent" 
+                ref={minuteScrollRef}
+              >
+                <div className="p-1">
+                  {minutes.map((minute) => (
+                    <button
+                      key={minute}
+                      type="button"
+                      data-minute={minute}
+                      onClick={() => handleMinuteSelect(minute)}
+                      className={cn(
+                        'w-full px-2 py-1.5 text-sm rounded-sm transition-all duration-150',
+                        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1',
+                        selectedMinute === minute
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                          : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      {minute}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Period Column */}
+            <div className="flex flex-col w-16">
+              <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm px-2 py-2 text-xs font-semibold text-foreground border-b border-border text-center">
+                Period
+              </div>
+              <div className="p-1.5 space-y-1.5 flex flex-col justify-center h-[160px]">
+                {(['AM', 'PM'] as const).map((period) => (
+                  <button
+                    key={period}
+                    type="button"
+                    onClick={() => handlePeriodToggle(period)}
+                    className={cn(
+                      'w-full px-2 py-2 text-sm font-medium rounded-sm transition-all duration-150',
+                      'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1',
+                      selectedPeriod === period
+                        ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    {period}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default TimePicker;
+
+
+
