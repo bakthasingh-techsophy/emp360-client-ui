@@ -78,7 +78,7 @@ export function LayoutWithAppShell() {
   });
 
   // ==================== EVENT HANDLERS ====================
-  
+
   /**
    * Handle pin/unpin of menu items
    * Updates both pinned state and order preferences
@@ -96,6 +96,28 @@ export function LayoutWithAppShell() {
   };
 
   /**
+<<<<<<< HEAD
+   * Get dynamic page title based on current route
+   */
+  const getPageTitle = () => {
+    // if (activePage) return activePage;
+
+    // // Find the menu item for the current path
+    // const currentMenuItem = allMenuItems.find((item) => item.to === path);
+    // if (currentMenuItem) return currentMenuItem.label;
+
+    // // Fallback to path-based titles
+    // if (path.startsWith('/settings')) return 'Settings';
+    // if (path.startsWith('/support')) return 'Support';
+    // if (path.startsWith('/dashboard')) return 'Dashboard';
+    // if (path.startsWith('/account')) return 'Account';
+
+    return 'Employee 360';
+  };
+
+  /**
+=======
+>>>>>>> master
    * Handle navigation when menu item is clicked
    */
   const handleNavigate = (item: AppShellMenuItem) => {
@@ -112,22 +134,28 @@ export function LayoutWithAppShell() {
       pinnedMenuIds={pinnedMenuIds}
       onTogglePin={handleTogglePin}
       menuCategories={menuCategoriesForPicker}
-      
+
       // Branding
       logo={undefined}
       brandName="Employee 360"
+<<<<<<< HEAD
+
+      // Header & Loading
+      headerContent={headerContent}
+=======
       
       // Header - Use the Header component as custom header content
       headerContent={<Header />}
+>>>>>>> master
       loadingBar={<LoadingBar />}
-      
+
       // Navigation
       onNavigate={handleNavigate}
-      
+
       // Customization options (all optional with sensible defaults)
       sheetAnimationDuration={0}         // 0 = instant (no animation), 200 = smooth slide (default)
-      sheetPosition="left"           
-      // useMenuPicker={true}             // Enable menu picker (false = show all menus in sidebar)
+      sheetPosition="left"
+    // useMenuPicker={true}             // Enable menu picker (false = show all menus in sidebar)
     >
       {/* Page content rendered here */}
       <Outlet />
