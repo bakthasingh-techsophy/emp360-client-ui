@@ -20,8 +20,7 @@ export interface Visitor {
   employeeId: string;
   
   // Form fields - Visit Schedule
-  expectedArrivalDate: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
-  expectedArrivalTime: string; // 12-hour format with AM/PM (e.g., "02:02 PM")
+  expectedArrivalDateTime: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
   
   // Form fields - Notes
   notes: string | null;
@@ -55,10 +54,9 @@ export type VisitorFormData = Pick<Visitor,
   | 'companyId'
   | 'purpose'
   | 'employeeId'
-  | 'expectedArrivalTime'
+  | 'expectedArrivalDateTime'
   | 'notes'
 > & {
-  expectedArrivalDate: Date; // Date object for form, string in Visitor
   photoUrl?: string; // Optional in form, added after submission
 };
 
@@ -82,8 +80,7 @@ export interface VisitorCarrier {
   hostEmployeeId: string;
   
   // Visit Schedule
-  expectedArrivalDate: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
-  expectedArrivalTime: string; // 12-hour format with AM/PM (e.g., "02:02 PM")
+  expectedArrivalDateTime: string; // ISO UTC timestamp (e.g., "2026-02-09T14:02:00.000Z")
   
   // Notes
   notes: string | null;
