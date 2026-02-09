@@ -1,0 +1,266 @@
+/**
+ * Holiday Management Main Page
+ * Displays list of holidays with filtering, search, and pagination
+ */
+
+import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageLayout } from '@/components/PageLayout';
+import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
+import { HolidayCard } from './components/HolidayCard';
+import { Holiday } from './types';
+import { Calendar, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DefaultPagination } from '@/components/common/Pagination/DefaultPagination';
+import { useHoliday } from '@/contexts/HolidayContext';
+import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
+
+export function HolidayManagement() {
+  const navigate = useNavigate();
+  const { refreshHolidays, deleteHolidayById, isLoading } = useHoliday();
+
+  // State
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+
+  // Ref to track previous dependency values to detect actual changes
+  const prevDepsRef = useRef<{
+    activeFilters: ActiveFilter[];
+    searchQuery: string;
+    pageIndex: number;
+    pageSize: number;
+    refreshTrigger: number;
+  } | null>(null);
+
+  const loadHolidays = async () => {
+    try {
+      // Build universal search request from filters and search query
+      const searchRequest = buildUniversalSearchRequest(
+        activeFilters,
+        searchQuery,
+        ['name', 'description'],
+      );
+
+      const result = await refreshHolidays(searchRequest, pageIndex, pageSize);
+      if (result) {
+        setHolidays(result.content || []);
+        setTotalItems(result.totalElements || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+    }
+  };
+
+  // Fetch data from API when filters or search change
+  useEffect(() => {
+    // Check if dependencies have actually changed
+    const depsChanged =
+      !prevDepsRef.current ||
+      JSON.stringify(prevDepsRef.current.activeFilters) !==
+        JSON.stringify(activeFilters) ||
+      prevDepsRef.current.searchQuery !== searchQuery ||
+      prevDepsRef.current.pageIndex !== pageIndex ||
+      prevDepsRef.current.pageSize !== pageSize ||
+      prevDepsRef.current.refreshTrigger !== refreshTrigger;
+
+    if (!depsChanged) return;
+
+    // Update the ref with current values
+    prevDepsRef.current = {
+      activeFilters,
+      searchQuery,
+      pageIndex,
+      pageSize,
+      refreshTrigger,
+    };
+
+    loadHolidays();
+  }, [
+    activeFilters,
+    searchQuery,
+    pageIndex,
+    pageSize,
+    refreshTrigger,
+  ]);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string | ReactNode;
+    action: () => void;
+    variant?: 'default' | 'destructive';
+    confirmText?: string;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    action: () => {},
+  });
+
+  // Admin flag - in real app, get from auth context
+  const isAdmin = true;
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const canNextPage = pageIndex < totalPages - 1;
+
+  // Handlers
+  const handleAddHoliday = () => {
+    navigate('/holiday-management/form?mode=create');
+  };
+
+  const handleEdit = (holiday: Holiday) => {
+    navigate(`/holiday-management/form?mode=edit&id=${holiday.id}`);
+  };
+
+  const handleDelete = (holiday: Holiday) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Holiday',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to delete <strong>{holiday.name}</strong>?
+          </p>
+          <p className="text-destructive text-xs">
+            This action cannot be undone. The holiday will be permanently removed.
+          </p>
+        </div>
+      ),
+      confirmText: 'Delete',
+      variant: 'destructive',
+      action: async () => {
+        const success = await deleteHolidayById(holiday.id);
+        if (success) {
+          // Trigger refresh by incrementing refreshTrigger
+          setRefreshTrigger(prev => prev + 1);
+        }
+      },
+    });
+  };
+
+  // Filter configuration for GenericToolbar
+  const filterConfig = [
+    {
+      id: 'companyId',
+      label: 'Company',
+      type: 'text' as const,
+      placeholder: 'Search by company...',
+    },
+  ];
+
+  return (
+    <>
+      <PageLayout>
+        <div className="space-y-6">
+          {/* Page Header with Action Button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                <Calendar className="h-8 w-8" />
+                Holiday Management
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Manage company holidays and observances
+              </p>
+            </div>
+            {isAdmin && (
+              <Button onClick={handleAddHoliday} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Holiday
+              </Button>
+            )}
+          </div>
+
+          {/* Toolbar */}
+          <GenericToolbar
+            showSearch
+            searchPlaceholder="Search holidays by name or description..."
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            showFilters
+            availableFilters={filterConfig}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            showExport={false}
+            showConfigureView={false}
+          />
+
+          {/* Holiday Cards Grid */}
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Loading holidays...
+            </div>
+          ) : holidays.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No holidays found</h3>
+              <p className="text-muted-foreground">
+                {searchQuery || activeFilters.length > 0
+                  ? 'Try adjusting your search or filters'
+                  : isAdmin
+                  ? 'Get started by adding your first holiday'
+                  : 'No holidays are currently available'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {holidays.map((holiday) => (
+                  <HolidayCard
+                    key={holiday.id}
+                    holiday={holiday}
+                    onEdit={isAdmin ? handleEdit : undefined}
+                    onDelete={isAdmin ? handleDelete : undefined}
+                    isAdmin={isAdmin}
+                  />
+                ))}
+              </div>
+
+              {/* Fixed Bottom Pagination */}
+              <DefaultPagination
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                totalPages={totalPages}
+                canNextPage={canNextPage}
+                totalItems={totalItems}
+                onPageChange={setPageIndex}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPageIndex(0);
+                }}
+                pageSizeOptions={[12, 24, 36, 48]}
+                className="fixed bottom-0 left-0 right-0 z-10"
+                disabled={isLoading}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Add padding at bottom to prevent content from being hidden behind fixed pagination */}
+        <div className="h-20" />
+      </PageLayout>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        onConfirm={confirmDialog.action}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        variant={confirmDialog.variant}
+      />
+    </>
+  );
+}

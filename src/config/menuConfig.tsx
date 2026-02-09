@@ -98,6 +98,13 @@ export const allMenuItems: AppShellMenuItem[] = [
     category: 'Time & Attendance',
   },
   {
+    id: 'holiday-management',
+    to: '/holiday-management',
+    icon: Calendar,
+    label: 'Holiday Management',
+    category: 'Time & Attendance',
+  },
+  {
     id: 'overtime',
     to: '/overtime',
     icon: Clock,
