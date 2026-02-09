@@ -138,15 +138,8 @@ export function LayoutWithAppShell() {
       // Branding
       logo={undefined}
       brandName="Employee 360"
-<<<<<<< HEAD
-
-      // Header & Loading
-      headerContent={headerContent}
-=======
-      
       // Header - Use the Header component as custom header content
       headerContent={<Header />}
->>>>>>> master
       loadingBar={<LoadingBar />}
 
       // Navigation
