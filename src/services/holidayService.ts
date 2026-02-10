@@ -1,6 +1,17 @@
 /**
  * Holiday Service
- * Handles all holiday-related API operations
+ * Handles all API operations for holiday management
+ * 
+ * Endpoints:
+ * - POST /emp-user-management/v1/holidays - Create holiday
+ * - GET /emp-user-management/v1/holidays/{id} - Get holiday by ID
+ * - PATCH /emp-user-management/v1/holidays/{id} - Update holiday
+ * - POST /emp-user-management/v1/holidays/search - Search holidays with pagination
+ * - DELETE /emp-user-management/v1/holidays/{id} - Delete holiday by ID
+ * - DELETE /emp-user-management/v1/holidays/bulk-delete - Bulk delete holidays
+ * - PATCH /emp-user-management/v1/holidays/bulk-update - Bulk update holidays
+ * 
+ * All responses follow ApiResponse<T> wrapper format
  */
 
 import { ApiResponse } from "@/types/responses";
@@ -12,19 +23,30 @@ import {
 } from "@/modules/time-attendance/holiday-management/types";
 import { apiRequest } from "./utils";
 
-const BASE_PATH = "/emp-user-management/v1/holidays";
+const BASE_ENDPOINT = "/emp-user-management/v1/holidays";
 
 /**
- * Create a new holiday
+ * Update payload - Map of field names to values
+ */
+export type UpdatePayload = Record<string, any>;
+
+/**
+ * Create Holiday
+ * POST /emp-user-management/v1/holidays
+ * 
+ * @param carrier - HolidayCarrier with holiday information
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Holiday>>
  */
 export const apiCreateHoliday = async (
   carrier: HolidayCarrier,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<Holiday>> => {
   return apiRequest<Holiday>({
     method: "POST",
-    endpoint: BASE_PATH,
+    endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
     body: carrier,
@@ -32,33 +54,48 @@ export const apiCreateHoliday = async (
 };
 
 /**
- * Get holiday by ID
+ * Get Holiday by ID
+ * GET /emp-user-management/v1/holidays/{id}
+ * 
+ * @param id - Holiday ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Holiday>>
  */
 export const apiGetHolidayById = async (
   id: string,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<Holiday>> => {
   return apiRequest<Holiday>({
     method: "GET",
-    endpoint: `${BASE_PATH}/${id}`,
+    endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
     accessToken,
   });
 };
 
 /**
- * Update holiday
+ * Update Holiday
+ * PATCH /emp-user-management/v1/holidays/{id}
+ * 
+ * Partial update - only provided fields are updated
+ * 
+ * @param id - Holiday ID
+ * @param payload - Map of fields to update
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Holiday>>
  */
 export const apiUpdateHoliday = async (
   id: string,
-  payload: Record<string, any>,
+  payload: UpdatePayload,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<Holiday>> => {
   return apiRequest<Holiday>({
     method: "PATCH",
-    endpoint: `${BASE_PATH}/${id}`,
+    endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
     accessToken,
     body: payload,
@@ -66,18 +103,26 @@ export const apiUpdateHoliday = async (
 };
 
 /**
- * Search holidays with pagination
+ * Search Holidays with Pagination
+ * POST /emp-user-management/v1/holidays/search?page={page}&size={size}
+ * 
+ * @param searchRequest - UniversalSearchRequest for filtering
+ * @param page - Page number (0-based)
+ * @param pageSize - Number of items per page
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Pagination<Holiday>>>
  */
 export const apiSearchHolidays = async (
   searchRequest: UniversalSearchRequest,
   page: number,
   pageSize: number,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<Pagination<Holiday>>> => {
   return apiRequest<Pagination<Holiday>>({
     method: "POST",
-    endpoint: `${BASE_PATH}/search?page=${page}&size=${pageSize}`,
+    endpoint: `${BASE_ENDPOINT}/search?page=${page}&size=${pageSize}`,
     tenant,
     accessToken,
     body: searchRequest,
@@ -85,32 +130,44 @@ export const apiSearchHolidays = async (
 };
 
 /**
- * Delete holiday by ID
+ * Delete Holiday by ID
+ * DELETE /emp-user-management/v1/holidays/{id}
+ * 
+ * @param id - Holiday ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
  */
 export const apiDeleteHolidayById = async (
   id: string,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<void>> => {
   return apiRequest<void>({
     method: "DELETE",
-    endpoint: `${BASE_PATH}/${id}`,
+    endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
     accessToken,
   });
 };
 
 /**
- * Bulk delete holidays by IDs
+ * Bulk Delete Holidays
+ * DELETE /emp-user-management/v1/holidays/bulk-delete
+ * 
+ * @param ids - Array of holiday IDs to delete
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
  */
 export const apiBulkDeleteHolidays = async (
   ids: string[],
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<void>> => {
   return apiRequest<void>({
     method: "DELETE",
-    endpoint: `${BASE_PATH}/bulk-delete`,
+    endpoint: `${BASE_ENDPOINT}/bulk-delete`,
     tenant,
     accessToken,
     body: ids,
@@ -118,19 +175,41 @@ export const apiBulkDeleteHolidays = async (
 };
 
 /**
- * Bulk update holidays
+ * Bulk Update Holidays
+ * PATCH /emp-user-management/v1/holidays/bulk-update
+ * 
+ * Bulk update multiple holidays with the same fields
+ * 
+ * @param ids - Array of holiday IDs to update
+ * @param updates - Map of fields to update
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
  */
 export const apiBulkUpdateHolidays = async (
   ids: string[],
-  updates: Record<string, any>,
+  updates: UpdatePayload,
   tenant: string,
-  accessToken: string
+  accessToken?: string
 ): Promise<ApiResponse<void>> => {
   return apiRequest<void>({
     method: "PATCH",
-    endpoint: `${BASE_PATH}/bulk-update`,
+    endpoint: `${BASE_ENDPOINT}/bulk-update`,
     tenant,
     accessToken,
     body: { ids, updates },
   });
+};
+
+/**
+ * Export all service functions as default object for easier importing
+ */
+export const holidayService = {
+  apiCreateHoliday,
+  apiGetHolidayById,
+  apiUpdateHoliday,
+  apiSearchHolidays,
+  apiDeleteHolidayById,
+  apiBulkDeleteHolidays,
+  apiBulkUpdateHolidays,
 };

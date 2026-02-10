@@ -114,6 +114,15 @@ export function HolidayManagement() {
   const totalPages = Math.ceil(totalItems / pageSize);
   const canNextPage = pageIndex < totalPages - 1;
 
+  // Dummy data for filter options
+  const dummyCompanies = [
+    { value: 'company-001', label: 'Acme Corporation' },
+    { value: 'company-002', label: 'Global Tech Solutions' },
+    { value: 'company-003', label: 'StartUp Innovations' },
+    { value: 'company-004', label: 'Enterprise Systems Ltd' },
+    { value: 'company-005', label: 'Digital Ventures' },
+  ];
+
   // Handlers
   const handleAddHoliday = () => {
     navigate('/holiday-management/form?mode=create');
@@ -152,10 +161,23 @@ export function HolidayManagement() {
   // Filter configuration for GenericToolbar
   const filterConfig = [
     {
-      id: 'companyId',
-      label: 'Company',
+      id: 'name',
+      label: 'Name',
       type: 'text' as const,
-      placeholder: 'Search by company...',
+      placeholder: 'Search by holiday name...',
+    },
+    {
+      id: 'description',
+      label: 'Description',
+      type: 'text' as const,
+      placeholder: 'Search by description...',
+    },
+    {
+      id: 'companyIds',
+      label: 'Company',
+      type: 'multiselect' as const,
+      options: dummyCompanies,
+      placeholder: 'Select companies...',
     },
   ];
 

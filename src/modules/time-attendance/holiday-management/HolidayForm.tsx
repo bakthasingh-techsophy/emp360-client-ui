@@ -2,13 +2,13 @@
  * Holiday Form Page - Create/Edit Holiday
  */
 
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -17,20 +17,24 @@ import {
   FormLabel,
   FormMessage,
   FormDescription,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { FormActionBar } from '@/components/common/FormActionBar';
-import { ArrowLeft } from 'lucide-react';
-import { useHoliday } from '@/contexts/HolidayContext';
-import { useCompany } from '@/contexts/CompanyContext';
-import { Holiday, HolidayCarrier } from './types';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { FormActionBar } from "@/components/common/FormActionBar";
+import { ArrowLeft } from "lucide-react";
+import { useHoliday } from "@/contexts/HolidayContext";
+import { useCompany } from "@/contexts/CompanyContext";
+import { Holiday, HolidayCarrier } from "./types";
 
 const holidayFormSchema = z.object({
-  name: z.string().min(2, 'Holiday name must be at least 2 characters'),
+  name: z.string().min(2, "Holiday name must be at least 2 characters"),
   description: z.string().optional(),
-  imageUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
-  companyIds: z.array(z.string()).min(1, 'Select at least one company'),
+  imageUrl: z
+    .string()
+    .url("Please enter a valid URL")
+    .optional()
+    .or(z.literal("")),
+  companyIds: z.array(z.string()).min(1, "Select at least one company"),
 });
 
 type HolidayFormDataType = z.infer<typeof holidayFormSchema>;
@@ -38,8 +42,8 @@ type HolidayFormDataType = z.infer<typeof holidayFormSchema>;
 export function HolidayForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = (searchParams.get('mode') as 'create' | 'edit') || 'create';
-  const holidayId = searchParams.get('id');
+  const mode = (searchParams.get("mode") as "create" | "edit") || "create";
+  const holidayId = searchParams.get("id");
 
   const { companies } = useCompany();
   const { createHoliday, updateHoliday, getHolidayById } = useHoliday();
@@ -50,38 +54,38 @@ export function HolidayForm() {
   const form = useForm<HolidayFormDataType>({
     resolver: zodResolver(holidayFormSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      imageUrl: '',
+      name: "",
+      description: "",
+      imageUrl: "",
       companyIds: [],
     },
   });
 
-  useEffect(() => {
-    const loadHoliday = async () => {
-      if (mode === 'edit' && holidayId) {
-        setLoadingHoliday(true);
-        const foundHoliday = await getHolidayById(holidayId);
-        if (foundHoliday) {
-          setHoliday(foundHoliday);
-          form.reset({
-            name: foundHoliday.name,
-            description: foundHoliday.description || '',
-            imageUrl: foundHoliday.imageUrl || '',
-            companyIds: foundHoliday.companyIds,
-          });
-        }
-        setLoadingHoliday(false);
+  const loadHoliday = async () => {
+    if (mode === "edit" && holidayId) {
+      setLoadingHoliday(true);
+      const foundHoliday = await getHolidayById(holidayId);
+      if (foundHoliday) {
+        setHoliday(foundHoliday);
+        form.reset({
+          name: foundHoliday.name,
+          description: foundHoliday.description || "",
+          imageUrl: foundHoliday.imageUrl || "",
+          companyIds: foundHoliday.companyIds,
+        });
       }
-    };
+      setLoadingHoliday(false);
+    }
+  };
+  useEffect(() => {
     loadHoliday();
-  }, [mode, holidayId, getHolidayById, form]);
+  }, [mode, holidayId, form]);
 
   const handleSubmit = async (data: HolidayFormDataType) => {
     setIsSubmitting(true);
 
     try {
-      if (mode === 'create') {
+      if (mode === "create") {
         // Create holiday carrier
         const holidayCarrier: HolidayCarrier = {
           name: data.name,
@@ -94,7 +98,7 @@ export function HolidayForm() {
         const newHoliday = await createHoliday(holidayCarrier);
 
         if (newHoliday) {
-          navigate('/holiday-management');
+          navigate("/holiday-management");
         }
       } else {
         // Update holiday
@@ -107,18 +111,18 @@ export function HolidayForm() {
 
         const updated = await updateHoliday(holidayId!, updates);
         if (updated) {
-          navigate('/holiday-management');
+          navigate("/holiday-management");
         }
       }
     } catch (error) {
-      console.error('Error submitting holiday:', error);
+      console.error("Error submitting holiday:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/holiday-management');
+    navigate("/holiday-management");
   };
 
   return (
@@ -145,12 +149,12 @@ export function HolidayForm() {
             </Button>
             <div>
               <h1 className="text-xl font-semibold">
-                {mode === 'edit' ? 'Edit Holiday' : 'Add Holiday'}
+                {mode === "edit" ? "Edit Holiday" : "Add Holiday"}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {mode === 'edit'
-                  ? `Update: ${holiday?.name || ''}`
-                  : 'Create a new company holiday'}
+                {mode === "edit"
+                  ? `Update: ${holiday?.name || ""}`
+                  : "Create a new company holiday"}
               </p>
             </div>
           </div>
@@ -163,7 +167,9 @@ export function HolidayForm() {
             >
               {/* Holiday Details Card */}
               <Card className="p-6">
-                <h3 className="text-base font-semibold mb-6">Holiday Details</h3>
+                <h3 className="text-base font-semibold mb-6">
+                  Holiday Details
+                </h3>
 
                 {/* Holiday Name */}
                 <FormField
@@ -244,16 +250,23 @@ export function HolidayForm() {
                                     checked={field.value.includes(company.id)}
                                     onChange={(e) => {
                                       if (e.target.checked) {
-                                        field.onChange([...field.value, company.id]);
+                                        field.onChange([
+                                          ...field.value,
+                                          company.id,
+                                        ]);
                                       } else {
                                         field.onChange(
-                                          field.value.filter(id => id !== company.id)
+                                          field.value.filter(
+                                            (id) => id !== company.id,
+                                          ),
                                         );
                                       }
                                     }}
                                     className="w-4 h-4"
                                   />
-                                  <span className="text-sm">{company.name}</span>
+                                  <span className="text-sm">
+                                    {company.name}
+                                  </span>
                                 </label>
                               ))}
                             </div>
@@ -278,7 +291,9 @@ export function HolidayForm() {
                 mode={mode}
                 isSubmitting={isSubmitting}
                 onCancel={handleCancel}
-                submitText={mode === 'edit' ? 'Update Holiday' : 'Create Holiday'}
+                submitText={
+                  mode === "edit" ? "Update Holiday" : "Create Holiday"
+                }
               />
             </form>
           </Form>
