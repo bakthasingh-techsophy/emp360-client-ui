@@ -19,7 +19,7 @@ const approveAction: ApprovalActionConfig = {
   label: 'Approve',
   variant: 'default',
   requiresComment: false,
-  nextStatus: 'level1_approved', // Will be overridden per level
+  nextStatus: 'approved', // Stays as 'approved', level tracking via currentApprovalLevel
   sideEffects: [
     {
       type: 'notification',
@@ -66,7 +66,7 @@ const returnAction: ApprovalActionConfig = {
   label: 'Return for Clarification',
   variant: 'outline',
   requiresComment: true,
-  nextStatus: 'submitted',
+  nextStatus: 'pending', // Back to pending for employee clarification
   sideEffects: [
     {
       type: 'notification',
@@ -121,7 +121,7 @@ export const LEVEL1_CONFIG: ApprovalLevelConfig = {
   availableActions: [
     {
       ...approveAction,
-      nextStatus: 'level1_approved',
+      nextStatus: 'approved',
     },
     rejectAction,
     returnAction,
@@ -138,7 +138,7 @@ export const LEVEL2_CONFIG: ApprovalLevelConfig = {
   availableActions: [
     {
       ...approveAction,
-      nextStatus: 'level2_approved',
+      nextStatus: 'approved',
     },
     rejectAction,
     returnAction,
@@ -198,7 +198,7 @@ export function getNextStatus(
 ): ExpenseStatus {
   const levelConfig = APPROVAL_WORKFLOW_CONFIG[currentLevel];
   const actionConfig = levelConfig.availableActions.find((a) => a.action === action);
-  return actionConfig?.nextStatus || 'submitted';
+  return actionConfig?.nextStatus || 'pending';
 }
 
 /**

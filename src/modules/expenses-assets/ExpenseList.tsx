@@ -13,7 +13,7 @@ import { mockExpenses } from './data/mockData';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { ExpenseTable } from './components/ExpenseTable';
 import { IntimationList } from './IntimationList';
-import { Bell, Plus } from 'lucide-react';
+import { Bell, Plus, Settings } from 'lucide-react';
 
 
 export function ExpenseList() {
@@ -41,6 +41,7 @@ export function ExpenseList() {
 
   // Filter expenses by tab
   const allExpenses = mockExpenses;
+  const draftExpenses = allExpenses.filter(e => e.status === 'draft');
   const pendingExpenses = allExpenses.filter(e => e.status === 'pending');
   const approvedExpenses = allExpenses.filter(e => e.status === 'approved');
   const rejectedExpenses = allExpenses.filter(e => e.status === 'rejected');
@@ -49,6 +50,7 @@ export function ExpenseList() {
   // Get current tab expenses
   const getCurrentExpenses = () => {
     switch (activeTab) {
+      case 'draft': return draftExpenses;
       case 'pending': return pendingExpenses;
       case 'approved': return approvedExpenses;
       case 'rejected': return rejectedExpenses;
@@ -112,6 +114,13 @@ export function ExpenseList() {
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
+                onClick={() => navigate('/expense-management/settings')}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+              <Button 
+                variant="outline" 
                 onClick={() => navigate('/expense-management/intimation/new')}
               >
                 <Bell className="h-4 w-4 mr-2" />
@@ -128,6 +137,7 @@ export function ExpenseList() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList>
                 <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
+                <TabsTrigger value="draft">Draft ({draftExpenses.length})</TabsTrigger>
                 <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
                 <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
                 <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>

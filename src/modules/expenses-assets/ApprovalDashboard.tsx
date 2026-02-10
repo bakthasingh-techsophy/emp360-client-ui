@@ -8,14 +8,13 @@ import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar';
 import { ExpenseStatsCards, ExpenseCard } from './components';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExpenseListItem, ExpenseStats, ApprovalLevel, UserRole } from './types/expense.types';
+import { ExpenseListItem, ExpenseStats, ApprovalLevel } from './types/expense.types';
 import { mockExpenses } from './data/mockData';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { APPROVAL_LEVEL_LABELS } from './constants/expense.constants';
 
 interface ApprovalDashboardProps {
   level: ApprovalLevel;
-  userRole: UserRole;
 }
 
 export function ApprovalDashboard({ level }: ApprovalDashboardProps) {

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ExpenseListItem, ExpenseStats } from './types/expense.types';
-import { mockExpenses, currentUser } from './data/mockData';
+import { mockExpenses } from './data/mockData';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 
 export function EmployeeExpenseList() {
@@ -19,9 +19,8 @@ export function EmployeeExpenseList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
-  // Filter expenses for current user
+  // All expenses (for demo, showing all expenses)
   const userExpenses = mockExpenses
-    .filter(exp => exp.employeeId === currentUser.id)
     .map(exp => ({
       ...exp,
       daysInReview: exp.status !== 'draft' && exp.status !== 'cancelled' 
