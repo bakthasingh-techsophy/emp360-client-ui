@@ -1,11 +1,14 @@
-import { DummyPage } from '@/components/common/DummyPage';
+import { useProfileData } from './my-profile/useProfileData';
+import { HeroSection } from './my-profile/components/HeroSection';
+import { ProfileTabs } from './my-profile/components/ProfileTabs';
 
 export function MyProfile() {
+  const { profile } = useProfileData();
+
   return (
-    <DummyPage
-      title="My Profile"
-      description="View and update personal information, contact details, and profile settings."
-      category="Employee & Manager Self Service"
-    />
+    <div className="container mx-auto animate-in fade-in duration-500">
+      <HeroSection profile={profile} />
+      <ProfileTabs profile={profile} />
+    </div>
   );
 }
