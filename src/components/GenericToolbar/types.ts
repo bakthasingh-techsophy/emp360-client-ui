@@ -9,7 +9,9 @@ export type FilterFieldType =
   | 'checkbox'
   | 'number'
   | 'numberrange'
-  | 'boolean';
+  | 'boolean'
+  | 'context-aware-dropdown'
+  | 'context-aware-multiselect';
 
 // Operator types based on field type
 export type TextOperator = 'regex' | 'eq';
@@ -18,6 +20,7 @@ export type SelectOperator = 'eq' | 'in';
 export type MultiselectOperator = CollectionOp; // in | all | nin
 export type BooleanOperator = 'eq' | 'exists';
 export type DateOperator = DateFilterType; // on | >= | <= | today | between
+export type ContextAwareOperator = 'eq' | 'in'; // eq for dropdown, in for multiselect
 
 export type FilterOperator = 
   | TextOperator 
@@ -25,11 +28,19 @@ export type FilterOperator =
   | SelectOperator 
   | MultiselectOperator 
   | BooleanOperator
-  | DateOperator;
+  | DateOperator
+  | ContextAwareOperator;
 
 export interface FilterOption {
   value: string;
   label: string;
+}
+
+export interface ContextAwareFilterConfig {
+  loadingFunction: (searchQuery: string) => Promise<FilterOption[]>;
+  searchCriteria?: string; // field to search on (optional)
+  minCharsToSearch?: number; // minimum characters before triggering search (default: 2)
+  debounceMs?: number; // debounce delay in ms (default: 300)
 }
 
 export interface OperatorOption {
@@ -47,6 +58,8 @@ export interface AvailableFilter {
   operators?: OperatorOption[];
   // Default operator if not specified
   defaultOperator?: FilterOperator;
+  // Configuration for context-aware filters
+  contextAwareConfig?: ContextAwareFilterConfig;
 }
 
 export interface ActiveFilter {
@@ -180,5 +193,12 @@ export const DEFAULT_OPERATORS: Record<FilterFieldType, OperatorOption[]> = {
     { value: '>=', label: 'On or after' },
     { value: '<=', label: 'On or before' },
     { value: 'between', label: 'Between dates' },
+  ],
+  'context-aware-dropdown': [
+    { value: 'eq', label: 'Equals' },
+  ],
+  'context-aware-multiselect': [
+    { value: 'in', label: 'Includes any' },
+    { value: 'all', label: 'Includes all' },
   ],
 };

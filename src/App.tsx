@@ -10,6 +10,7 @@ import { CompanyProvider } from './contexts/CompanyContext';
 import { PolicyProvider } from './contexts/PolicyContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { VisitorManagementProvider } from './contexts/VisitorManagementContext';
+import { HolidayProvider } from './contexts/HolidayContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -94,6 +95,9 @@ import { RoomForm } from './modules/visitor-room/RoomForm';
 import { BookingPage } from './modules/visitor-room/BookingPage';
 import { RoomManagement } from './modules/visitor-room';
 
+// Holiday Management modules
+import { HolidayManagement, HolidayForm } from './modules/time-attendance/holiday-management';
+
 // Administration & Security modules
 import { UserManagement } from './modules/user-management/UserManagement';
 import { UserManagementSettings } from './modules/user-management/UserManagementSettings';
@@ -120,8 +124,9 @@ function App() {
             <UserManagementProvider>
               <NotificationProvider>
                 <PolicyProvider>
-                  <BrowserRouter>
-                  <Routes>
+                  <HolidayProvider>
+                    <BrowserRouter>
+                    <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
@@ -153,6 +158,12 @@ function App() {
                 <Route path="/attendance-management" element={<AttendanceManagement />} />
                 <Route path="/shift-schedule" element={<ShiftSchedule />} />
                 <Route path="/leave-holiday" element={<LeaveHoliday />} />
+                <Route path="/holiday-management" element={
+                  <HolidayManagement />
+                } />
+                <Route path="/holiday-management/form" element={
+                  <HolidayForm />
+                } />
                 <Route path="/overtime" element={<OvertimeManagement />} />
 
                 {/* Payroll & Compensation routes - Flat paths */}
@@ -250,6 +261,7 @@ function App() {
             </Routes>
           </BrowserRouter>
           <Toaster />
+        </HolidayProvider>
         </PolicyProvider>
       </NotificationProvider>
     </UserManagementProvider>
