@@ -19,14 +19,14 @@ import { DocumentUploadModal } from './DocumentUploadModal';
 export interface TableColumn<T = any> {
   key: string;
   header: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'documents';
+  type: 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'documents';
   width?: string;
   minWidth?: string; // Minimum width for the column
   maxWidth?: string; // Maximum width for the column
   flex?: number; // Flex grow factor (e.g., 1 for flex-1)
   required?: boolean;
   placeholder?: string;
-  options?: { label: string; value: string }[]; // For select type
+  options?: { label: string; value: string }[]; // For select/multiselect type
   min?: number | string; // For number/date type (string for date inputs)
   max?: number | string;
   step?: number;
@@ -53,6 +53,7 @@ export interface EditableItemsTableProps<T = any> {
   onDelete?: (item: T, index: number) => void | Promise<void>; // Callback when delete is clicked for an item
   errors?: Record<number, Record<string, string>>; // Validation errors by row index and column key
   onValidate?: (items: T[]) => Record<number, Record<string, string>>; // Optional validation function
+  onMultiselectClick?: (columnKey: string, index: number, currentValue: string[]) => void; // Callback when multiselect button is clicked
 }
 
 export function EditableItemsTable<T extends Record<string, any>>({
@@ -73,6 +74,7 @@ export function EditableItemsTable<T extends Record<string, any>>({
   onDelete,
   errors = {},
   onValidate,
+  onMultiselectClick,
 }: EditableItemsTableProps<T>) {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -170,6 +172,28 @@ export function EditableItemsTable<T extends Record<string, any>>({
             ))}
           </SelectContent>
         </Select>
+      );
+    }
+
+    // Multiselect column (array of selected values) - shown as button with count, opens modal via callback
+    if (column.type === 'multiselect') {
+      const hasError = errors[index]?.[column.key];
+      const selectedValues = Array.isArray(value) ? value : [];
+      
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onMultiselectClick?.(column.key, index, selectedValues)}
+          className={cn(
+            'h-8 text-sm w-full justify-start text-left font-normal gap-2',
+            !selectedValues.length && 'text-muted-foreground',
+            hasError && 'border-red-500 focus-visible:ring-red-500'
+          )}
+        >
+          {selectedValues.length > 0 ? `${selectedValues.length} selected` : column.placeholder || 'Select...'}
+        </Button>
       );
     }
 

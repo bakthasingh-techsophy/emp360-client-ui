@@ -6,7 +6,6 @@
  * - POST /emp-user-management/v1/expense-categories - Create expense category
  * - GET /emp-user-management/v1/expense-categories/{id} - Get expense category by ID
  * - PATCH /emp-user-management/v1/expense-categories/{id} - Update expense category
- * - GET /emp-user-management/v1/expense-categories - List all expense categories
  * - POST /emp-user-management/v1/expense-categories/search - Search expense categories
  * - DELETE /emp-user-management/v1/expense-categories/{id} - Delete expense category
  * 
@@ -66,26 +65,6 @@ export const apiGetExpenseCategoryById = async (
   return apiRequest<ExpenseCategoryConfig>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
-    tenant,
-    accessToken,
-  });
-};
-
-/**
- * List All Expense Categories
- * GET /emp-user-management/v1/expense-categories
- * 
- * @param tenant - Tenant ID
- * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<ExpenseCategoryConfig[]>>
- */
-export const apiListExpenseCategories = async (
-  tenant: string,
-  accessToken?: string
-): Promise<ApiResponse<ExpenseCategoryConfig[]>> => {
-  return apiRequest<ExpenseCategoryConfig[]>({
-    method: "GET",
-    endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
   });

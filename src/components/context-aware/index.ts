@@ -7,3 +7,4 @@
 
 export { UsersSelector } from './UsersSelector';
 export { CompanySelector } from './CompanySelector';
+export { CompanyAssignmentModal } from './CompanyAssignmentModal';

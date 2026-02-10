@@ -27,7 +27,6 @@ import {
   apiGetExpenseTypeById,
   apiUpdateExpenseType,
   apiSearchExpenseTypes,
-  apiListExpenseTypes,
   apiDeleteExpenseType,
 } from "@/services/expenseTypeService";
 
@@ -37,7 +36,6 @@ import {
   apiGetExpenseCategoryById,
   apiUpdateExpenseCategory,
   apiSearchExpenseCategories,
-  apiListExpenseCategories,
   apiDeleteExpenseCategory,
 } from "@/services/expenseCategoryService";
 
@@ -67,7 +65,6 @@ interface ExpenseManagementContextType {
     id: string,
     payload: UpdatePayload
   ) => Promise<ExpenseTypeConfig | null>;
-  listExpenseTypes: () => Promise<ExpenseTypeConfig[] | null>;
   searchExpenseTypes: (
     searchRequest: UniversalSearchRequest,
     page?: number,
@@ -84,7 +81,6 @@ interface ExpenseManagementContextType {
     id: string,
     payload: UpdatePayload
   ) => Promise<ExpenseCategoryConfig | null>;
-  listExpenseCategories: () => Promise<ExpenseCategoryConfig[] | null>;
   searchExpenseCategories: (
     searchRequest: UniversalSearchRequest,
     page?: number,
@@ -237,14 +233,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<ExpenseTypeConfig | null>;
   };
 
-  const listExpenseTypes = async (): Promise<ExpenseTypeConfig[] | null> => {
-    return executeApiCall(
-      (tenant, accessToken) => apiListExpenseTypes(tenant, accessToken),
-      "Fetch Expense Types",
-      ""
-    ) as Promise<ExpenseTypeConfig[] | null>;
-  };
-
   const searchExpenseTypes = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
@@ -303,15 +291,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<ExpenseCategoryConfig | null>;
   };
 
-  const listExpenseCategories = async (): Promise<ExpenseCategoryConfig[] | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiListExpenseCategories(tenant, accessToken),
-      "Fetch Expense Categories",
-      ""
-    ) as Promise<ExpenseCategoryConfig[] | null>;
-  };
-
   const searchExpenseCategories = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
@@ -342,7 +321,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     createExpenseType,
     getExpenseTypeById,
     updateExpenseType,
-    listExpenseTypes,
     searchExpenseTypes,
     deleteExpenseType,
 
@@ -350,7 +328,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     createExpenseCategory,
     getExpenseCategoryById,
     updateExpenseCategory,
-    listExpenseCategories,
     searchExpenseCategories,
     deleteExpenseCategory,
 

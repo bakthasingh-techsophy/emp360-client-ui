@@ -7,13 +7,18 @@ export interface ExpenseTypeConfig {
   id: string;
   type: string;
   description: string;
+  companyIds?: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ExpenseCategoryConfig {
   id: string;
   category: string;
   description: string;
+  companyIds?: string[];
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ApprovalLevel {

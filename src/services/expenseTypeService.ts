@@ -6,7 +6,6 @@
  * - POST /emp-user-management/v1/expense-types - Create expense type
  * - GET /emp-user-management/v1/expense-types/{id} - Get expense type by ID
  * - PATCH /emp-user-management/v1/expense-types/{id} - Update expense type
- * - GET /emp-user-management/v1/expense-types - List all expense types
  * - POST /emp-user-management/v1/expense-types/search - Search expense types
  * - DELETE /emp-user-management/v1/expense-types/{id} - Delete expense type
  * 
@@ -66,26 +65,6 @@ export const apiGetExpenseTypeById = async (
   return apiRequest<ExpenseTypeConfig>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
-    tenant,
-    accessToken,
-  });
-};
-
-/**
- * List All Expense Types
- * GET /emp-user-management/v1/expense-types
- * 
- * @param tenant - Tenant ID
- * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<ExpenseTypeConfig[]>>
- */
-export const apiListExpenseTypes = async (
-  tenant: string,
-  accessToken?: string
-): Promise<ApiResponse<ExpenseTypeConfig[]>> => {
-  return apiRequest<ExpenseTypeConfig[]>({
-    method: "GET",
-    endpoint: BASE_ENDPOINT,
     tenant,
     accessToken,
   });
