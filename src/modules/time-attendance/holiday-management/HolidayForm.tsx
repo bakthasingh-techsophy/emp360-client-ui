@@ -34,7 +34,7 @@ const holidayFormSchema = z.object({
     .url("Please enter a valid URL")
     .optional()
     .or(z.literal("")),
-  companyIds: z.array(z.string()).min(1, "Select at least one company"),
+  companyIds: z.array(z.string()).optional(),
 });
 
 type HolidayFormDataType = z.infer<typeof holidayFormSchema>;
@@ -71,7 +71,7 @@ export function HolidayForm() {
           name: foundHoliday.name,
           description: foundHoliday.description || "",
           imageUrl: foundHoliday.imageUrl || "",
-          companyIds: foundHoliday.companyIds,
+          companyIds: foundHoliday.companyIds || [],
         });
       }
       setLoadingHoliday(false);
@@ -91,7 +91,7 @@ export function HolidayForm() {
           name: data.name,
           description: data.description,
           imageUrl: data.imageUrl,
-          companyIds: data.companyIds,
+          companyIds: data.companyIds || [],
           createdAt: new Date().toISOString(),
         };
 
@@ -106,7 +106,7 @@ export function HolidayForm() {
           name: data.name,
           description: data.description,
           imageUrl: data.imageUrl,
-          companyIds: data.companyIds,
+          companyIds: data.companyIds || [],
         };
 
         const updated = await updateHoliday(holidayId!, updates);
@@ -247,16 +247,17 @@ export function HolidayForm() {
                                 >
                                   <input
                                     type="checkbox"
-                                    checked={field.value.includes(company.id)}
+                                    checked={(field.value || []).includes(company.id)}
                                     onChange={(e) => {
+                                      const currentValues = field.value || [];
                                       if (e.target.checked) {
                                         field.onChange([
-                                          ...field.value,
+                                          ...currentValues,
                                           company.id,
                                         ]);
                                       } else {
                                         field.onChange(
-                                          field.value.filter(
+                                          currentValues.filter(
                                             (id) => id !== company.id,
                                           ),
                                         );

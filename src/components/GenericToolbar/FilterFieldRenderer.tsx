@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { AvailableFilter, FilterOperator } from './types';
+import { ContextAwareFilterRenderer } from './ContextAwareFilterRenderer';
 
 interface FilterFieldRendererProps {
   filter: AvailableFilter;
@@ -275,6 +276,34 @@ export const FilterFieldRenderer: React.FC<FilterFieldRendererProps> = ({
             <SelectItem value="false">False</SelectItem>
           </SelectContent>
         </Select>
+      );
+
+    case 'context-aware-dropdown':
+      if (!filter.contextAwareConfig) {
+        return <div className="text-sm text-muted-foreground">Invalid config</div>;
+      }
+      return (
+        <ContextAwareFilterRenderer
+          config={filter.contextAwareConfig}
+          value={value}
+          onChange={onChange}
+          isSingleSelect={true}
+          placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`}
+        />
+      );
+
+    case 'context-aware-multiselect':
+      if (!filter.contextAwareConfig) {
+        return <div className="text-sm text-muted-foreground">Invalid config</div>;
+      }
+      return (
+        <ContextAwareFilterRenderer
+          config={filter.contextAwareConfig}
+          value={value}
+          onChange={onChange}
+          isSingleSelect={false}
+          placeholder={filter.placeholder || `Select ${filter.label.toLowerCase()}`}
+        />
       );
 
     default:

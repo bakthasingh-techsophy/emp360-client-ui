@@ -183,7 +183,7 @@ export function UsersTable({
       fetchData();
     }
     setUserToDelete(null);
-  }, [userToDelete, deleteUser]);
+  }, [userToDelete]);
 
   // Fetch data from API when filters or search change
   useEffect(() => {

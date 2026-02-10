@@ -8,13 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { HolidayCard } from './components/HolidayCard';
+import { HolidayCards } from './components/HolidayCards';
 import { Holiday } from './types';
 import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DefaultPagination } from '@/components/common/Pagination/DefaultPagination';
 import { useHoliday } from '@/contexts/HolidayContext';
-import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { useCompany } from '@/contexts/CompanyContext';
+import { ActiveFilter, FilterOption } from '@/components/GenericToolbar/types';
 import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 export function HolidayManagement() {
@@ -27,6 +27,10 @@ export function HolidayManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0);
@@ -107,6 +111,9 @@ export function HolidayManagement() {
     action: () => {},
   });
 
+  // Get companies from context
+  const { companies } = useCompany();
+
   // Admin flag - in real app, get from auth context
   const isAdmin = true;
 
@@ -114,14 +121,25 @@ export function HolidayManagement() {
   const totalPages = Math.ceil(totalItems / pageSize);
   const canNextPage = pageIndex < totalPages - 1;
 
-  // Dummy data for filter options
-  const dummyCompanies = [
-    { value: 'company-001', label: 'Acme Corporation' },
-    { value: 'company-002', label: 'Global Tech Solutions' },
-    { value: 'company-003', label: 'StartUp Innovations' },
-    { value: 'company-004', label: 'Enterprise Systems Ltd' },
-    { value: 'company-005', label: 'Digital Ventures' },
-  ];
+  // Company loading function for context-aware filter
+  const loadCompanies = async (searchQuery: string): Promise<FilterOption[]> => {
+    // Filter companies based on search query
+    const filtered = companies.filter(company => {
+      if (!searchQuery) return company.isActive !== false;
+      return (
+        company.isActive !== false &&
+        company.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+
+    // Map to FilterOption format and limit to 20 results
+    return filtered
+      .slice(0, 20)
+      .map(company => ({
+        value: company.id,
+        label: company.name,
+      }));
+  };
 
   // Handlers
   const handleAddHoliday = () => {
@@ -151,11 +169,101 @@ export function HolidayManagement() {
       action: async () => {
         const success = await deleteHolidayById(holiday.id);
         if (success) {
+          // Clear selection
+          setSelectedIds([]);
+          setSelectionMode(false);
+          // Reset to first page
+          setPageIndex(0);
           // Trigger refresh by incrementing refreshTrigger
           setRefreshTrigger(prev => prev + 1);
         }
       },
     });
+  };
+
+  // Bulk delete handler for selected holidays
+  const handleBulkDelete = () => {
+    const selectedCount = selectedIds.length;
+    const selectedHolidayNames = holidays
+      .filter(h => selectedIds.includes(h.id))
+      .map(h => h.name);
+
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Selected Holidays',
+      description: (
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to delete <strong>{selectedCount}</strong> selected holiday
+            {selectedCount !== 1 ? 'ies' : ''}?
+          </p>
+          {selectedHolidayNames.length <= 5 ? (
+            <div className="text-sm text-muted-foreground">
+              {selectedHolidayNames.map((name, idx) => (
+                <div key={idx}>• {name}</div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {selectedHolidayNames.slice(0, 3).map(n => n).join(', ')} and{' '}
+              {selectedHolidayNames.length - 3} more
+            </p>
+          )}
+          <p className="text-destructive text-xs">
+            This action cannot be undone. The holidays will be permanently removed.
+          </p>
+        </div>
+      ),
+      confirmText: 'Delete All',
+      variant: 'destructive',
+      action: async () => {
+        // Delete all selected holidays
+        const deletePromises = selectedIds.map(id => deleteHolidayById(id));
+        const results = await Promise.all(deletePromises);
+        
+        if (results.some(result => result)) {
+          // Clear selection immediately
+          setSelectedIds([]);
+          // Reset to first page
+          setPageIndex(0);
+          // Trigger data refresh
+          setRefreshTrigger(prev => prev + 1);
+        }
+      },
+    });
+  };
+
+  // Export handler for holidays
+  const handleExport = async (sendEmail: boolean, email?: string) => {
+    try {
+      // TODO: Replace with actual API call to export holidays
+      // const response = await apiExportHolidays({
+      //   filters: activeFilters,
+      //   searchQuery: searchQuery,
+      //   sendEmail,
+      //   email,
+      // });
+
+      // Placeholder: Show alert with current filters and search
+      console.log('Export triggered with:', {
+        activeFilters,
+        searchQuery,
+        sendEmail,
+        email,
+        holidays: holidays.map(h => ({
+          id: h.id,
+          name: h.name,
+          description: h.description,
+          companyIds: h.companyIds,
+        })),
+      });
+
+      // Placeholder for successful export
+      alert('Export functionality coming soon! Check console for data.');
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export holidays');
+    }
   };
 
   // Filter configuration for GenericToolbar
@@ -175,9 +283,13 @@ export function HolidayManagement() {
     {
       id: 'companyIds',
       label: 'Company',
-      type: 'multiselect' as const,
-      options: dummyCompanies,
+      type: 'context-aware-multiselect' as const,
       placeholder: 'Select companies...',
+      contextAwareConfig: {
+        loadingFunction: loadCompanies,
+        minCharsToSearch: 0, // Allow loading on open without typing
+        debounceMs: 300,
+      },
     },
   ];
 
@@ -214,59 +326,65 @@ export function HolidayManagement() {
             availableFilters={filterConfig}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
-            showExport={false}
+            showExport={true}
+            onExportAll={handleExport}
+            onExportResults={handleExport}
             showConfigureView={false}
+            showBulkActions={true}
+            selectedCount={selectedIds.length}
+            bulkActions={[
+              {
+                id: 'delete',
+                label: `Delete (${selectedIds.length})`,
+                type: 'button' as const,
+                variant: 'destructive',
+                onClick: handleBulkDelete,
+              },
+            ]}
+            selectionMode={selectionMode}
+            onToggleSelection={() => {
+              setSelectionMode(!selectionMode);
+              if (selectionMode) {
+                // Clear selection when toggling off
+                setSelectedIds([]);
+              }
+            }}
           />
 
-          {/* Holiday Cards Grid */}
-          {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Loading holidays...
-            </div>
-          ) : holidays.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No holidays found</h3>
-              <p className="text-muted-foreground">
-                {searchQuery || activeFilters.length > 0
-                  ? 'Try adjusting your search or filters'
-                  : isAdmin
-                  ? 'Get started by adding your first holiday'
-                  : 'No holidays are currently available'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {holidays.map((holiday) => (
-                  <HolidayCard
-                    key={holiday.id}
-                    holiday={holiday}
-                    onEdit={isAdmin ? handleEdit : undefined}
-                    onDelete={isAdmin ? handleDelete : undefined}
-                    isAdmin={isAdmin}
-                  />
-                ))}
-              </div>
-
-              {/* Fixed Bottom Pagination */}
-              <DefaultPagination
-                pageIndex={pageIndex}
-                pageSize={pageSize}
-                totalPages={totalPages}
-                canNextPage={canNextPage}
-                totalItems={totalItems}
-                onPageChange={setPageIndex}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setPageIndex(0);
-                }}
-                pageSizeOptions={[12, 24, 36, 48]}
-                className="fixed bottom-0 left-0 right-0 z-10"
-                disabled={isLoading}
-              />
-            </>
-          )}
+          {/* Holiday Cards using HolidayCards wrapper */}
+          <HolidayCards
+            holidays={holidays}
+            loading={isLoading}
+            pagination={{
+              pageIndex,
+              pageSize,
+              totalPages,
+              canNextPage,
+              totalItems,
+              pageSizeOptions: [12, 24, 36, 48],
+              onPageChange: setPageIndex,
+              onPageSizeChange: (size) => {
+                setPageSize(size);
+                setPageIndex(0);
+              },
+            }}
+            onEdit={isAdmin ? handleEdit : undefined}
+            onDelete={isAdmin ? handleDelete : undefined}
+            isAdmin={isAdmin}
+            searchQuery={searchQuery}
+            activeFiltersCount={activeFilters.length}
+            emptyStateTitle="No holidays found"
+            emptyStateDescription={
+              isAdmin
+                ? 'Get started by adding your first holiday'
+                : 'No holidays are currently available'
+            }
+            selection={{
+              enabled: selectionMode,
+              selectedIds,
+              onSelectionChange: setSelectedIds,
+            }}
+          />
         </div>
 
         {/* Add padding at bottom to prevent content from being hidden behind fixed pagination */}
