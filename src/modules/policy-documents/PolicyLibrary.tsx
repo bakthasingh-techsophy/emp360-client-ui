@@ -147,8 +147,10 @@ export function PolicyLibrary() {
   };
 
   const handleView = (policy: Policy) => {
+    console.log('policy:',policy)
     // Open document in new tab
     const latestVersion = getLatestVersion(policy.versionsIds);
+    console.log('latestVersion:',latestVersion)
     if (latestVersion?.documentUrl) {
       window.open(latestVersion.documentUrl, '_blank');
     }

@@ -86,6 +86,13 @@ export interface PolicyCarrier {
   expiryDate?: string;
   mandatory?: boolean;
   createdAt: string;
+    versionNumber: string;
+  documentId?: string;
+  documentUrl?: string;
+  sourceType: DocumentSourceType;
+  fileType?: "pdf" | "docx";
+  fileSize?: number; // in bytes
+  changeNotes?: string;
 }
 
 /**
