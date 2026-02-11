@@ -3,7 +3,7 @@
  * Manages user's pinned/visible menu items in sidebar (Outlook-style)
  */
 
-const MENU_PREFERENCES_KEY = 'emp360_menu_preferences';
+const MENU_PREFERENCES_KEY = "emp360_menu_preferences";
 
 export interface MenuPreferences {
   pinnedMenuIds: string[];
@@ -16,18 +16,19 @@ export interface MenuPreferences {
  * Focused on most commonly used HRMS features
  */
 const DEFAULT_PINNED_MENUS = [
-  'dashboard',
-  'visitor-management',
-  'room-booking',
-  'policy-library',
-  'expense-management',
-  'user-management',
-  'company-management',
-  'my-profile',
-  'leave-holiday',
-  'system-settings',
-  'attendance-management',
-  'project-list',
+  "dashboard",
+  "visitor-management",
+  "room-booking",
+  "policy-library",
+  "expense-management",
+  "user-management",
+  "company-management",
+  "my-profile",
+  "leave-holiday",
+  "system-settings",
+  "attendance-management",
+  "project-list",
+  "performance-reviews",
 ];
 
 /**
@@ -40,7 +41,7 @@ export function getMenuPreferences(): MenuPreferences {
       return JSON.parse(stored);
     }
   } catch (error) {
-    console.error('Failed to load menu preferences:', error);
+    console.error("Failed to load menu preferences:", error);
   }
 
   // Return defaults if nothing stored
@@ -48,7 +49,7 @@ export function getMenuPreferences(): MenuPreferences {
   DEFAULT_PINNED_MENUS.forEach((id, index) => {
     defaultOrder[id] = index;
   });
-  
+
   return {
     pinnedMenuIds: DEFAULT_PINNED_MENUS,
     menuOrder: defaultOrder,
@@ -64,7 +65,7 @@ export function saveMenuPreferences(preferences: MenuPreferences): void {
     preferences.lastUpdated = new Date().toISOString();
     localStorage.setItem(MENU_PREFERENCES_KEY, JSON.stringify(preferences));
   } catch (error) {
-    console.error('Failed to save menu preferences:', error);
+    console.error("Failed to save menu preferences:", error);
   }
 }
 
@@ -108,7 +109,7 @@ export function resetMenuPreferences(): void {
   DEFAULT_PINNED_MENUS.forEach((id, index) => {
     defaultOrder[id] = index;
   });
-  
+
   saveMenuPreferences({
     pinnedMenuIds: DEFAULT_PINNED_MENUS,
     menuOrder: defaultOrder,
@@ -123,11 +124,11 @@ export function resetMenuPreferences(): void {
 export function updateMenuOrder(orderedMenuIds: string[]): void {
   const prefs = getMenuPreferences();
   const newOrder: Record<string, number> = {};
-  
+
   orderedMenuIds.forEach((id, index) => {
     newOrder[id] = index;
   });
-  
+
   prefs.menuOrder = newOrder;
   prefs.pinnedMenuIds = orderedMenuIds;
   saveMenuPreferences(prefs);
@@ -139,7 +140,7 @@ export function updateMenuOrder(orderedMenuIds: string[]): void {
  */
 export function getOrderedPinnedMenuIds(): string[] {
   const prefs = getMenuPreferences();
-  
+
   return [...prefs.pinnedMenuIds].sort((a, b) => {
     const orderA = prefs.menuOrder[a] ?? Number.MAX_SAFE_INTEGER;
     const orderB = prefs.menuOrder[b] ?? Number.MAX_SAFE_INTEGER;
