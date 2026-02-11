@@ -1,56 +1,59 @@
 /**
  * Expense Management Types
  * Comprehensive type definitions for multi-level approval workflow
+ * Updated to match backend models
  */
 
 // ==================== Enums ====================
 
-export type ExpenseType = 'expense' | 'advance';
+export type ExpenseType = "expense" | "advance";
 
-export type ExpenseStatus = 
-  | 'draft'           // Created but not submitted
-  | 'pending'         // Submitted, awaiting approval
-  | 'approved'        // Fully approved (ready for payment)
-  | 'paid'           // Payment confirmed
-  | 'rejected'       // Rejected at any level
-  | 'cancelled';     // Cancelled by employee
+export type ExpenseStatus =
+  | "draft" // Created but not submitted
+  | "pending" // Submitted, awaiting approval
+  | "approved" // Fully approved (ready for payment)
+  | "paid" // Payment confirmed
+  | "rejected" // Rejected at any level
+  | "cancelled"; // Cancelled by employee
 
-export type ExpenseCategory = 
-  | 'travel'
-  | 'accommodation'
-  | 'meals'
-  | 'transportation'
-  | 'office_supplies'
-  | 'equipment'
-  | 'training'
-  | 'client_entertainment'
-  | 'software_licenses'
-  | 'other';
+export type ExpenseCategory =
+  | "travel"
+  | "accommodation"
+  | "meals"
+  | "transportation"
+  | "office_supplies"
+  | "equipment"
+  | "training"
+  | "client_entertainment"
+  | "software_licenses"
+  | "other";
 
-export type PaymentMethod = 
-  | 'cash'
-  | 'card'
-  | 'bank_transfer'
-  | 'cheque'
-  | 'digital_wallet';
+export type PaymentMethod =
+  | "cash"
+  | "card"
+  | "bank_transfer"
+  | "cheque"
+  | "digital_wallet";
 
-export type ApprovalLevel = 'level1' | 'level2' | 'level3';
+export type ApprovalAction =
+  | "approve"
+  | "reject"
+  | "return"
+  | "confirm_payment";
 
-export type ApprovalAction = 'approve' | 'reject' | 'return' | 'confirm_payment';
-
-export type UserRole = 
-  | 'employee'
-  | 'manager'          // Level 1 approver
-  | 'business_head'    // Level 2 approver
-  | 'finance'          // Level 3 approver
-  | 'admin';
+export type UserRole =
+  | "employee"
+  | "manager" // Level 1 approver
+  | "business_head" // Level 2 approver
+  | "finance" // Level 3 approver
+  | "admin";
 
 // ==================== Core Interfaces ====================
 
 // Individual expense line item within a claim
 export interface ExpenseLineItem {
   id: string;
-  category: ExpenseCategory;
+  category: string; // ExpenseCategory enum value
   description: string;
   amount: number;
   fromDate: string; // ISO date string - start date of expense
@@ -62,55 +65,53 @@ export interface ExpenseLineItem {
 export interface Expense {
   id: string;
   expenseNumber: string; // e.g., "EXP-2024-001"
-  
+
   // Type of claim
-  type: ExpenseType; // 'expense' or 'advance'
-  
+  type: string; // ExpenseType enum value
+
   // Employee details
   employeeId: string;
-  employeeName: string;
-  employeeEmail: string;
-  employeePhone: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
   department: string;
-  
+
   // Raised by details (for claims raised on behalf)
   raisedById?: string;
-  raisedByName?: string;
-  
+  raisedByFirstName?: string;
+  raisedByLastName?: string;
+
   // Temporary person details (if applicable)
   isTemporaryPerson?: boolean;
   temporaryPersonName?: string;
   temporaryPersonPhone?: string;
   temporaryPersonEmail?: string;
-  
+
   // Claim details
   description: string; // Main description/purpose
-  
-  // Line items - multiple expenses in one claim
-  lineItems: ExpenseLineItem[];
-  
+
+  // Line items - multiple expenses in one claim (IDs only)
+  lineItemIds?: string[];
+
   // Calculated totals
   amount: number; // Total amount (sum of line items or advance amount)
-  currency: string;
-  
+
   // Status and workflow
-  status: ExpenseStatus;
-  currentApprovalLevel: number; // Numeric approval level (1, 2, 3)
-  
-  // Approval history
-  approvalHistory: ApprovalRecord[];
-  
+  status: string; // ExpenseStatus enum value
+  currentApprovalLevel?: number; // Numeric approval level (1, 2, 3)
+
+  // Approval history (IDs only)
+  approvalHistoryIds?: string[];
+
+  // Payment confirmation (ID only)
+  paymentConfirmationId?: string;
+
   // Timestamps
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   submittedAt?: string;
-  completedAt?: string;
   paidAt?: string;
-  
-  // Additional metadata
-  tags?: string[];
-  notes?: string;
-  isUrgent?: boolean;
 }
 
 export interface ExpenseAttachment {
@@ -119,27 +120,83 @@ export interface ExpenseAttachment {
   url: string;
   type: string; // mime type
   size: number; // bytes
-  uploadedAt: string;
+  uploadedAt?: string;
 }
 
 export interface ApprovalRecord {
   id: string;
-  level: ApprovalLevel;
-  action: ApprovalAction;
-  approverId: string;
+  approvalLevel: number; // 1, 2, or 3
+  approverUserId: string;
   approverName: string;
-  approverRole: UserRole;
+  approverEmail: string;
+  action: string; // ApprovalAction enum value
   comments?: string;
-  timestamp: string;
-  
-  // For payment confirmation
-  paymentDetails?: PaymentConfirmation;
+  actionDate: string;
+  approverRole: string; // UserRole enum value
 }
 
 export interface PaymentConfirmation {
+  id?: string;
   paymentDate: string;
   paymentReference: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: string; // PaymentMethod enum value
+  transactionId?: string;
+  bankDetails?: string;
+}
+
+// ==================== Carrier Types for API ====================
+
+// Carrier for creating/updating expenses
+export interface ExpenseCarrier {
+  type: string; // ExpenseType enum value
+  employeeId?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  raisedById?: string;
+  raisedByFirstName?: string;
+  raisedByLastName?: string;
+  isTemporaryPerson?: boolean;
+  temporaryPersonName?: string;
+  temporaryPersonPhone?: string;
+  temporaryPersonEmail?: string;
+  description: string;
+  lineItemIds?: string[];
+  status: string; // ExpenseStatus enum value
+  currentApprovalLevel?: number;
+  approvalHistoryIds?: string[];
+  paymentConfirmationId?: string;
+  createdAt: string; // ISO date string
+}
+
+// Carrier for expense line items
+export interface ExpenseLineItemCarrier {
+  id: string;
+  category: string; // ExpenseCategory enum value
+  description: string;
+  amount: number;
+  fromDate: string; // ISO date string
+  toDate: string; // ISO date string
+  attachments?: ExpenseAttachmentCarrier[];
+  notes?: string;
+  createdAt: string;
+}
+
+// Carrier for expense attachments
+export interface ExpenseAttachmentCarrier {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
+
+// Carrier for payment confirmation
+export interface PaymentConfirmationCarrier {
+  id?: string;
+  paymentDate: string; // ISO date string
+  paymentReference: string;
+  paymentMethod: string; // PaymentMethod enum value
   transactionId?: string;
   bankDetails?: string;
 }
@@ -147,45 +204,35 @@ export interface PaymentConfirmation {
 // ==================== Workflow Configuration ====================
 
 export interface ApprovalLevelConfig {
-  level: ApprovalLevel;
+  level: number;
   name: string;
   description: string;
-  requiredRoles: UserRole[];
+  requiredRoles: string[];
   availableActions: ApprovalActionConfig[];
   autoApproveThreshold?: number; // Auto-approve if amount is below this
   notificationRecipients: string[]; // Email addresses or user IDs
 }
 
 export interface ApprovalActionConfig {
-  action: ApprovalAction;
+  action: string;
   label: string;
   icon?: string;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary';
+  variant?: "default" | "destructive" | "outline" | "secondary";
   requiresComment?: boolean;
   requiresPaymentDetails?: boolean;
-  nextStatus: ExpenseStatus;
+  nextStatus: string;
   sideEffects: SideEffect[];
 }
 
 export interface SideEffect {
-  type: 'notification' | 'email' | 'webhook' | 'status_change' | 'assign_next_level';
+  type:
+    | "notification"
+    | "email"
+    | "webhook"
+    | "status_change"
+    | "assign_next_level";
   target?: string;
   payload?: Record<string, any>;
-}
-
-// ==================== Filter and Search ====================
-
-export interface ExpenseFilters {
-  status?: ExpenseStatus[];
-  category?: ExpenseCategory[];
-  dateFrom?: string;
-  dateTo?: string;
-  amountMin?: number;
-  amountMax?: number;
-  employeeId?: string;
-  department?: string;
-  isUrgent?: boolean;
-  currentLevel?: ApprovalLevel[];
 }
 
 export interface ExpenseStats {
@@ -204,35 +251,39 @@ export interface ExpenseStats {
 // Parent form data for entire expense/advance request
 export interface ExpenseFormData {
   // General Information
-  type: ExpenseType;
-  employeeName: string;
-  employeeEmail: string;
+  type: string; // ExpenseType enum value
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
   department: string;
   description: string;
-  
+
   // Line Items
-  lineItems: ExpenseLineItem[];
+  lineItems: ExpenseLineItemCarrier[];
+
+  // Optional fields
+  isTemporaryPerson?: boolean;
+  temporaryPersonName?: string;
+  temporaryPersonPhone?: string;
+  temporaryPersonEmail?: string;
 }
 
-// Single line item form data (legacy, kept for compatibility)
+// Single line item form data
 export interface ExpenseLineItemFormData {
-  category: ExpenseCategory;
+  category: string; // ExpenseCategory enum value
   description: string;
   amount: number;
-  expenseDate: string;
-  paymentMethod: PaymentMethod;
-  merchantName?: string;
-  receiptNumber?: string;
+  fromDate: string;
+  toDate: string;
   attachments?: File[];
-  tags?: string[];
   notes?: string;
-  isUrgent?: boolean;
 }
 
 export interface ApprovalFormData {
-  action: ApprovalAction;
+  action: string; // ApprovalAction enum value
   comments?: string;
-  paymentDetails?: PaymentConfirmation;
+  paymentDetails?: PaymentConfirmationCarrier;
 }
 
 // ==================== View Models ====================
@@ -243,13 +294,4 @@ export interface ExpenseListItem extends Expense {
   canEdit: boolean;
   canCancel: boolean;
   nextApproverName?: string;
-}
-
-export interface ApprovalDashboardData {
-  pendingCount: number;
-  approvedToday: number;
-  rejectedToday: number;
-  averageApprovalTime: number; // in hours
-  expenses: Expense[];
-  stats: ExpenseStats;
 }

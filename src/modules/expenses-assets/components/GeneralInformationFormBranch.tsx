@@ -3,7 +3,7 @@
  * Child form component for general request details (applicable to all request types)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { UsersSelector } from '@/components/context-aware/UsersSelector';
+import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
+import { ExpenseCategoryConfig } from '../types/settings.types';
 import { ExpenseFormData } from '../types/expense.types';
 
 interface GeneralInformationFormBranchProps {
@@ -27,14 +30,52 @@ interface GeneralInformationFormBranchProps {
 export function GeneralInformationFormBranch({ form }: GeneralInformationFormBranchProps) {
   const { watch } = form;
   const expenseType = watch('type');
+  const { searchExpenseCategories } = useExpenseManagement();
 
   // Local state for raising for options
   const [raisingFor, setRaisingFor] = useState<'myself' | 'employee' | 'temporary-person'>('myself');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-  const [temporaryPersonName, setTemporaryPersonName] = useState<string>('');
-  const [temporaryPersonPhone, setTemporaryPersonPhone] = useState<string>('');
-  const [temporaryPersonEmail, setTemporaryPersonEmail] = useState<string>('');
-  const [advanceAmount, setAdvanceAmount] = useState<string>('');
+  
+  // Expense category state
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryConfig[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+  // Fetch expense categories using context
+  useEffect(() => {
+    const fetchExpenseCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const result = await searchExpenseCategories(
+          {
+            filters: {},
+          },
+          0,
+          100
+        );
+        
+        if (result && result.content) {
+          setExpenseCategories(result.content);
+        }
+      } catch (error) {
+        console.error('Failed to fetch expense categories:', error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchExpenseCategories();
+  }, []);
+
+  // Set employeeId based on selection type
+  useEffect(() => {
+    if (raisingFor === 'myself') {
+      // Dummy employeeId for current logged in user
+      setSelectedEmployeeId('EMP-2024-001');
+    } else if (raisingFor === 'temporary-person') {
+      setSelectedEmployeeId('');
+    }
+  }, [raisingFor]);
 
   return (
     <Card>
@@ -79,17 +120,11 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
         {raisingFor === 'employee' && (
           <div className="space-y-2">
             <Label htmlFor="employee-select">Select Employee *</Label>
-            <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an employee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user-001">John Doe - Engineering</SelectItem>
-                <SelectItem value="user-002">Jane Smith - Marketing</SelectItem>
-                <SelectItem value="user-003">Mike Johnson - Engineering</SelectItem>
-                <SelectItem value="user-004">Sarah Williams - Marketing</SelectItem>
-              </SelectContent>
-            </Select>
+            <UsersSelector
+              value={selectedEmployeeId}
+              onChange={(userId) => setSelectedEmployeeId(userId)}
+              placeholder="Select an employee"
+            />
             <p className="text-xs text-muted-foreground">
               Select the employee for whom you are raising this request
             </p>
@@ -104,9 +139,8 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
               <Label htmlFor="temp-name">Full Name *</Label>
               <Input
                 id="temp-name"
-                value={temporaryPersonName}
-                onChange={(e) => setTemporaryPersonName(e.target.value)}
                 placeholder="Enter full name"
+                {...form.register('temporaryPersonName')}
               />
             </div>
             <div className="space-y-2">
@@ -114,9 +148,8 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
               <Input
                 id="temp-phone"
                 type="tel"
-                value={temporaryPersonPhone}
-                onChange={(e) => setTemporaryPersonPhone(e.target.value)}
                 placeholder="Enter phone number"
+                {...form.register('temporaryPersonPhone')}
               />
             </div>
             <div className="space-y-2">
@@ -124,9 +157,8 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
               <Input
                 id="temp-email"
                 type="email"
-                value={temporaryPersonEmail}
-                onChange={(e) => setTemporaryPersonEmail(e.target.value)}
                 placeholder="Enter email address"
+                {...form.register('temporaryPersonEmail')}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -135,33 +167,43 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
           </div>
         )}
 
-        {/* Advance Amount - Only for advance type */}
-        {expenseType === 'advance' && (
-          <div className="space-y-2">
-            <Label htmlFor="advance-amount">Advance Amount ($) *</Label>
-            <Input
-              id="advance-amount"
-              type="number"
-              step="0.01"
-              value={advanceAmount}
-              onChange={(e) => setAdvanceAmount(e.target.value)}
-              placeholder="0.00"
-            />
-          </div>
-        )}
-
-        {/* Notes */}
+        {/* Description */}
         <div className="space-y-2">
-          <Label htmlFor="notes">Additional Notes</Label>
+          <Label htmlFor="description">Purpose/Description *</Label>
           <Textarea
-            id="notes"
-            placeholder="Any additional information or special instructions"
-            rows={2}
+            id="description"
+            rows={3}
+            placeholder="Provide details about this expense/advance request"
+            className="resize-none"
+            {...form.register('description')}
           />
           <p className="text-xs text-muted-foreground">
-            Optional field for any extra details or context
+            Explain the purpose and nature of this request
           </p>
         </div>
+
+        {/* Expense Category - Only for expense type */}
+        {expenseType === 'expense' && (
+          <div className="space-y-2">
+            <Label htmlFor="expense-category">Expense Category *</Label>
+            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select expense category"} />
+              </SelectTrigger>
+              <SelectContent>
+                {expenseCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.category}
+                    {category.description && ` - ${category.description}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Select the category that best describes this expense
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

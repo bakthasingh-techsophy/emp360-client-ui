@@ -11,6 +11,7 @@ import { PolicyProvider } from './contexts/PolicyContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { VisitorManagementProvider } from './contexts/VisitorManagementContext';
 import { HolidayProvider } from './contexts/HolidayContext';
+import { ExpenseManagementProvider } from './contexts/ExpenseManagementContext';
 
 // Auth modules
 import { Login } from './modules/auth/Login';
@@ -126,7 +127,8 @@ function App() {
               <NotificationProvider>
                 <PolicyProvider>
                   <HolidayProvider>
-                    <BrowserRouter>
+                    <ExpenseManagementProvider>
+                      <BrowserRouter>
                     <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
@@ -261,16 +263,17 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-          </BrowserRouter>
-          <Toaster />
-        </HolidayProvider>
-        </PolicyProvider>
-      </NotificationProvider>
-    </UserManagementProvider>
-  </CompanyProvider>
-      </LayoutProvider>
-    </AuthProvider>
-  </ThemeProvider>
+                      </BrowserRouter>
+                      <Toaster />
+                    </ExpenseManagementProvider>
+                  </HolidayProvider>
+                </PolicyProvider>
+              </NotificationProvider>
+            </UserManagementProvider>
+          </CompanyProvider>
+        </LayoutProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
