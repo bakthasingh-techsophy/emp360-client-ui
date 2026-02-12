@@ -1,11 +1,15 @@
-import { DummyPage } from '@/components/common/DummyPage';
+/**
+ * Performance Reviews Module
+ * Full RBAC implementation with template builder, workflow engine, and score calculation
+ */
+
+import { PerformanceReviewProvider } from './context/PerformanceReviewContext';
+import { PerformanceReviewsPage } from './components/PerformanceReviewsPage';
 
 export function PerformanceReviews() {
   return (
-    <DummyPage
-      title="Performance Reviews / Appraisals"
-      description="Conduct periodic performance reviews, appraisals, and employee evaluations."
-      category="Performance & Development"
-    />
+    <PerformanceReviewProvider>
+      <PerformanceReviewsPage />
+    </PerformanceReviewProvider>
   );
 }
