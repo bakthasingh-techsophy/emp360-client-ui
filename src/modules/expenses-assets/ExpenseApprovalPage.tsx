@@ -234,7 +234,7 @@ export function ExpenseApprovalPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg">
-                    {expense.expenseNumber}
+                    {expense.firstName} {expense.lastName} - {expense.id}
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">

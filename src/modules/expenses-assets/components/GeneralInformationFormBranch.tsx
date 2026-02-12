@@ -28,17 +28,14 @@ interface GeneralInformationFormBranchProps {
 }
 
 export function GeneralInformationFormBranch({ form }: GeneralInformationFormBranchProps) {
-  const { watch } = form;
+  const { watch, setValue } = form;
   const expenseType = watch('type');
+  const raisedFor = watch('raisedFor') || 'myself';
+  const selectedEmployeeId = watch('raisedByEmployeeId') || '';
   const { searchExpenseCategories } = useExpenseManagement();
 
-  // Local state for raising for options
-  const [raisingFor, setRaisingFor] = useState<'myself' | 'employee' | 'temporary-person'>('myself');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-  
   // Expense category state
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryConfig[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // Fetch expense categories using context
@@ -67,16 +64,6 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
     fetchExpenseCategories();
   }, []);
 
-  // Set employeeId based on selection type
-  useEffect(() => {
-    if (raisingFor === 'myself') {
-      // Dummy employeeId for current logged in user
-      setSelectedEmployeeId('EMP-2024-001');
-    } else if (raisingFor === 'temporary-person') {
-      setSelectedEmployeeId('');
-    }
-  }, [raisingFor]);
-
   return (
     <Card>
       <CardHeader>
@@ -92,8 +79,10 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
             Raising this request for *
           </Label>
           <RadioGroup
-            value={raisingFor}
-            onValueChange={(value) => setRaisingFor(value as 'myself' | 'employee' | 'temporary-person')}
+            value={raisedFor}
+            onValueChange={(value) => {
+              setValue('raisedFor', value as 'myself' | 'employee' | 'temporary-person');
+            }}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="myself" id="myself" />
@@ -117,12 +106,12 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
         </div>
 
         {/* Employee Selection */}
-        {raisingFor === 'employee' && (
+        {raisedFor === 'employee' && (
           <div className="space-y-2">
             <Label htmlFor="employee-select">Select Employee *</Label>
             <UsersSelector
               value={selectedEmployeeId}
-              onChange={(userId) => setSelectedEmployeeId(userId)}
+              onChange={(userId) => setValue('raisedByEmployeeId', userId)}
               placeholder="Select an employee"
             />
             <p className="text-xs text-muted-foreground">
@@ -132,7 +121,7 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
         )}
 
         {/* Temporary Person Details */}
-        {raisingFor === 'temporary-person' && (
+        {raisedFor === 'temporary-person' && (
           <div className="space-y-4 p-4 bg-accent/50 rounded-lg">
             <p className="text-sm font-medium">Person Details</p>
             <div className="space-y-2">
@@ -186,7 +175,7 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
         {expenseType === 'expense' && (
           <div className="space-y-2">
             <Label htmlFor="expense-category">Expense Category *</Label>
-            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+            <Select value={watch('expenseCategoryId') || ''} onValueChange={(value) => setValue('expenseCategoryId', value)}>
               <SelectTrigger>
                 <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select expense category"} />
               </SelectTrigger>

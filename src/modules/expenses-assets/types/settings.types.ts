@@ -50,4 +50,3 @@ export interface IntimationWorkflowConfig {
   description?: string;
   levels: IntimationLevel[];
 }
-

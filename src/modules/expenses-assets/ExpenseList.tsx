@@ -9,7 +9,6 @@ import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockExpenses } from './data/mockData';
 import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
 import { ExpenseTable } from './components/ExpenseTable';
 import { IntimationList } from './IntimationList';
@@ -18,6 +17,7 @@ import { Bell, Plus, Settings } from 'lucide-react';
 
 export function ExpenseList() {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [parentTab, setParentTab] = useState('expenses');
   const [activeTab, setActiveTab] = useState('all');
@@ -26,7 +26,7 @@ export function ExpenseList() {
   const allColumns = [
     { id: 'employeeId', label: 'Employee ID' },
     { id: 'employeeName', label: 'Name' },
-    { id: 'employeeEmail', label: 'Contact Info' },
+    { id: 'contact', label: 'Contact Info' },
     { id: 'description', label: 'Request Details' },
     { id: 'amount', label: 'Amount' },
     { id: 'paidAt', label: 'Paid At' },
@@ -38,28 +38,6 @@ export function ExpenseList() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     allColumns.map(col => col.id)
   );
-
-  // Filter expenses by tab
-  const allExpenses = mockExpenses;
-  const draftExpenses = allExpenses.filter(e => e.status === 'draft');
-  const pendingExpenses = allExpenses.filter(e => e.status === 'pending');
-  const approvedExpenses = allExpenses.filter(e => e.status === 'approved');
-  const rejectedExpenses = allExpenses.filter(e => e.status === 'rejected');
-  const cancelledExpenses = allExpenses.filter(e => e.status === 'cancelled');
-
-  // Get current tab expenses
-  const getCurrentExpenses = () => {
-    switch (activeTab) {
-      case 'draft': return draftExpenses;
-      case 'pending': return pendingExpenses;
-      case 'approved': return approvedExpenses;
-      case 'rejected': return rejectedExpenses;
-      case 'cancelled': return cancelledExpenses;
-      default: return allExpenses;
-    }
-  };
-
-  const currentExpenses = getCurrentExpenses();
 
   // Filter fields
   const filterFields: AvailableFilter[] = [
@@ -126,7 +104,7 @@ export function ExpenseList() {
                 <Bell className="h-4 w-4 mr-2" />
                 New Intimation
               </Button>
-              <Button onClick={() => navigate('/expense-management/new')}>
+              <Button onClick={() => navigate('/expense-management/expense?mode=create')}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Expense
               </Button>
@@ -136,16 +114,18 @@ export function ExpenseList() {
           <TabsContent value="expenses" className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList>
-                <TabsTrigger value="all">All ({allExpenses.length})</TabsTrigger>
-                <TabsTrigger value="draft">Draft ({draftExpenses.length})</TabsTrigger>
-                <TabsTrigger value="pending">Pending ({pendingExpenses.length})</TabsTrigger>
-                <TabsTrigger value="approved">Approved ({approvedExpenses.length})</TabsTrigger>
-                <TabsTrigger value="rejected">Rejected ({rejectedExpenses.length})</TabsTrigger>
-                <TabsTrigger value="cancelled">Cancelled ({cancelledExpenses.length})</TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="draft">Draft</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="approved">Approved</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected</TabsTrigger>
+                <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab} className="space-y-4">
                 <GenericToolbar
+                  searchPlaceholder="Search expenses..."
+                  onSearchChange={setSearchQuery}
                   showFilters={true}
                   availableFilters={filterFields}
                   activeFilters={activeFilters}
@@ -160,8 +140,8 @@ export function ExpenseList() {
 
                 <div className="mt-4">
                   <ExpenseTable 
-                    data={currentExpenses} 
-                    loading={false}
+                    searchQuery={searchQuery}
+                    activeFilters={activeFilters}
                     visibleColumns={visibleColumns}
                   />
                 </div>

@@ -97,7 +97,7 @@ export function EmployeeExpenseList() {
 
   // Apply filters
   let filteredExpenses = userExpenses.filter(expense => {
-    if (searchQuery && !expense.expenseNumber.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    if (searchQuery && !expense.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !expense.description.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }

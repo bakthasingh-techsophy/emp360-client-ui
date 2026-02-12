@@ -1,16 +1,16 @@
 /**
  * Expense Form - Parent Form Component
  * Integrates multiple branch forms for expense/advance management
+ * Modes: create, edit&id=xxx
  */
 
 import { useEffect } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { PageLayout } from "@/components/PageLayout";
 import { FormHeader } from "@/components/common/FormHeader";
 import { GeneralInformationFormBranch } from "./components/GeneralInformationFormBranch";
 import { ExpenseItemsFormBranch } from "./components/ExpenseItemsFormBranch";
-import { mockExpenses } from "./data/mockData";
 import {
   ExpenseFormData,
   ExpenseType,
@@ -22,31 +22,32 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function ExpenseForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const isEdit = !!id;
+
+  // Get mode and id from URL params
+  const mode = searchParams.get("mode") || "create"; // create, edit
+  const id = searchParams.get("id");
+  const isEdit = mode === "edit" && !!id;
 
   // Context hooks
-  const { createExpense, updateExpense, isLoading } = useExpenseManagement();
+  const { createExpense, updateExpense, getExpenseDetails, isLoading } =
+    useExpenseManagement();
   const { user } = useAuth();
 
   // Get type from URL params, default to 'expense'
   const claimType: ExpenseType =
     (searchParams.get("type") as ExpenseType) || "expense";
 
-  // Find expense if editing
-  const existingExpense = isEdit ? mockExpenses.find((e) => e.id === id) : null;
-
   // Initialize form with react-hook-form
   const form = useForm<ExpenseFormData>({
     defaultValues: {
-      type: existingExpense?.type || claimType,
-      description: existingExpense?.description || "",
-      lineItems: [], // Line items are loaded separately in edit mode
-      isTemporaryPerson: existingExpense?.isTemporaryPerson || false,
-      temporaryPersonName: existingExpense?.temporaryPersonName || "",
-      temporaryPersonPhone: existingExpense?.temporaryPersonPhone || "",
-      temporaryPersonEmail: existingExpense?.temporaryPersonEmail || "",
+      type: claimType,
+      raisedFor: "myself",
+      description: "",
+      lineItems: [],
+      temporaryPersonName: "",
+      temporaryPersonPhone: "",
+      temporaryPersonEmail: "",
     },
   });
 
@@ -58,12 +59,30 @@ export function ExpenseForm() {
   const expenseType = watch("type");
   const lineItems = watch("lineItems") || [];
 
-  // Update form when expense type changes from URL
-  useEffect(() => {
-    if (claimType) {
-      form.setValue("type", claimType);
+  // Load expense data if in edit mode
+  const loadExpense = async () => {
+    if (isEdit && id) {
+      // Context method handles all error handling, loading states, and token validation
+      const expense = await getExpenseDetails(id);
+      if (expense) {
+        // Update form with loaded data
+        form.reset({
+          type: expense.type as ExpenseType,
+          raisedFor: expense.raisedFor,
+          description: expense.description,
+          expenseCategoryId: expense.expenseCategoryId,
+          lineItems: [], // Line items loaded separately in edit mode
+          temporaryPersonName: expense.temporaryPersonName || "",
+          temporaryPersonPhone: expense.temporaryPersonPhone || "",
+          temporaryPersonEmail: expense.temporaryPersonEmail || "",
+        });
+      }
     }
-  }, [claimType, form]);
+  };
+
+  useEffect(() => {
+    loadExpense();
+  }, [isEdit, id, form]);
 
   const calculateTotal = () => {
     return lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -92,7 +111,7 @@ export function ExpenseForm() {
 
   const onSaveGeneralInfoAndAddExpenses = async () => {
     // Validate general information fields
-    const generalInfoValid = await form.trigger(["description"]);
+    const generalInfoValid = await form.trigger(["description", "expenseCategoryId"]);
 
     if (!generalInfoValid) {
       console.warn("Please fill all required fields");
@@ -106,22 +125,43 @@ export function ExpenseForm() {
       return;
     }
 
-    // Build expense carrier with general information
+    // Determine values based on raisedFor selection
+    let employeeId: string | undefined;
+    let raisedByEmployeeId: string | undefined;
+
+    if (formData.raisedFor === "myself") {
+      // Raising for self
+      employeeId = user?.id;
+      raisedByEmployeeId = undefined; // Not needed when raising for self
+    } else if (formData.raisedFor === "employee") {
+      // Raising for another employee
+      employeeId = formData.raisedByEmployeeId; // The selected employee
+      raisedByEmployeeId = user?.id; // Current user is raising this
+    } else if (formData.raisedFor === "temporary-person") {
+      // Raising for temporary/external person
+      employeeId = undefined; // No employee ID for temporary person
+      raisedByEmployeeId = user?.id; // Current user is raising this
+    }
+
+    // Build expense carrier with minimal required fields matching backend
     const expenseCarrier: ExpenseCarrier = {
       type: formData.type || claimType,
-      employeeId: user?.id,
-      firstName: formData.firstName || user?.name?.split(" ")[0],
-      lastName: formData.lastName || user?.name?.split(" ")[1],
-      email: user?.email || formData.email || "",
+      companyId: user?.companyId || user?.orgId || "",
+      raisedFor: formData.raisedFor || "myself",
       description: formData.description,
-      lineItemIds: [],
-      status: "draft",
-      currentApprovalLevel: 1,
-      isTemporaryPerson: formData.isTemporaryPerson,
-      temporaryPersonName: formData.temporaryPersonName,
-      temporaryPersonPhone: formData.temporaryPersonPhone,
-      temporaryPersonEmail: formData.temporaryPersonEmail,
+      expenseCategoryId: formData.expenseCategoryId || "",
       createdAt: new Date().toISOString(),
+      
+      // Conditional fields based on raisedFor
+      ...(employeeId && { employeeId }),
+      ...(raisedByEmployeeId && { raisedByEmployeeId }),
+      
+      // Temporary person details
+      ...(formData.raisedFor === "temporary-person" && {
+        temporaryPersonName: formData.temporaryPersonName,
+        temporaryPersonPhone: formData.temporaryPersonPhone,
+        temporaryPersonEmail: formData.temporaryPersonEmail,
+      }),
     };
 
     // Call create expense API
@@ -129,7 +169,7 @@ export function ExpenseForm() {
 
     if (createdExpense && createdExpense.id) {
       // Navigate to edit mode with the newly created expense ID
-      navigate(`/expense-management/expense/${createdExpense.id}/edit`);
+      navigate(`/expense-management/expense?mode=edit&id=${createdExpense.id}`);
     }
   };
 
@@ -177,8 +217,8 @@ export function ExpenseForm() {
         : "Update your expense claim details";
     }
     return expenseType === "advance"
-      ? "Request advance payment for upcoming expenses"
-      : "Submit expenses from your business trip or activities";
+      ? "Create a new advance request"
+      : "Create a new expense claim";
   };
 
   return (

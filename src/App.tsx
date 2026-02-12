@@ -200,6 +200,7 @@ function App() {
 
                 {/* Expenses, Travel & Assets routes - Flat paths */}
                 <Route path="/expense-management" element={<ExpenseManagement />} />
+                <Route path="/expense-management/expense" element={<ExpenseForm />} />
                 <Route path="/expense-management/settings" element={<ExpenseSettings />} />
                 <Route path="/expense-management/new" element={<ExpenseForm />} />
                 <Route path="/expense-management/edit/:id" element={<ExpenseForm />} />

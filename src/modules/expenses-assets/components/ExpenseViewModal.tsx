@@ -256,7 +256,7 @@ export function ExpenseViewModal({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <DialogTitle className="text-xl">{expense.expenseNumber}</DialogTitle>
+                <DialogTitle className="text-xl">{expense.firstName} {expense.lastName} - {expense.id}</DialogTitle>
                 <Badge className={EXPENSE_STATUS_COLORS[expense.status]}>
                   {EXPENSE_STATUS_LABELS[expense.status]}
                 </Badge>

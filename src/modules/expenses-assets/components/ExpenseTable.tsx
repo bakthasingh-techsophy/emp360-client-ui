@@ -1,10 +1,15 @@
 /**
  * Expense Table Component
  * Displays expense/advance requests in a data table
+ * Uses ExpenseSnapshot for optimized rendering
+ * Implements search, filtering, pagination with context integration
  */
 
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/common/DataTable';
+import { DataTableRef } from '@/components/common/DataTable/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,38 +18,138 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
-import { Copy } from 'lucide-react';
-import { Expense } from '../types/expense.types';
+import { Eye, Edit, Trash2, MoreVertical, Copy, Check } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { ExpenseSnapshot } from '../types/expense.types';
 import { EXPENSE_STATUS_LABELS, EXPENSE_STATUS_COLORS } from '../constants/expense.constants';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 import { ExpenseViewModal } from './ExpenseViewModal';
-import { useState } from 'react';
+import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
+import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 interface ExpenseTableProps {
-  data: Expense[];
-  loading?: boolean;
-  visibleColumns?: string[];
+  searchQuery: string;
+  activeFilters: ActiveFilter[];
+  visibleColumns: string[];
+  refreshTrigger?: number;
 }
 
-export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseTableProps) {
+export function ExpenseTable({ 
+  searchQuery, 
+  activeFilters, 
+  visibleColumns,
+  refreshTrigger = 0 
+}: ExpenseTableProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const { searchExpenseSnapshots, isLoading } = useExpenseManagement();
+  const tableRef = useRef<DataTableRef>(null);
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied!',
-      description: `${label} copied to clipboard`,
-      duration: 2000,
-    });
+  // Table state
+  const [tableData, setTableData] = useState<ExpenseSnapshot[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<ExpenseSnapshot | null>(null);
+
+  // Ref to track previous dependency values
+  const prevDepsRef = useRef<{
+    activeFilters: ActiveFilter[];
+    searchQuery: string;
+    pageIndex: number;
+    pageSize: number;
+    refreshTrigger: number;
+  } | null>(null);
+
+  // Copy to clipboard
+  const copyToClipboard = useCallback(async (text: string, fieldId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldId);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }, []);
+
+  // Action handlers
+  const handleViewExpense = useCallback((expense: ExpenseSnapshot) => {
+    setSelectedExpense(expense);
+    setViewModalOpen(true);
+  }, []);
+
+  const handleEditExpense = useCallback(
+    (expense: ExpenseSnapshot) => {
+      navigate(`/expense-management/expense?mode=edit&id=${expense.id}`);
+    },
+    [navigate],
+  );
+
+  // Fetch data from API
+  const fetchData = async () => {
+    try {
+      const searchRequest = buildUniversalSearchRequest(
+        activeFilters,
+        searchQuery,
+        ['description', 'type', 'firstName', 'lastName', 'email', 'employeeId'],
+      );
+
+      const result = await searchExpenseSnapshots(
+        searchRequest,
+        pageIndex,
+        pageSize,
+      );
+
+      if (result) {
+        setTableData(result.content || []);
+        setTotalItems(result.totalElements || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching expense snapshots:', error);
+    }
   };
 
-  const columns: ColumnDef<Expense>[] = [
+  // Fetch data when filters or search change
+  useEffect(() => {
+    const depsChanged =
+      !prevDepsRef.current ||
+      JSON.stringify(prevDepsRef.current.activeFilters) !==
+        JSON.stringify(activeFilters) ||
+      prevDepsRef.current.searchQuery !== searchQuery ||
+      prevDepsRef.current.pageIndex !== pageIndex ||
+      prevDepsRef.current.pageSize !== pageSize ||
+      prevDepsRef.current.refreshTrigger !== refreshTrigger;
+
+    if (!depsChanged) return;
+
+    prevDepsRef.current = {
+      activeFilters,
+      searchQuery,
+      pageIndex,
+      pageSize,
+      refreshTrigger,
+    };
+
+    fetchData();
+  }, [activeFilters, searchQuery, pageIndex, pageSize, refreshTrigger]);
+
+  // Initial load on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Define table columns - memoized to prevent unnecessary re-renders
+  const columns: ColumnDef<ExpenseSnapshot>[] = useMemo(
+    () => [
     {
       id: 'employeeId',
       accessorKey: 'employeeId',
@@ -55,45 +160,82 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
     },
     {
       id: 'employeeName',
-      accessorKey: 'employeeName',
       header: 'Name',
       cell: ({ row }) => (
         <div className="space-y-0.5">
-          <div className="font-medium">{row.original.employeeName}</div>
+          <div className="font-medium">{row.original.firstName} {row.original.lastName}</div>
           <div className="text-xs text-muted-foreground">{row.original.department}</div>
         </div>
       ),
     },
     {
-      id: 'employeeEmail',
-      accessorKey: 'employeeEmail',
+      id: 'contact',
       header: 'Contact Info',
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs truncate max-w-[160px]">{row.original.employeeEmail}</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-4 w-4 p-0 hover:bg-accent shrink-0"
-              onClick={() => copyToClipboard(row.original.employeeEmail, 'Email')}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
+      cell: ({ row }) => {
+        const expense = row.original;
+        const emailId = `email-${expense.id}`;
+        const phoneId = `phone-${expense.id}`;
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{expense.email}</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(expense.email, emailId);
+                      }}
+                    >
+                      {copiedField === emailId ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy email</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {expense.phone}
+              </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(expense.phone, phoneId);
+                      }}
+                    >
+                      {copiedField === phoneId ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy phone</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs">{row.original.employeePhone}</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-4 w-4 p-0 hover:bg-accent shrink-0"
-              onClick={() => copyToClipboard(row.original.employeePhone, 'Phone')}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       id: 'description',
@@ -106,7 +248,7 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
             {row.original.description}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {row.original.lineItems.length} {row.original.lineItems.length === 1 ? 'item' : 'items'}
+            {row.original.lineItemCount} {row.original.lineItemCount === 1 ? 'item' : 'items'}
           </div>
         </div>
       ),
@@ -151,10 +293,11 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => {
-        const colorClass = EXPENSE_STATUS_COLORS[row.original.status];
+        const status = row.original.status as keyof typeof EXPENSE_STATUS_COLORS;
+        const colorClass = EXPENSE_STATUS_COLORS[status];
         return (
           <Badge className={colorClass}>
-            {EXPENSE_STATUS_LABELS[row.original.status]}
+            {EXPENSE_STATUS_LABELS[status]}
           </Badge>
         );
       },
@@ -207,7 +350,7 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => navigate(`/expense-management/edit/${expense.id}`)}
+                  onClick={() => navigate(`/expense-management/expense?mode=edit&id=${expense.id}`)}
                   disabled={!isDraft}
                 >
                   <Edit className="h-4 w-4 mr-2" />
@@ -227,19 +370,44 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
         );
       },
     },
-  ];
+    ],
+    [copyToClipboard, copiedField, handleViewExpense, handleEditExpense, navigate],
+  );
 
-  // Filter columns based on visibility
-  const visibleColumnsData = visibleColumns 
-    ? columns.filter(col => col.id && visibleColumns.includes(col.id))
-    : columns;
+  // Filter columns based on visibleColumns prop
+  const filteredColumns = useMemo(
+    () =>
+      columns.filter((column: any) => {
+        // Always include action columns
+        if (column.id === 'actions') {
+          return true;
+        }
+        // For other columns, check if id is in visibleColumns
+        if (column.id) {
+          return visibleColumns.includes(column.id);
+        }
+        return true;
+      }),
+    [columns, visibleColumns],
+  );
 
   return (
     <>
       <DataTable
-        data={data}
-        columns={visibleColumnsData}
-        loading={loading}
+        ref={tableRef}
+        data={tableData}
+        columns={filteredColumns}
+        loading={isLoading}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalPages: Math.ceil(totalItems / pageSize),
+          totalItems,
+          onPageChange: setPageIndex,
+          onPageSizeChange: setPageSize,
+        }}
+        paginationVariant="default"
+        fixedPagination={true}
         emptyState={{
           title: 'No expenses found',
           description: 'Try adjusting your filters or create a new expense',
@@ -255,14 +423,14 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
         }}
         onEdit={(expense) => {
           setViewModalOpen(false);
-          navigate(`/expense-management/edit/${expense.id}`);
+          navigate(`/expense-management/expense?mode=edit&id=${expense.id}`);
         }}
         onApprove={(expense) => {
           console.log('Approve', expense.id);
           setViewModalOpen(false);
           toast({
             title: 'Approved',
-            description: `Expense ${expense.expenseNumber} has been approved`,
+            description: `Expense ${expense.id} has been approved`,
           });
         }}
         onReject={(expense) => {
@@ -270,7 +438,7 @@ export function ExpenseTable({ data, loading = false, visibleColumns }: ExpenseT
           setViewModalOpen(false);
           toast({
             title: 'Rejected',
-            description: `Expense ${expense.expenseNumber} has been rejected`,
+            description: `Expense ${expense.id} has been rejected`,
           });
         }}
       />

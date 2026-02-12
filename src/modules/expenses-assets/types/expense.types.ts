@@ -64,10 +64,12 @@ export interface ExpenseLineItem {
 
 export interface Expense {
   id: string;
-  expenseNumber: string; // e.g., "EXP-2024-001"
+  companyId: string; // Company ID for the expense
 
   // Type of claim
   type: string; // ExpenseType enum value
+  // Raised for details (myself, another employee, or temporary person)
+  raisedFor?: "myself" | "employee" | "temporary-person"; // Who this expense is for
 
   // Employee details
   employeeId: string;
@@ -78,18 +80,16 @@ export interface Expense {
   department: string;
 
   // Raised by details (for claims raised on behalf)
-  raisedById?: string;
-  raisedByFirstName?: string;
-  raisedByLastName?: string;
+  raisedByEmployeeId?: string;
 
-  // Temporary person details (if applicable)
-  isTemporaryPerson?: boolean;
+  // Temporary person details (if applicable - only when raisedFor="temporary-person")
   temporaryPersonName?: string;
   temporaryPersonPhone?: string;
   temporaryPersonEmail?: string;
 
   // Claim details
   description: string; // Main description/purpose
+  expenseCategoryId?: string; // Selected expense category ID (for expense type only)
 
   // Line items - multiple expenses in one claim (IDs only)
   lineItemIds?: string[];
@@ -147,26 +147,27 @@ export interface PaymentConfirmation {
 // ==================== Carrier Types for API ====================
 
 // Carrier for creating/updating expenses
+// Minimal required fields for backend API
 export interface ExpenseCarrier {
-  type: string; // ExpenseType enum value
-  employeeId?: string;
-  firstName?: string;
-  lastName?: string;
-  email: string;
-  raisedById?: string;
-  raisedByFirstName?: string;
-  raisedByLastName?: string;
-  isTemporaryPerson?: boolean;
-  temporaryPersonName?: string;
-  temporaryPersonPhone?: string;
+  // Required fields
+  type: string; // ExpenseType enum value - required
+  companyId: string;
+  raisedFor: string; // "myself" | "employee" | "temporary-person" - required
+  description: string; // max 1000 characters - required
+  expenseCategoryId: string; // required for expense type
+
+  // Conditional required fields
+  employeeId?: string; // Employee ID (required when raisedFor="myself" or "employee")
+  raisedByEmployeeId?: string; // Employee ID who raised this (mandatory if raisedFor != "myself", else null)
+
+  // Temporary person fields (when raisedFor="temporary-person")
+  temporaryPersonName?: string; // max 100 characters
+  temporaryPersonPhone?: string; // max 20 characters
   temporaryPersonEmail?: string;
-  description: string;
-  lineItemIds?: string[];
-  status: string; // ExpenseStatus enum value
-  currentApprovalLevel?: number;
-  approvalHistoryIds?: string[];
-  paymentConfirmationId?: string;
-  createdAt: string; // ISO date string
+
+  // Additional metadata (may be removed if not needed by backend)
+  status?: string;
+  createdAt: string; // ISO date string - required
 }
 
 // Carrier for expense line items
@@ -252,21 +253,19 @@ export interface ExpenseStats {
 export interface ExpenseFormData {
   // General Information
   type: string; // ExpenseType enum value
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  department: string;
+  raisedFor?: "myself" | "employee" | "temporary-person"; // Who this expense is for
+  raisedByEmployeeId?: string; // Employee ID who raised this (current user if raisedFor != "myself")
+  employeeId?: string; // Employee ID (for "myself" or "employee" raisedFor)
   description: string;
+  expenseCategoryId?: string; // Selected expense category ID
 
-  // Line Items
-  lineItems: ExpenseLineItemCarrier[];
-
-  // Optional fields
-  isTemporaryPerson?: boolean;
+  // Temporary person details (only when raisedFor="temporary-person")
   temporaryPersonName?: string;
   temporaryPersonPhone?: string;
   temporaryPersonEmail?: string;
+
+  // Line Items
+  lineItems: ExpenseLineItemCarrier[];
 }
 
 // Single line item form data
@@ -294,4 +293,24 @@ export interface ExpenseListItem extends Expense {
   canEdit: boolean;
   canCancel: boolean;
   nextApproverName?: string;
+}
+
+/**
+ * ExpenseSnapshot
+ * Lightweight snapshot of expense data optimized for table rendering
+ * Extends Expense with cached computed fields for improved performance
+ * Eliminates expensive calculations (e.g., array length) during rendering
+ */
+export interface ExpenseSnapshot extends Expense {
+  /**
+   * Cached line item count for faster table rendering
+   * Avoids calculating length from lineItemIds array on every render
+   */
+  lineItemCount: number;
+
+  /**
+   * Raised by details for display purposes (populated from raised by employee details)
+   */
+  raisedByFirstName?: string;
+  raisedByLastName?: string;
 }

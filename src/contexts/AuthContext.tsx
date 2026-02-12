@@ -34,6 +34,7 @@ interface User {
   email: string;
   role: UserRole;
   orgId?: string;
+  companyId?: string;
 }
 
 interface SessionPayload {

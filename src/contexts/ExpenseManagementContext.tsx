@@ -41,8 +41,6 @@ import {
 
 // Expense Service
 import {
-  apiCreateExpense,
-  apiGetExpenseById,
   apiUpdateExpense,
   apiSearchExpenses,
   apiDeleteExpense,
@@ -50,6 +48,9 @@ import {
   apiBulkUpdateExpenses,
   BulkUpdatePayload,
 } from "@/services/expenseService";
+
+// Expense Management Service
+import * as expenseManagementService from "@/services/expenseManagementService";
 
 // Expense Line Item Service
 import {
@@ -122,7 +123,6 @@ interface ExpenseManagementContextType {
   createExpense: (
     carrier: ExpenseCarrier
   ) => Promise<Expense | null>;
-  getExpenseById: (id: string) => Promise<Expense | null>;
   updateExpense: (
     id: string,
     payload: UpdatePayload
@@ -135,6 +135,16 @@ interface ExpenseManagementContextType {
   deleteExpense: (id: string) => Promise<boolean>;
   bulkDeleteExpenses: (ids: string[]) => Promise<boolean>;
   bulkUpdateExpenses: (payload: BulkUpdatePayload) => Promise<Expense[] | null>;
+
+  // Expense Management Service Methods (from expenseManagementService)
+  // Note: These methods handle token validation, error handling, and loading states
+  getExpenseDetails: (id: string) => Promise<Expense | null>;
+  getExpenseSnapshot: (id: string) => Promise<any | null>;
+  searchExpenseSnapshots: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<any> | null>;
 
   // Expense Line Item Methods
   createExpenseLineItem: (
@@ -389,20 +399,9 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
   ): Promise<Expense | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
-        apiCreateExpense(carrier, tenant, accessToken),
+        expenseManagementService.apiCreateExpense(carrier, tenant, accessToken),
       "Create Expense",
       "Expense created successfully"
-    ) as Promise<Expense | null>;
-  };
-
-  const getExpenseById = async (
-    id: string
-  ): Promise<Expense | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiGetExpenseById(id, tenant, accessToken),
-      "Fetch Expense",
-      ""
     ) as Promise<Expense | null>;
   };
 
@@ -460,6 +459,49 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
       "Bulk Update Expenses",
       "Expenses updated successfully"
     ) as Promise<Expense[] | null>;
+  };
+
+  // ==================== EXPENSE MANAGEMENT SERVICE METHODS ====================
+
+  const getExpenseDetails = async (
+    id: string
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetExpenseDetails(id, tenant, accessToken),
+      "Fetch Expense Details",
+      ""
+    ) as Promise<Expense | null>;
+  };
+
+  const getExpenseSnapshot = async (
+    id: string
+  ): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetExpenseSnapshot(id, tenant, accessToken),
+      "Fetch Expense Snapshot",
+      ""
+    ) as Promise<any | null>;
+  };
+
+  const searchExpenseSnapshots = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiSearchExpenseSnapshots(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken
+        ),
+      "Fetch Expense Snapshots",
+      ""
+    ) as Promise<any | null>;
   };
 
   // ==================== EXPENSE LINE ITEM METHODS ====================
@@ -561,12 +603,16 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
 
     // Expense Methods
     createExpense,
-    getExpenseById,
     updateExpense,
     searchExpenses,
     deleteExpense,
     bulkDeleteExpenses,
     bulkUpdateExpenses,
+
+    // Expense Management Service Methods
+    getExpenseDetails,
+    getExpenseSnapshot,
+    searchExpenseSnapshots,
 
     // Expense Line Item Methods
     createExpenseLineItem,
