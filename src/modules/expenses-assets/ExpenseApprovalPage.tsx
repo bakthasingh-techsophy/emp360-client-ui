@@ -213,7 +213,7 @@ export function ExpenseApprovalPage() {
     </div>
   );
 
-  const originalTotal = expense.amount;
+  const originalTotal = expense.totalRequestedAmount || 0;
   const adjustedTotal = calculateTotal();
   const hasAdjustments = originalTotal !== adjustedTotal;
 

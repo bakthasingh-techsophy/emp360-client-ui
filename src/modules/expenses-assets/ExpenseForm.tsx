@@ -4,7 +4,7 @@
  * Modes: create, edit&id=xxx
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { PageLayout } from "@/components/PageLayout";
@@ -19,20 +19,33 @@ import {
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { useExpenseManagement } from "@/contexts/ExpenseManagementContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayoutContext } from "@/contexts/LayoutContext";
 
 export function ExpenseForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { setHideCompanySelector } = useLayoutContext();
 
   // Get mode and id from URL params
   const mode = searchParams.get("mode") || "create"; // create, edit
   const id = searchParams.get("id");
   const isEdit = mode === "edit" && !!id;
 
+  // State for line item IDs from loaded expense
+  const [loadedLineItemIds, setLoadedLineItemIds] = useState<string[]>([]);
+
   // Context hooks
-  const { createExpense, updateExpense, getExpenseDetails, isLoading } =
+  const { createExpenseMain, updateExpense, getExpenseDetailsMain, isLoading } =
     useExpenseManagement();
   const { user } = useAuth();
+
+  // Hide company selector in header for this route
+  useEffect(() => {
+    setHideCompanySelector(true);
+    return () => {
+      setHideCompanySelector(false);
+    };
+  }, [setHideCompanySelector]);
 
   // Get type from URL params, default to 'expense'
   const claimType: ExpenseType =
@@ -42,8 +55,12 @@ export function ExpenseForm() {
   const form = useForm<ExpenseFormData>({
     defaultValues: {
       type: claimType,
+      companyId: "",
       raisedFor: "myself",
       description: "",
+      expenseCategoryId: "",
+      employeeId: "emp001", // Default to emp001 for "myself"
+      raisedByEmployeeId: "",
       lineItems: [],
       temporaryPersonName: "",
       temporaryPersonPhone: "",
@@ -63,14 +80,20 @@ export function ExpenseForm() {
   const loadExpense = async () => {
     if (isEdit && id) {
       // Context method handles all error handling, loading states, and token validation
-      const expense = await getExpenseDetails(id);
+      const expense = await getExpenseDetailsMain(id);
       if (expense) {
+        // Store line item IDs for loading in ExpenseItemsFormBranch
+        setLoadedLineItemIds(expense.lineItemIds || []);
+        
         // Update form with loaded data
         form.reset({
           type: expense.type as ExpenseType,
+          companyId: expense.companyId,
           raisedFor: expense.raisedFor,
           description: expense.description,
           expenseCategoryId: expense.expenseCategoryId,
+          employeeId: expense.employeeId,
+          raisedByEmployeeId: expense.raisedByEmployeeId,
           lineItems: [], // Line items loaded separately in edit mode
           temporaryPersonName: expense.temporaryPersonName || "",
           temporaryPersonPhone: expense.temporaryPersonPhone || "",
@@ -111,7 +134,7 @@ export function ExpenseForm() {
 
   const onSaveGeneralInfoAndAddExpenses = async () => {
     // Validate general information fields
-    const generalInfoValid = await form.trigger(["description", "expenseCategoryId"]);
+    const generalInfoValid = await form.trigger(["companyId", "description", "expenseCategoryId"]);
 
     if (!generalInfoValid) {
       console.warn("Please fill all required fields");
@@ -125,36 +148,20 @@ export function ExpenseForm() {
       return;
     }
 
-    // Determine values based on raisedFor selection
-    let employeeId: string | undefined;
-    let raisedByEmployeeId: string | undefined;
-
-    if (formData.raisedFor === "myself") {
-      // Raising for self
-      employeeId = user?.id;
-      raisedByEmployeeId = undefined; // Not needed when raising for self
-    } else if (formData.raisedFor === "employee") {
-      // Raising for another employee
-      employeeId = formData.raisedByEmployeeId; // The selected employee
-      raisedByEmployeeId = user?.id; // Current user is raising this
-    } else if (formData.raisedFor === "temporary-person") {
-      // Raising for temporary/external person
-      employeeId = undefined; // No employee ID for temporary person
-      raisedByEmployeeId = user?.id; // Current user is raising this
-    }
-
     // Build expense carrier with minimal required fields matching backend
     const expenseCarrier: ExpenseCarrier = {
       type: formData.type || claimType,
-      companyId: user?.companyId || user?.orgId || "",
+      companyId: formData.companyId,
       raisedFor: formData.raisedFor || "myself",
       description: formData.description,
-      expenseCategoryId: formData.expenseCategoryId || "",
       createdAt: new Date().toISOString(),
       
       // Conditional fields based on raisedFor
-      ...(employeeId && { employeeId }),
-      ...(raisedByEmployeeId && { raisedByEmployeeId }),
+      ...(formData.employeeId && { employeeId: formData.employeeId }),
+      ...(formData.raisedByEmployeeId && { raisedByEmployeeId: formData.raisedByEmployeeId }),
+      
+      // Category for expense type
+      ...(formData.expenseCategoryId && { expenseCategoryId: formData.expenseCategoryId }),
       
       // Temporary person details
       ...(formData.raisedFor === "temporary-person" && {
@@ -165,7 +172,7 @@ export function ExpenseForm() {
     };
 
     // Call create expense API
-    const createdExpense = await createExpense(expenseCarrier);
+    const createdExpense = await createExpenseMain(expenseCarrier);
 
     if (createdExpense && createdExpense.id) {
       // Navigate to edit mode with the newly created expense ID
@@ -239,7 +246,13 @@ export function ExpenseForm() {
             />
 
             {/* Branch Form 2: Expense Items - Only shown in edit mode */}
-            {isEdit && <ExpenseItemsFormBranch form={form} mode="edit" />}
+            {isEdit && (
+              <ExpenseItemsFormBranch
+                form={form}
+                mode="edit"
+                lineItemIds={loadedLineItemIds}
+              />
+            )}
 
             {/* Total Amount Display - Only in edit mode */}
             {isEdit && calculateTotal() > 0 && (

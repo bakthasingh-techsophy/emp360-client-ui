@@ -65,29 +65,25 @@ export function ApprovalDashboard({ level }: ApprovalDashboardProps) {
     approved: approvedToday.length,
     rejected: rejectedToday.length,
     paid: allExpenses.filter(e => e.status === 'paid').length,
-    totalAmount: allExpenses.reduce((sum, e) => sum + e.amount, 0),
-    pendingAmount: pendingExpenses.reduce((sum, e) => sum + e.amount, 0),
-    paidAmount: allExpenses.filter(e => e.status === 'paid').reduce((sum, e) => sum + e.amount, 0),
+    totalAmount: allExpenses.reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
+    pendingAmount: pendingExpenses.reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
+    paidAmount: allExpenses.filter(e => e.status === 'paid').reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
   };
 
   // Filter fields
   const filterFields: AvailableFilter[] = [
     {
-      id: 'category',
-      label: 'Category',
+      id: 'status',
+      label: 'Status',
       type: 'select',
       options: [
         { label: 'All', value: '' },
-        { label: 'Travel', value: 'travel' },
-        { label: 'Accommodation', value: 'accommodation' },
-        { label: 'Meals', value: 'meals' },
-        { label: 'Transport', value: 'transport' },
-        { label: 'Office Supplies', value: 'office_supplies' },
-        { label: 'Equipment', value: 'equipment' },
-        { label: 'Training', value: 'training' },
-        { label: 'Entertainment', value: 'entertainment' },
-        { label: 'Software', value: 'software' },
-        { label: 'Other', value: 'other' },
+        { label: 'Draft', value: 'draft' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Approved', value: 'approved' },
+        { label: 'Paid', value: 'paid' },
+        { label: 'Rejected', value: 'rejected' },
+        { label: 'Cancelled', value: 'cancelled' },
       ],
     },
     {
@@ -100,11 +96,6 @@ export function ApprovalDashboard({ level }: ApprovalDashboardProps) {
       label: 'Max Amount',
       type: 'text',
     },
-    {
-      id: 'urgent',
-      label: 'Urgent Only',
-      type: 'checkbox',
-    },
   ];
 
   // Convert activeFilters to record for easier access
@@ -116,20 +107,14 @@ export function ApprovalDashboard({ level }: ApprovalDashboardProps) {
   // Apply filters
   const applyFilters = (expenses: ExpenseListItem[]) => {
     return expenses.filter(expense => {
-      if (searchQuery && !expense.claimTitle.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !expense.purpose.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && !expense.description.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !expense.id.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      if (filters.category && !expense.lineItems.some(item => item.category === filters.category)) {
+      if (filters.amountMin && (expense.totalRequestedAmount || 0) < Number(filters.amountMin)) {
         return false;
       }
-      if (filters.amountMin && expense.amount < Number(filters.amountMin)) {
-        return false;
-      }
-      if (filters.amountMax && expense.amount > Number(filters.amountMax)) {
-        return false;
-      }
-      if (filters.urgent && !expense.isUrgent) {
+      if (filters.amountMax && (expense.totalRequestedAmount || 0) > Number(filters.amountMax)) {
         return false;
       }
       return true;

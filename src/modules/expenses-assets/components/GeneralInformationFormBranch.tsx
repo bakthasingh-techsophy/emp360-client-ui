@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UsersSelector } from '@/components/context-aware/UsersSelector';
+import { CompanyDropdown } from '@/components/context-aware/CompanyDropdown';
 import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ExpenseCategoryConfig } from '../types/settings.types';
 import { ExpenseFormData } from '../types/expense.types';
 
@@ -29,9 +30,10 @@ interface GeneralInformationFormBranchProps {
 
 export function GeneralInformationFormBranch({ form }: GeneralInformationFormBranchProps) {
   const { watch, setValue } = form;
+  const { user } = useAuth();
   const expenseType = watch('type');
   const raisedFor = watch('raisedFor') || 'myself';
-  const selectedEmployeeId = watch('raisedByEmployeeId') || '';
+  const selectedEmployeeId = watch('employeeId') || '';
   const { searchExpenseCategories } = useExpenseManagement();
 
   // Expense category state
@@ -64,6 +66,25 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
     fetchExpenseCategories();
   }, []);
 
+  // Handle raisedFor change to set employeeId and raisedByEmployeeId accordingly
+  const handleRaisedForChange = (value: string) => {
+    setValue('raisedFor', value as 'myself' | 'employee' | 'temporary-person');
+    
+    if (value === 'myself') {
+      // For myself: set employeeId to hardcoded emp001 (simulating current user)
+      setValue('employeeId', 'emp001');
+      setValue('raisedByEmployeeId', undefined);
+    } else if (value === 'employee') {
+      // For another employee: leave employeeId empty for manual input, set raisedByEmployeeId to current user
+      setValue('employeeId', '');
+      setValue('raisedByEmployeeId', user?.id);
+    } else if (value === 'temporary-person') {
+      // For temporary person: same as myself, set employeeId to emp001 (simulating current user)
+      setValue('employeeId', 'emp001');
+      setValue('raisedByEmployeeId', undefined);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -73,6 +94,19 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Company Selector */}
+        <div className="space-y-2">
+          <Label htmlFor="company-select">Company *</Label>
+          <CompanyDropdown
+            value={watch('companyId') || ''}
+            onChange={(companyId) => setValue('companyId', companyId)}
+            placeholder="Select company"
+          />
+          <p className="text-xs text-muted-foreground">
+            Select the company for this expense/advance request
+          </p>
+        </div>
+
         {/* Raising For */}
         <div className="space-y-3">
           <Label>
@@ -80,9 +114,7 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
           </Label>
           <RadioGroup
             value={raisedFor}
-            onValueChange={(value) => {
-              setValue('raisedFor', value as 'myself' | 'employee' | 'temporary-person');
-            }}
+            onValueChange={handleRaisedForChange}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="myself" id="myself" />
@@ -105,17 +137,18 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
           </RadioGroup>
         </div>
 
-        {/* Employee Selection */}
+        {/* Employee ID Input - For another employee */}
         {raisedFor === 'employee' && (
           <div className="space-y-2">
-            <Label htmlFor="employee-select">Select Employee *</Label>
-            <UsersSelector
+            <Label htmlFor="employee-id-input">Employee ID *</Label>
+            <Input
+              id="employee-id-input"
+              placeholder="Enter employee ID (e.g., emp001, emp002)"
               value={selectedEmployeeId}
-              onChange={(userId) => setValue('raisedByEmployeeId', userId)}
-              placeholder="Select an employee"
+              onChange={(e) => setValue('employeeId', e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Select the employee for whom you are raising this request
+              Enter the employee ID for whom you are raising this request
             </p>
           </div>
         )}

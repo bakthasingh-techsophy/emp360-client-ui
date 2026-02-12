@@ -53,6 +53,7 @@ export type UserRole =
 // Individual expense line item within a claim
 export interface ExpenseLineItem {
   id: string;
+  expenseId: string;
   category: string; // ExpenseCategory enum value
   description: string;
   amount: number;
@@ -60,6 +61,8 @@ export interface ExpenseLineItem {
   toDate: string; // ISO date string - end date of expense
   attachments: ExpenseAttachment[];
   notes?: string;
+  createdAt: string; // ISO datetime string
+  updatedAt?: string; // ISO datetime string
 }
 
 export interface Expense {
@@ -68,16 +71,12 @@ export interface Expense {
 
   // Type of claim
   type: string; // ExpenseType enum value
+
   // Raised for details (myself, another employee, or temporary person)
-  raisedFor?: "myself" | "employee" | "temporary-person"; // Who this expense is for
+  raisedFor: string; // "myself" | "employee" | "temporary-person"
 
   // Employee details
   employeeId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  department: string;
 
   // Raised by details (for claims raised on behalf)
   raisedByEmployeeId?: string;
@@ -88,14 +87,11 @@ export interface Expense {
   temporaryPersonEmail?: string;
 
   // Claim details
-  description: string; // Main description/purpose
   expenseCategoryId?: string; // Selected expense category ID (for expense type only)
+  description: string; // Main description/purpose
 
   // Line items - multiple expenses in one claim (IDs only)
   lineItemIds?: string[];
-
-  // Calculated totals
-  amount: number; // Total amount (sum of line items or advance amount)
 
   // Status and workflow
   status: string; // ExpenseStatus enum value
@@ -146,33 +142,41 @@ export interface PaymentConfirmation {
 
 // ==================== Carrier Types for API ====================
 
-// Carrier for creating/updating expenses
-// Minimal required fields for backend API
+/**
+ * ExpenseCarrier
+ * Carrier for creating/updating expenses
+ * Matches backend ExpenseCarrier model for API compatibility
+ * Minimal required fields for backend API
+ */
 export interface ExpenseCarrier {
-  // Required fields
-  type: string; // ExpenseType enum value - required
-  companyId: string;
-  raisedFor: string; // "myself" | "employee" | "temporary-person" - required
-  description: string; // max 1000 characters - required
-  expenseCategoryId: string; // required for expense type
+  // Required fields - must always be provided
+  type: string; // ExpenseType enum value - "expense" or "advance"
+  raisedFor: string; // "myself" | "employee" | "temporary-person"
+  description: string; // Validation: @NotBlank, max 1000 characters
+
+  // Company and employee context
+  companyId: string; // Company ID for the expense
+  employeeId?: string; // Employee ID (required when raisedFor="myself" or "employee")
 
   // Conditional required fields
-  employeeId?: string; // Employee ID (required when raisedFor="myself" or "employee")
-  raisedByEmployeeId?: string; // Employee ID who raised this (mandatory if raisedFor != "myself", else null)
+  raisedByEmployeeId?: string; // Mandatory if raisedFor != "myself", else null
+
+  // Category (required for expense type)
+  expenseCategoryId?: string; // Validation: @Size(max=100) - required for expense type
 
   // Temporary person fields (when raisedFor="temporary-person")
-  temporaryPersonName?: string; // max 100 characters
-  temporaryPersonPhone?: string; // max 20 characters
+  temporaryPersonName?: string; // Validation: @Size(max=100)
+  temporaryPersonPhone?: string; // Validation: @Size(max=20)
   temporaryPersonEmail?: string;
 
-  // Additional metadata (may be removed if not needed by backend)
-  status?: string;
-  createdAt: string; // ISO date string - required
+  // Metadata
+  createdAt: string; // ISO datetime string - required
 }
 
 // Carrier for expense line items
 export interface ExpenseLineItemCarrier {
   id: string;
+  expenseId: string; // Reference to parent expense
   category: string; // ExpenseCategory enum value
   description: string;
   amount: number;
@@ -253,11 +257,12 @@ export interface ExpenseStats {
 export interface ExpenseFormData {
   // General Information
   type: string; // ExpenseType enum value
-  raisedFor?: "myself" | "employee" | "temporary-person"; // Who this expense is for
+  companyId: string; // Company ID - required
+  raisedFor: string; // "myself" | "employee" | "temporary-person" - required
+  employeeId?: string; // Employee ID (for "myself" or when selecting specific employee)
   raisedByEmployeeId?: string; // Employee ID who raised this (current user if raisedFor != "myself")
-  employeeId?: string; // Employee ID (for "myself" or "employee" raisedFor)
   description: string;
-  expenseCategoryId?: string; // Selected expense category ID
+  expenseCategoryId?: string; // Selected expense category ID (for expense type only)
 
   // Temporary person details (only when raisedFor="temporary-person")
   temporaryPersonName?: string;
@@ -309,8 +314,24 @@ export interface ExpenseSnapshot extends Expense {
   lineItemCount: number;
 
   /**
+   * Total requested amount (sum of line items or advance amount)
+   * Cached for faster rendering
+   */
+  totalRequestedAmount?: number;
+
+  /**
+   * Employee details for display purposes (cached from employee data)
+   */
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+
+  /**
    * Raised by details for display purposes (populated from raised by employee details)
    */
   raisedByFirstName?: string;
   raisedByLastName?: string;
+  raisedByEmail?: string;
+  raisedByPhone?: string;
 }

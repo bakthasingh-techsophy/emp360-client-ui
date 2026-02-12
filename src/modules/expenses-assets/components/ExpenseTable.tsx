@@ -49,7 +49,7 @@ export function ExpenseTable({
 }: ExpenseTableProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { searchExpenseSnapshots, isLoading } = useExpenseManagement();
+  const { searchExpenseSnapshotsMain, deleteExpenseMain, isLoading } = useExpenseManagement();
   const tableRef = useRef<DataTableRef>(null);
 
   // Table state
@@ -94,6 +94,17 @@ export function ExpenseTable({
     [navigate],
   );
 
+  const handleDeleteExpense = useCallback(
+    async (expense: ExpenseSnapshot) => {
+      const result = await deleteExpenseMain(expense.id);
+      if (result) {
+        // Refresh the table after successful deletion
+        fetchData();
+      }
+    },
+    [deleteExpenseMain],
+  );
+
   // Fetch data from API
   const fetchData = async () => {
     try {
@@ -103,7 +114,7 @@ export function ExpenseTable({
         ['description', 'type', 'firstName', 'lastName', 'email', 'employeeId'],
       );
 
-      const result = await searchExpenseSnapshots(
+      const result = await searchExpenseSnapshotsMain(
         searchRequest,
         pageIndex,
         pageSize,
@@ -164,7 +175,6 @@ export function ExpenseTable({
       cell: ({ row }) => (
         <div className="space-y-0.5">
           <div className="font-medium">{row.original.firstName} {row.original.lastName}</div>
-          <div className="text-xs text-muted-foreground">{row.original.department}</div>
         </div>
       ),
     },
@@ -255,11 +265,11 @@ export function ExpenseTable({
     },
     {
       id: 'amount',
-      accessorKey: 'amount',
+      accessorKey: 'totalRequestedAmount',
       header: () => <div className="text-center">Amount</div>,
       cell: ({ row }) => (
         <div className="text-center font-semibold">
-          ${row.original.amount.toLocaleString()}
+          ${(row.original.totalRequestedAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       ),
     },
@@ -357,7 +367,7 @@ export function ExpenseTable({
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => console.log('Delete', expense.id)}
+                  onClick={() => handleDeleteExpense(expense)}
                   className="text-red-600"
                   disabled={!(isDraft || isPending)}
                 >

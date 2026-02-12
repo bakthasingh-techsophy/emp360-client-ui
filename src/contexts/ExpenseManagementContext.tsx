@@ -52,13 +52,11 @@ import {
 // Expense Management Service
 import * as expenseManagementService from "@/services/expenseManagementService";
 
-// Expense Line Item Service
+// Expense Line Item Service (only update function)
 import {
-  apiCreateExpenseLineItem,
   apiGetExpenseLineItemById,
   apiUpdateExpenseLineItem,
   apiSearchExpenseLineItems,
-  apiDeleteExpenseLineItem,
   apiBulkDeleteExpenseLineItems,
   apiBulkUpdateExpenseLineItems,
   BulkUpdatePayload as LineItemBulkUpdatePayload,
@@ -120,7 +118,7 @@ interface ExpenseManagementContextType {
   deleteExpenseCategory: (id: string) => Promise<boolean>;
 
   // Expense Methods
-  createExpense: (
+  createExpenseMain: (
     carrier: ExpenseCarrier
   ) => Promise<Expense | null>;
   updateExpense: (
@@ -138,18 +136,24 @@ interface ExpenseManagementContextType {
 
   // Expense Management Service Methods (from expenseManagementService)
   // Note: These methods handle token validation, error handling, and loading states
-  getExpenseDetails: (id: string) => Promise<Expense | null>;
-  getExpenseSnapshot: (id: string) => Promise<any | null>;
-  searchExpenseSnapshots: (
+  getExpenseDetailsMain: (id: string) => Promise<Expense | null>;
+  getExpenseSnapshotMain: (id: string) => Promise<any | null>;
+  searchExpenseSnapshotsMain: (
     searchRequest: UniversalSearchRequest,
     page?: number,
     pageSize?: number
   ) => Promise<Pagination<any> | null>;
+  deleteExpenseMain: (expenseId: string) => Promise<boolean>;
 
   // Expense Line Item Methods
-  createExpenseLineItem: (
-    carrier: ExpenseLineItemCarrier
-  ) => Promise<ExpenseLineItem | null>;
+  addExpenseLineItemMain: (
+    expenseId: string,
+    lineItem: ExpenseLineItemCarrier
+  ) => Promise<Expense | null>;
+  deleteExpenseLineItemMain: (
+    expenseId: string,
+    lineItemId: string
+  ) => Promise<Expense | null>;
   getExpenseLineItemById: (id: string) => Promise<ExpenseLineItem | null>;
   updateExpenseLineItem: (
     id: string,
@@ -160,7 +164,6 @@ interface ExpenseManagementContextType {
     page?: number,
     pageSize?: number
   ) => Promise<Pagination<ExpenseLineItem> | null>;
-  deleteExpenseLineItem: (id: string) => Promise<boolean>;
   bulkDeleteExpenseLineItems: (ids: string[]) => Promise<boolean>;
   bulkUpdateExpenseLineItems: (
     payload: LineItemBulkUpdatePayload
@@ -394,7 +397,7 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
 
   // ==================== EXPENSE METHODS ====================
 
-  const createExpense = async (
+  const createExpenseMain = async (
     carrier: ExpenseCarrier
   ): Promise<Expense | null> => {
     return executeApiCall(
@@ -463,7 +466,7 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
 
   // ==================== EXPENSE MANAGEMENT SERVICE METHODS ====================
 
-  const getExpenseDetails = async (
+  const getExpenseDetailsMain = async (
     id: string
   ): Promise<Expense | null> => {
     return executeApiCall(
@@ -474,7 +477,7 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<Expense | null>;
   };
 
-  const getExpenseSnapshot = async (
+  const getExpenseSnapshotMain = async (
     id: string
   ): Promise<any | null> => {
     return executeApiCall(
@@ -485,7 +488,7 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<any | null>;
   };
 
-  const searchExpenseSnapshots = async (
+  const searchExpenseSnapshotsMain = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
     pageSize: number = 10
@@ -506,15 +509,54 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
 
   // ==================== EXPENSE LINE ITEM METHODS ====================
 
-  const createExpenseLineItem = async (
-    carrier: ExpenseLineItemCarrier
-  ): Promise<ExpenseLineItem | null> => {
+  const addExpenseLineItemMain = async (
+    expenseId: string,
+    lineItem: ExpenseLineItemCarrier
+  ): Promise<Expense | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
-        apiCreateExpenseLineItem(carrier, tenant, accessToken),
-      "Create Expense Line Item",
-      "Expense line item created successfully"
-    ) as Promise<ExpenseLineItem | null>;
+        expenseManagementService.apiAddExpenseLineItem(
+          expenseId,
+          lineItem,
+          tenant,
+          accessToken
+        ),
+      "Add Expense Line Item",
+      "Expense line item added successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const deleteExpenseLineItemMain = async (
+    expenseId: string,
+    lineItemId: string
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiDeleteExpenseLineItem(
+          expenseId,
+          lineItemId,
+          tenant,
+          accessToken
+        ),
+      "Delete Expense Line Item",
+      "Expense line item deleted successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const deleteExpenseMain = async (
+    expenseId: string
+  ): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiDeleteExpense(
+          expenseId,
+          tenant,
+          accessToken
+        ),
+      "Delete Expense",
+      "Expense deleted successfully",
+      true
+    ) as Promise<boolean>;
   };
 
   const getExpenseLineItemById = async (
@@ -551,16 +593,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
       "Search Expense Line Items",
       ""
     ) as Promise<Pagination<ExpenseLineItem> | null>;
-  };
-
-  const deleteExpenseLineItem = async (id: string): Promise<boolean> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiDeleteExpenseLineItem(id, tenant, accessToken),
-      "Delete Expense Line Item",
-      "Expense line item deleted successfully",
-      true
-    ) as Promise<boolean>;
   };
 
   const bulkDeleteExpenseLineItems = async (ids: string[]): Promise<boolean> => {
@@ -602,7 +634,7 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     deleteExpenseCategory,
 
     // Expense Methods
-    createExpense,
+    createExpenseMain,
     updateExpense,
     searchExpenses,
     deleteExpense,
@@ -610,16 +642,17 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     bulkUpdateExpenses,
 
     // Expense Management Service Methods
-    getExpenseDetails,
-    getExpenseSnapshot,
-    searchExpenseSnapshots,
+    getExpenseDetailsMain,
+    getExpenseSnapshotMain,
+    searchExpenseSnapshotsMain,
+    deleteExpenseMain,
 
     // Expense Line Item Methods
-    createExpenseLineItem,
+    addExpenseLineItemMain,
+    deleteExpenseLineItemMain,
     getExpenseLineItemById,
     updateExpenseLineItem,
     searchExpenseLineItems,
-    deleteExpenseLineItem,
     bulkDeleteExpenseLineItems,
     bulkUpdateExpenseLineItems,
 

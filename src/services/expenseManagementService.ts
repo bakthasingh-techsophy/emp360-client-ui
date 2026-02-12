@@ -163,6 +163,102 @@ export const apiSearchExpenseSnapshots = async (
 };
 
 /**
+ * Add Expense Line Item
+ * POST /emp-user-management/v1/expense-management/{expenseId}/line-items/add
+ * 
+ * Adds a new line item to an existing expense.
+ * 
+ * @param expenseId - Expense ID to add line item to
+ * @param lineItem - Line item data (includes id, category, description, amount, dates, attachments)
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Expense>>
+ * 
+ * @example
+ * const response = await apiAddExpenseLineItem('EXP-2026-12345', {
+ *   id: 'LI-004',
+ *   category: 'TRAVEL',
+ *   expenseId: 'EXP-2026-12345',
+ *   description: 'Flight ticket to Mumbai',
+ *   amount: 25000.00,
+ *   fromDate: '2026-02-12',
+ *   toDate: '2026-02-14',
+ *   attachments: [],
+ *   createdAt: new Date().toISOString()
+ * }, 'tenant-001');
+ */
+export const apiAddExpenseLineItem = async (
+  expenseId: string,
+  lineItem: any,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Expense>> => {
+  return apiRequest<Expense>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/${expenseId}/line-items/add`,
+    tenant,
+    accessToken,
+    body: lineItem,
+  });
+};
+
+/**
+ * Delete Expense Line Item
+ * DELETE /emp-user-management/v1/expense-management/{expenseId}/line-items/{lineItemId}
+ * 
+ * Deletes a line item from an existing expense.
+ * 
+ * @param expenseId - Expense ID
+ * @param lineItemId - Line item ID to delete
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Expense>>
+ * 
+ * @example
+ * const response = await apiDeleteExpenseLineItem('EXP-2026-12345', 'LI-004', 'tenant-001');
+ */
+export const apiDeleteExpenseLineItem = async (
+  expenseId: string,
+  lineItemId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Expense>> => {
+  return apiRequest<Expense>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/${expenseId}/line-items/${lineItemId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Delete Expense
+ * DELETE /emp-user-management/v1/expense-management/{expenseId}
+ * 
+ * Deletes an expense from the system.
+ * 
+ * @param expenseId - Expense ID to delete
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteExpense('EXP-2026-12345', 'tenant-001');
+ */
+export const apiDeleteExpense = async (
+  expenseId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/${expenseId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const expenseManagementService = {
@@ -170,4 +266,7 @@ export const expenseManagementService = {
   apiGetExpenseDetails,
   apiGetExpenseSnapshot,
   apiSearchExpenseSnapshots,
+  apiAddExpenseLineItem,
+  apiDeleteExpenseLineItem,
+  apiDeleteExpense,
 };
