@@ -36,6 +36,7 @@ import { EmployeeDocuments } from './modules/core-hr/EmployeeDocuments';
 import { AttendanceManagement } from './modules/time-attendance/AttendanceManagement';
 import { ShiftSchedule } from './modules/time-attendance/ShiftSchedule';
 import { LeaveHoliday } from './modules/time-attendance/LeaveHoliday';
+import { LeaveSettings } from './modules/time-attendance/LeaveSettings';
 import { OvertimeManagement } from './modules/time-attendance/OvertimeManagement';
 
 // Payroll & Compensation modules
@@ -161,6 +162,7 @@ function App() {
                 <Route path="/attendance-management" element={<AttendanceManagement />} />
                 <Route path="/shift-schedule" element={<ShiftSchedule />} />
                 <Route path="/leave-holiday" element={<LeaveHoliday />} />
+                <Route path="/leave-holiday/settings" element={<LeaveSettings />} />
                 <Route path="/holiday-management" element={
                   <HolidayManagement />
                 } />
