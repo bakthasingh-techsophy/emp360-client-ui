@@ -27,7 +27,6 @@ import {
   apiGetExpenseTypeById,
   apiUpdateExpenseType,
   apiSearchExpenseTypes,
-  apiListExpenseTypes,
   apiDeleteExpenseType,
 } from "@/services/expenseTypeService";
 
@@ -37,9 +36,31 @@ import {
   apiGetExpenseCategoryById,
   apiUpdateExpenseCategory,
   apiSearchExpenseCategories,
-  apiListExpenseCategories,
   apiDeleteExpenseCategory,
 } from "@/services/expenseCategoryService";
+
+// Expense Service
+import {
+  apiUpdateExpense,
+  apiSearchExpenses,
+  apiDeleteExpense,
+  apiBulkDeleteExpenses,
+  apiBulkUpdateExpenses,
+  BulkUpdatePayload,
+} from "@/services/expenseService";
+
+// Expense Management Service
+import * as expenseManagementService from "@/services/expenseManagementService";
+
+// Expense Line Item Service (only update function)
+import {
+  apiGetExpenseLineItemById,
+  apiUpdateExpenseLineItem,
+  apiSearchExpenseLineItems,
+  apiBulkDeleteExpenseLineItems,
+  apiBulkUpdateExpenseLineItems,
+  BulkUpdatePayload as LineItemBulkUpdatePayload,
+} from "@/services/expenseLineItemService";
 
 // Types
 import Pagination from "@/types/pagination";
@@ -48,6 +69,17 @@ import {
   ExpenseTypeConfig,
   ExpenseCategoryConfig,
 } from "@/modules/expenses-assets/types/settings.types";
+import {
+  Expense,
+  ExpenseCarrier,
+  ExpenseLineItem,
+  ExpenseLineItemCarrier,
+} from "@/modules/expenses-assets/types/expense.types";
+import {
+  Intimation,
+  IntimationCarrier,
+  IntimationSnapshot,
+} from "@/modules/expenses-assets/types/intimation.types";
 
 /**
  * Generic update payload type
@@ -67,7 +99,6 @@ interface ExpenseManagementContextType {
     id: string,
     payload: UpdatePayload
   ) => Promise<ExpenseTypeConfig | null>;
-  listExpenseTypes: () => Promise<ExpenseTypeConfig[] | null>;
   searchExpenseTypes: (
     searchRequest: UniversalSearchRequest,
     page?: number,
@@ -84,13 +115,75 @@ interface ExpenseManagementContextType {
     id: string,
     payload: UpdatePayload
   ) => Promise<ExpenseCategoryConfig | null>;
-  listExpenseCategories: () => Promise<ExpenseCategoryConfig[] | null>;
   searchExpenseCategories: (
     searchRequest: UniversalSearchRequest,
     page?: number,
     pageSize?: number
   ) => Promise<Pagination<ExpenseCategoryConfig> | null>;
   deleteExpenseCategory: (id: string) => Promise<boolean>;
+
+  // Expense Methods
+  createExpenseMain: (
+    carrier: ExpenseCarrier
+  ) => Promise<Expense | null>;
+  updateExpense: (
+    id: string,
+    payload: UpdatePayload
+  ) => Promise<Expense | null>;
+  searchExpenses: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<Expense> | null>;
+  deleteExpense: (id: string) => Promise<boolean>;
+  bulkDeleteExpenses: (ids: string[]) => Promise<boolean>;
+  bulkUpdateExpenses: (payload: BulkUpdatePayload) => Promise<Expense[] | null>;
+
+  // Expense Management Service Methods (from expenseManagementService)
+  // Note: These methods handle token validation, error handling, and loading states
+  getExpenseDetailsMain: (id: string) => Promise<Expense | null>;
+  getExpenseSnapshotMain: (id: string) => Promise<any | null>;
+  searchExpenseSnapshotsMain: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<any> | null>;
+  deleteExpenseMain: (expenseId: string) => Promise<boolean>;
+
+  // Expense Line Item Methods
+  addExpenseLineItemMain: (
+    expenseId: string,
+    lineItem: ExpenseLineItemCarrier
+  ) => Promise<Expense | null>;
+  deleteExpenseLineItemMain: (
+    expenseId: string,
+    lineItemId: string
+  ) => Promise<Expense | null>;
+  getExpenseLineItemById: (id: string) => Promise<ExpenseLineItem | null>;
+  updateExpenseLineItem: (
+    id: string,
+    payload: UpdatePayload
+  ) => Promise<ExpenseLineItem | null>;
+  searchExpenseLineItems: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<ExpenseLineItem> | null>;
+  bulkDeleteExpenseLineItems: (ids: string[]) => Promise<boolean>;
+  bulkUpdateExpenseLineItems: (
+    payload: LineItemBulkUpdatePayload
+  ) => Promise<ExpenseLineItem[] | null>;
+
+  // Intimation Methods
+  getIntimationDetailsMain: (id: string) => Promise<Intimation | null>;
+  createIntimationRequest: (
+    carrier: IntimationCarrier
+  ) => Promise<Intimation | null>;
+  searchIntimationSnapshotsMain: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<IntimationSnapshot> | null>;
 
   // Loading State
   isLoading: boolean;
@@ -237,14 +330,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<ExpenseTypeConfig | null>;
   };
 
-  const listExpenseTypes = async (): Promise<ExpenseTypeConfig[] | null> => {
-    return executeApiCall(
-      (tenant, accessToken) => apiListExpenseTypes(tenant, accessToken),
-      "Fetch Expense Types",
-      ""
-    ) as Promise<ExpenseTypeConfig[] | null>;
-  };
-
   const searchExpenseTypes = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
@@ -303,15 +388,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<ExpenseCategoryConfig | null>;
   };
 
-  const listExpenseCategories = async (): Promise<ExpenseCategoryConfig[] | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiListExpenseCategories(tenant, accessToken),
-      "Fetch Expense Categories",
-      ""
-    ) as Promise<ExpenseCategoryConfig[] | null>;
-  };
-
   const searchExpenseCategories = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
@@ -335,6 +411,270 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<boolean>;
   };
 
+  // ==================== EXPENSE METHODS ====================
+
+  const createExpenseMain = async (
+    carrier: ExpenseCarrier
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiCreateExpense(carrier, tenant, accessToken),
+      "Create Expense",
+      "Expense created successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const updateExpense = async (
+    id: string,
+    payload: UpdatePayload
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiUpdateExpense(id, payload, tenant, accessToken),
+      "Update Expense",
+      "Expense updated successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const searchExpenses = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<Expense> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiSearchExpenses(searchRequest, page, pageSize, tenant, accessToken),
+      "Search Expenses",
+      ""
+    ) as Promise<Pagination<Expense> | null>;
+  };
+
+  const deleteExpense = async (id: string): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiDeleteExpense(id, tenant, accessToken),
+      "Delete Expense",
+      "Expense deleted successfully",
+      true
+    ) as Promise<boolean>;
+  };
+
+  const bulkDeleteExpenses = async (ids: string[]): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkDeleteExpenses(ids, tenant, accessToken),
+      "Bulk Delete Expenses",
+      "Expenses deleted successfully",
+      true
+    ) as Promise<boolean>;
+  };
+
+  const bulkUpdateExpenses = async (
+    payload: BulkUpdatePayload
+  ): Promise<Expense[] | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkUpdateExpenses(payload, tenant, accessToken),
+      "Bulk Update Expenses",
+      "Expenses updated successfully"
+    ) as Promise<Expense[] | null>;
+  };
+
+  // ==================== EXPENSE MANAGEMENT SERVICE METHODS ====================
+
+  const getExpenseDetailsMain = async (
+    id: string
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetExpenseDetails(id, tenant, accessToken),
+      "Fetch Expense Details",
+      ""
+    ) as Promise<Expense | null>;
+  };
+
+  const getExpenseSnapshotMain = async (
+    id: string
+  ): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetExpenseSnapshot(id, tenant, accessToken),
+      "Fetch Expense Snapshot",
+      ""
+    ) as Promise<any | null>;
+  };
+
+  const searchExpenseSnapshotsMain = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiSearchExpenseSnapshots(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken
+        ),
+      "Fetch Expense Snapshots",
+      ""
+    ) as Promise<any | null>;
+  };
+
+  // ==================== EXPENSE LINE ITEM METHODS ====================
+
+  const addExpenseLineItemMain = async (
+    expenseId: string,
+    lineItem: ExpenseLineItemCarrier
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiAddExpenseLineItem(
+          expenseId,
+          lineItem,
+          tenant,
+          accessToken
+        ),
+      "Add Expense Line Item",
+      "Expense line item added successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const deleteExpenseLineItemMain = async (
+    expenseId: string,
+    lineItemId: string
+  ): Promise<Expense | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiDeleteExpenseLineItem(
+          expenseId,
+          lineItemId,
+          tenant,
+          accessToken
+        ),
+      "Delete Expense Line Item",
+      "Expense line item deleted successfully"
+    ) as Promise<Expense | null>;
+  };
+
+  const deleteExpenseMain = async (
+    expenseId: string
+  ): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiDeleteExpense(
+          expenseId,
+          tenant,
+          accessToken
+        ),
+      "Delete Expense",
+      "Expense deleted successfully",
+      true
+    ) as Promise<boolean>;
+  };
+
+  const getExpenseLineItemById = async (
+    id: string
+  ): Promise<ExpenseLineItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetExpenseLineItemById(id, tenant, accessToken),
+      "Fetch Expense Line Item",
+      ""
+    ) as Promise<ExpenseLineItem | null>;
+  };
+
+  const updateExpenseLineItem = async (
+    id: string,
+    payload: UpdatePayload
+  ): Promise<ExpenseLineItem | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiUpdateExpenseLineItem(id, payload, tenant, accessToken),
+      "Update Expense Line Item",
+      "Expense line item updated successfully"
+    ) as Promise<ExpenseLineItem | null>;
+  };
+
+  const searchExpenseLineItems = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<ExpenseLineItem> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiSearchExpenseLineItems(searchRequest, page, pageSize, tenant, accessToken),
+      "Search Expense Line Items",
+      ""
+    ) as Promise<Pagination<ExpenseLineItem> | null>;
+  };
+
+  const bulkDeleteExpenseLineItems = async (ids: string[]): Promise<boolean> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkDeleteExpenseLineItems(ids, tenant, accessToken),
+      "Bulk Delete Expense Line Items",
+      "Expense line items deleted successfully",
+      true
+    ) as Promise<boolean>;
+  };
+
+  const bulkUpdateExpenseLineItems = async (
+    payload: LineItemBulkUpdatePayload
+  ): Promise<ExpenseLineItem[] | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkUpdateExpenseLineItems(payload, tenant, accessToken),
+      "Bulk Update Expense Line Items",
+      "Expense line items updated successfully"
+    ) as Promise<ExpenseLineItem[] | null>;
+  };
+
+  // ==================== INTIMATION METHODS ====================
+
+  const getIntimationDetailsMain = async (
+    id: string
+  ): Promise<Intimation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetIntimationDetails(id, tenant, accessToken),
+      "Fetch Intimation Details",
+      ""
+    ) as Promise<Intimation | null>;
+  };
+
+  const createIntimationRequest = async (
+    carrier: IntimationCarrier
+  ): Promise<Intimation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiCreateIntimationRequest(carrier, tenant, accessToken),
+      "Create Intimation Request",
+      "Intimation request created successfully"
+    ) as Promise<Intimation | null>;
+  };
+
+  const searchIntimationSnapshotsMain = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20
+  ): Promise<Pagination<IntimationSnapshot> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiSearchIntimationSnapshots(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken
+        ),
+      "Search Intimation Snapshots",
+      ""
+    ) as Promise<Pagination<IntimationSnapshot> | null>;
+  };
+
   // ==================== CONTEXT VALUE ====================
 
   const value: ExpenseManagementContextType = {
@@ -342,7 +682,6 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     createExpenseType,
     getExpenseTypeById,
     updateExpenseType,
-    listExpenseTypes,
     searchExpenseTypes,
     deleteExpenseType,
 
@@ -350,9 +689,36 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     createExpenseCategory,
     getExpenseCategoryById,
     updateExpenseCategory,
-    listExpenseCategories,
     searchExpenseCategories,
     deleteExpenseCategory,
+
+    // Expense Methods
+    createExpenseMain,
+    updateExpense,
+    searchExpenses,
+    deleteExpense,
+    bulkDeleteExpenses,
+    bulkUpdateExpenses,
+
+    // Expense Management Service Methods
+    getExpenseDetailsMain,
+    getExpenseSnapshotMain,
+    searchExpenseSnapshotsMain,
+    deleteExpenseMain,
+
+    // Expense Line Item Methods
+    addExpenseLineItemMain,
+    deleteExpenseLineItemMain,
+    getExpenseLineItemById,
+    updateExpenseLineItem,
+    searchExpenseLineItems,
+    bulkDeleteExpenseLineItems,
+    bulkUpdateExpenseLineItems,
+
+    // Intimation Methods
+    getIntimationDetailsMain,
+    createIntimationRequest,
+    searchIntimationSnapshotsMain,
 
     // Loading State
     isLoading,

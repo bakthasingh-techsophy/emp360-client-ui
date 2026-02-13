@@ -1,84 +1,205 @@
 /**
  * Expense Form - Parent Form Component
  * Integrates multiple branch forms for expense/advance management
+ * Modes: create, edit&id=xxx
  */
 
-import { useEffect } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { PageLayout } from "@/components/PageLayout";
 import { FormHeader } from "@/components/common/FormHeader";
 import { GeneralInformationFormBranch } from "./components/GeneralInformationFormBranch";
 import { ExpenseItemsFormBranch } from "./components/ExpenseItemsFormBranch";
-import { mockExpenses } from "./data/mockData";
-import { ExpenseFormData, ExpenseType } from "./types/expense.types";
-import { format } from "date-fns";
+import {
+  ExpenseFormData,
+  ExpenseType,
+  ExpenseCarrier,
+} from "./types/expense.types";
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
+import { useExpenseManagement } from "@/contexts/ExpenseManagementContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLayoutContext } from "@/contexts/LayoutContext";
 
 export function ExpenseForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const isEdit = !!id;
+  const { setHideCompanySelector } = useLayoutContext();
+
+  // Get mode and id from URL params
+  const mode = searchParams.get("mode") || "create"; // create, edit
+  const id = searchParams.get("id");
+  const isEdit = mode === "edit" && !!id;
+
+  // State for line item IDs from loaded expense
+  const [loadedLineItemIds, setLoadedLineItemIds] = useState<string[]>([]);
+
+  // Context hooks
+  const { createExpenseMain, updateExpense, getExpenseDetailsMain, isLoading } =
+    useExpenseManagement();
+  const { user } = useAuth();
+
+  // Hide company selector in header for this route
+  useEffect(() => {
+    setHideCompanySelector(true);
+    return () => {
+      setHideCompanySelector(false);
+    };
+  }, [setHideCompanySelector]);
 
   // Get type from URL params, default to 'expense'
   const claimType: ExpenseType =
     (searchParams.get("type") as ExpenseType) || "expense";
 
-  // Find expense if editing
-  const existingExpense = isEdit ? mockExpenses.find((e) => e.id === id) : null;
-
   // Initialize form with react-hook-form
   const form = useForm<ExpenseFormData>({
     defaultValues: {
-      type: existingExpense?.type || claimType,
-      employeeName: existingExpense?.employeeName || "",
-      employeeEmail: existingExpense?.employeeEmail || "",
-      department: existingExpense?.department || "",
-      description: existingExpense?.description || "",
-      lineItems: existingExpense?.lineItems || [
-        {
-          id: `temp-${Date.now()}`,
-          category: 'travel',
-          description: '',
-          fromDate: format(new Date(), 'yyyy-MM-dd'),
-          toDate: format(new Date(), 'yyyy-MM-dd'),
-          amount: 0,
-          attachments: [],
-        },
-      ],
+      type: claimType,
+      companyId: "",
+      raisedFor: "myself",
+      description: "",
+      expenseCategoryId: "",
+      employeeId: "emp001", // Default to emp001 for "myself"
+      raisedByEmployeeId: "",
+      lineItems: [],
+      temporaryPersonName: "",
+      temporaryPersonPhone: "",
+      temporaryPersonEmail: "",
     },
   });
 
-  const { handleSubmit, watch, formState: { isSubmitting } } = form;
-  const expenseType = watch('type');
-  const lineItems = watch('lineItems') || [];
+  const {
+    handleSubmit,
+    watch,
+    formState: { isSubmitting },
+  } = form;
+  const expenseType = watch("type");
+  const lineItems = watch("lineItems") || [];
 
-  // Update form when expense type changes from URL
-  useEffect(() => {
-    if (claimType) {
-      form.setValue('type', claimType);
+  // Load expense data if in edit mode
+  const loadExpense = async () => {
+    if (isEdit && id) {
+      // Context method handles all error handling, loading states, and token validation
+      const expense = await getExpenseDetailsMain(id);
+      if (expense) {
+        // Store line item IDs for loading in ExpenseItemsFormBranch
+        setLoadedLineItemIds(expense.lineItemIds || []);
+        
+        // Update form with loaded data
+        form.reset({
+          type: expense.type as ExpenseType,
+          companyId: expense.companyId,
+          raisedFor: expense.raisedFor,
+          description: expense.description,
+          expenseCategoryId: expense.expenseCategoryId,
+          employeeId: expense.employeeId,
+          raisedByEmployeeId: expense.raisedByEmployeeId,
+          lineItems: [], // Line items loaded separately in edit mode
+          temporaryPersonName: expense.temporaryPersonName || "",
+          temporaryPersonPhone: expense.temporaryPersonPhone || "",
+          temporaryPersonEmail: expense.temporaryPersonEmail || "",
+        });
+      }
     }
-  }, [claimType, form]);
+  };
+
+  useEffect(() => {
+    loadExpense();
+  }, [isEdit, id, form]);
 
   const calculateTotal = () => {
     return lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   };
 
   const onSubmitDraft = async (data: ExpenseFormData) => {
-    console.log("Saving draft...", { ...data, status: 'draft', amount: calculateTotal() });
-    // API call to save draft
-    setTimeout(() => {
-      navigate("/expense-management");
-    }, 1000);
+    if (!isEdit || !id) return;
+
+    // Build update payload
+    const updatePayload = {
+      description: data.description,
+      temporaryPersonName: data.temporaryPersonName,
+      temporaryPersonPhone: data.temporaryPersonPhone,
+      temporaryPersonEmail: data.temporaryPersonEmail,
+      status: "draft",
+    };
+
+    // Call update expense API
+    const updatedExpense = await updateExpense(id, updatePayload);
+
+    if (updatedExpense) {
+      console.log("Expense saved successfully");
+      // Stay on the same page - data is updated
+    }
+  };
+
+  const onSaveGeneralInfoAndAddExpenses = async () => {
+    // Validate general information fields
+    const generalInfoValid = await form.trigger(["companyId", "description", "expenseCategoryId"]);
+
+    if (!generalInfoValid) {
+      console.warn("Please fill all required fields");
+      return;
+    }
+
+    const formData = form.getValues();
+
+    if (!user) {
+      console.error("User information not available");
+      return;
+    }
+
+    // Build expense carrier with minimal required fields matching backend
+    const expenseCarrier: ExpenseCarrier = {
+      type: formData.type || claimType,
+      companyId: formData.companyId,
+      raisedFor: formData.raisedFor || "myself",
+      description: formData.description,
+      createdAt: new Date().toISOString(),
+      
+      // Conditional fields based on raisedFor
+      ...(formData.employeeId && { employeeId: formData.employeeId }),
+      ...(formData.raisedByEmployeeId && { raisedByEmployeeId: formData.raisedByEmployeeId }),
+      
+      // Category for expense type
+      ...(formData.expenseCategoryId && { expenseCategoryId: formData.expenseCategoryId }),
+      
+      // Temporary person details
+      ...(formData.raisedFor === "temporary-person" && {
+        temporaryPersonName: formData.temporaryPersonName,
+        temporaryPersonPhone: formData.temporaryPersonPhone,
+        temporaryPersonEmail: formData.temporaryPersonEmail,
+      }),
+    };
+
+    // Call create expense API
+    const createdExpense = await createExpenseMain(expenseCarrier);
+
+    if (createdExpense && createdExpense.id) {
+      // Navigate to edit mode with the newly created expense ID
+      navigate(`/expense-management/expense?mode=edit&id=${createdExpense.id}`);
+    }
   };
 
   const onSubmitForApproval = handleSubmit(async (data: ExpenseFormData) => {
-    console.log("Submitting for approval...", { ...data, status: 'pending', amount: calculateTotal() });
-    // API call to submit
-    setTimeout(() => {
+    if (!isEdit || !id) return;
+
+    // Build update payload with pending status
+    const updatePayload = {
+      description: data.description,
+      temporaryPersonName: data.temporaryPersonName,
+      temporaryPersonPhone: data.temporaryPersonPhone,
+      temporaryPersonEmail: data.temporaryPersonEmail,
+      status: "pending",
+      amount: calculateTotal(),
+    };
+
+    // Call update expense API
+    const updatedExpense = await updateExpense(id, updatePayload);
+
+    if (updatedExpense) {
+      console.log("Expense submitted for approval");
       navigate("/expense-management");
-    }, 1000);
+    }
   });
 
   const handleCancel = () => {
@@ -103,8 +224,8 @@ export function ExpenseForm() {
         : "Update your expense claim details";
     }
     return expenseType === "advance"
-      ? "Request advance payment for upcoming expenses"
-      : "Submit expenses from your business trip or activities";
+      ? "Create a new advance request"
+      : "Create a new expense claim";
   };
 
   return (
@@ -119,13 +240,22 @@ export function ExpenseForm() {
 
           <form onSubmit={onSubmitForApproval} className="space-y-6">
             {/* Branch Form 1: General Information */}
-            <GeneralInformationFormBranch form={form} mode={isEdit ? 'edit' : 'create'} />
+            <GeneralInformationFormBranch
+              form={form}
+              mode={isEdit ? "edit" : "create"}
+            />
 
-            {/* Branch Form 2: Expense Items */}
-            <ExpenseItemsFormBranch form={form} mode={isEdit ? 'edit' : 'create'} />
+            {/* Branch Form 2: Expense Items - Only shown in edit mode */}
+            {isEdit && (
+              <ExpenseItemsFormBranch
+                form={form}
+                mode="edit"
+                lineItemIds={loadedLineItemIds}
+              />
+            )}
 
-            {/* Total Amount Display */}
-            {calculateTotal() > 0 && (
+            {/* Total Amount Display - Only in edit mode */}
+            {isEdit && calculateTotal() > 0 && (
               <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
                 <span className="font-semibold">
                   Total {expenseType === "advance" ? "Advance" : "Claim"} Amount
@@ -137,22 +267,68 @@ export function ExpenseForm() {
             )}
 
             {/* Form Action Bar */}
-            <FormActionBar
-              mode={isEdit ? "edit" : "create"}
-              isSubmitting={isSubmitting}
-              onCancel={handleCancel}
-              submitText="Submit for Approval"
-              leftContent={
-                <button
-                  type="button"
-                  className="px-4 py-2 border rounded-md hover:bg-accent"
-                  onClick={handleSubmit(onSubmitDraft)}
-                  disabled={isSubmitting}
-                >
-                  Save as Draft
-                </button>
-              }
-            />
+            {isEdit ? (
+              <FormActionBar
+                mode="edit"
+                isSubmitting={isSubmitting}
+                onCancel={handleCancel}
+                hideDefaultActions
+                rightContent={
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className="px-4 py-2 border rounded-md hover:bg-accent"
+                      onClick={handleSubmit(onSubmitDraft)}
+                      disabled={isLoading}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                      disabled={isLoading}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      type="button"
+                      className="px-4 py-2 border rounded-md hover:bg-accent"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                }
+              />
+            ) : (
+              <FormActionBar
+                mode="create"
+                isSubmitting={isSubmitting}
+                onCancel={handleCancel}
+                hideDefaultActions
+                rightContent={
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                      onClick={onSaveGeneralInfoAndAddExpenses}
+                      disabled={isLoading}
+                    >
+                      Save & Next
+                    </button>
+                    <button
+                      type="button"
+                      className="px-4 py-2 border rounded-md hover:bg-accent"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                }
+              />
+            )}
           </form>
         </div>
       </div>

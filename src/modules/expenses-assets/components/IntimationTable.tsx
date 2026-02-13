@@ -1,49 +1,190 @@
 /**
  * Intimation Table Component
- * DataTable for displaying intimation requests with actions
+ * Displays intimation requests in a data table
+ * Uses IntimationSnapshot for optimized rendering
+ * Implements search, filtering, pagination with context integration
  */
 
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { ColumnDef } from '@tanstack/react-table';
+import { DataTable } from '@/components/common/DataTable';
+import { DataTableRef } from '@/components/common/DataTable/types';
 import { Badge } from '@/components/ui/badge';
-import { Eye, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Intimation, IntimationStatus } from '../types/intimation.types';
+import { Eye, Edit, Trash2, MoreVertical, Copy, Check } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { IntimationSnapshot, IntimationStatus } from '../types/intimation.types';
 import { TravelIntimationViewModal } from './TravelIntimationViewModal';
 import { OtherIntimationViewModal } from './OtherIntimationViewModal';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
+import { ActiveFilter } from '@/components/GenericToolbar/types';
+import { buildUniversalSearchRequest } from '@/components/GenericToolbar/searchBuilder';
 
 interface IntimationTableProps {
-  data: Intimation[];
-  loading?: boolean;
-  visibleColumns?: string[];
+  activeTab: string;
+  searchQuery: string;
+  activeFilters: ActiveFilter[];
+  visibleColumns: string[];
 }
 
-export function IntimationTable({ data, loading = false, visibleColumns = [] }: IntimationTableProps) {
+export function IntimationTable({ 
+  activeTab,
+  searchQuery, 
+  activeFilters, 
+  visibleColumns
+}: IntimationTableProps) {
   const navigate = useNavigate();
-  const [selectedIntimation, setSelectedIntimation] = useState<Intimation | null>(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const { toast } = useToast();
+  const { searchIntimationSnapshotsMain, isLoading } = useExpenseManagement();
+  const tableRef = useRef<DataTableRef>(null);
 
+  // Table state
+  const [tableData, setTableData] = useState<IntimationSnapshot[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedIntimation, setSelectedIntimation] = useState<IntimationSnapshot | null>(null);
+
+  // Ref to track previous dependency values
+  const prevDepsRef = useRef<{
+    activeTab: string;
+    activeFilters: ActiveFilter[];
+    searchQuery: string;
+    pageIndex: number;
+    pageSize: number;
+  } | null>(null);
+
+  // Copy to clipboard
+  const copyToClipboard = useCallback(async (text: string, fieldId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldId);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }, []);
+
+  // Action handlers
+  const handleViewIntimation = useCallback((intimation: IntimationSnapshot) => {
+    setSelectedIntimation(intimation);
+    setViewModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setViewModalOpen(false);
+    setSelectedIntimation(null);
+  }, []);
+
+  const handleEditIntimation = useCallback(
+    (intimation: IntimationSnapshot) => {
+      navigate(`/expense-management/intimation/edit/${intimation.id}`);
+    },
+    [navigate],
+  );
+
+  const handleDeleteIntimation = useCallback(
+    async (intimation: IntimationSnapshot) => {
+      // TODO: Implement delete via context
+      console.log('Delete intimation:', intimation.id);
+      toast({
+        title: 'Delete',
+        description: 'Delete functionality to be implemented',
+      });
+    },
+    [toast],
+  );
+
+  // Fetch data from API
+  const fetchData = async () => {
+    try {
+      // Build filters with status based on active tab
+      const filtersToApply = [...activeFilters];
+      
+      // Add status filter based on active tab
+      if (activeTab !== 'all') {
+        const statusMap: Record<string, string[]> = {
+          draft: ['draft'],
+          submitted: ['submitted', 'pending_approval'],
+          approved: ['approved'],
+          rejected: ['rejected'],
+          acknowledged: ['acknowledged'],
+          cancelled: ['cancelled'],
+        };
+        
+        const statusValues = statusMap[activeTab];
+        if (statusValues) {
+          filtersToApply.push({
+            id: `status-tab-${activeTab}`,
+            filterId: 'status',
+            operator: 'in',
+            value: statusValues,
+          });
+        }
+      }
+
+      const searchRequest = buildUniversalSearchRequest(
+        filtersToApply,
+        searchQuery,
+        ['type', 'firstName', 'lastName', 'email', 'description'],
+      );
+
+      const result = await searchIntimationSnapshotsMain(
+        searchRequest,
+        pageIndex,
+        pageSize,
+      );
+
+      if (result) {
+        setTableData(result.content || []);
+        setTotalItems(result.totalElements || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching intimation snapshots:', error);
+    }
+  };
+
+  // Fetch data when filters or search change
+  useEffect(() => {
+    const depsChanged =
+      !prevDepsRef.current ||
+      prevDepsRef.current.activeTab !== activeTab ||
+      JSON.stringify(prevDepsRef.current.activeFilters) !==
+        JSON.stringify(activeFilters) ||
+      prevDepsRef.current.searchQuery !== searchQuery ||
+      prevDepsRef.current.pageIndex !== pageIndex ||
+      prevDepsRef.current.pageSize !== pageSize;
+
+    if (!depsChanged) return;
+
+    prevDepsRef.current = {
+      activeTab,
+      activeFilters,
+      searchQuery,
+      pageIndex,
+      pageSize,
+    };
+
+    fetchData();
+  }, [activeTab, activeFilters, searchQuery, pageIndex, pageSize]);
+
+  // Status badge helpers
   const getStatusBadgeVariant = (status: IntimationStatus): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
       case 'submitted':
@@ -78,236 +219,239 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
     return type === 'travel' ? 'Travel' : 'Other';
   };
 
-  const getJourneySummary = (intimation: Intimation): string => {
-    if (intimation.type !== 'travel' || !intimation.journeySegments) {
-      return '-';
-    }
-    const segments = intimation.journeySegments;
-    if (segments.length === 0) return '-';
-    if (segments.length === 1) {
-      return `${segments[0].from} → ${segments[0].to}`;
-    }
-    return `${segments[0].from} → ... → ${segments[segments.length - 1].to} (${segments.length} segments)`;
-  };
-
-  const handleView = (intimation: Intimation) => {
-    setSelectedIntimation(intimation);
-    setViewModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setViewModalOpen(false);
-    setSelectedIntimation(null);
-  };
-
-  const handleEdit = (intimation: Intimation) => {
-    navigate(`/expense-management/intimation/edit/${intimation.id}`);
-  };
-
-  const handleDelete = (intimation: Intimation) => {
-    console.log('Delete intimation:', intimation.id);
-    // TODO: Implement delete confirmation
-  };
-
-  const columns: ColumnDef<Intimation>[] = [
-    {
-      accessorKey: 'intimationNumber',
-      header: 'Intimation #',
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.intimationNumber}</span>
-      ),
-    },
-    {
-      accessorKey: 'type',
-      header: () => <div className="text-center">Type</div>,
-      cell: ({ row }) => (
-        <div className="text-center">
-          <Badge variant={row.original.type === 'travel' ? 'default' : 'secondary'}>
-            {getTypeLabel(row.original.type)}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'journey',
-      header: 'Journey/Description',
-      cell: ({ row }) => {
-        if (row.original.type === 'travel') {
+  // Column definitions
+  const columns = useMemo<ColumnDef<IntimationSnapshot>[]>(() => {
+    const allColumns: ColumnDef<IntimationSnapshot>[] = [
+      {
+        id: 'employeeId',
+        accessorKey: 'employeeId',
+        header: 'Employee ID',
+        cell: ({ row }) => (
+          <div className="font-mono text-sm font-medium">{row.original.employeeId}</div>
+        ),
+      },
+      {
+        id: 'employeeName',
+        header: 'Name',
+        cell: ({ row }) => (
+          <div className="space-y-0.5">
+            <div className="font-medium">{row.original.firstName} {row.original.lastName}</div>
+          </div>
+        ),
+      },
+      {
+        id: 'contact',
+        header: 'Contact Info',
+        cell: ({ row }) => {
+          const intimation = row.original;
+          const emailId = `email-${intimation.id}`;
+          const phoneId = `phone-${intimation.id}`;
           return (
-            <div className="max-w-md">
-              <span className="text-sm">{getJourneySummary(row.original)}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{intimation.email}</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(intimation.email || '', emailId);
+                        }}
+                      >
+                        {copiedField === emailId ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Copy email</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {intimation.phone}
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyToClipboard(intimation.phone || '', phoneId);
+                        }}
+                      >
+                        {copiedField === phoneId ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Copy phone</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           );
-        }
-        return (
+        },
+      },
+      {
+        id: 'type',
+        accessorKey: 'type',
+        header: () => <div className="text-center">Type</div>,
+        cell: ({ row }) => (
+          <div className="text-center">
+            <Badge variant={row.original.type === 'travel' ? 'default' : 'secondary'}>
+              {getTypeLabel(row.original.type)}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: 'Description',
+        cell: ({ row }) => (
           <div className="max-w-md">
-            <span className="text-sm text-muted-foreground line-clamp-2">
-              {row.original.description}
-            </span>
+            <span className="text-sm line-clamp-2">{row.original.description || '-'}</span>
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: 'estimatedTotalCost',
-      header: () => <div className="text-center">Est. Cost</div>,
-      cell: ({ row }) => (
-        <div className="text-center font-medium">
-          {row.original.estimatedTotalCost 
-            ? `$${row.original.estimatedTotalCost.toFixed(2)}`
-            : '-'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'submittedAt',
-      header: () => <div className="text-center">Submitted Date</div>,
-      cell: ({ row }) => (
-        <div className="text-center text-sm">
-          {row.original.submittedAt 
-            ? format(new Date(row.original.submittedAt), 'MMM dd, yyyy')
-            : '-'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'status',
-      header: () => <div className="text-center">Status</div>,
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <Badge variant={getStatusBadgeVariant(row.original.status)}>
-            {getStatusLabel(row.original.status)}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      id: 'actions',
-      header: () => <div className="text-center">Actions</div>,
-      cell: ({ row }) => {
-        const intimation = row.original;
-        const canEdit = intimation.status === 'draft';
-        const canDelete = intimation.status === 'draft';
-        const isPendingApproval = intimation.status === 'pending_approval' || intimation.status === 'submitted';
-
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleView(intimation)}
-              className="h-8 w-8 p-0"
-              title="View"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-
-            {/* Take Action button - visible for pending approvals */}
-            <Button
-              size="sm"
-              variant="default"
-              disabled={!isPendingApproval}
-              onClick={() => navigate(`/expense-management/intimation/approve/${intimation.id}`)}
-            >
-              Take Action
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleEdit(intimation)}
-                  disabled={!canEdit}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(intimation)}
-                  disabled={!canDelete}
-                  className="text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      {
+        id: 'estimatedTotalCost',
+        accessorKey: 'estimatedTotalCost',
+        header: () => <div className="text-center">Est. Cost</div>,
+        cell: ({ row }) => (
+          <div className="text-center font-medium">
+            {row.original.totalEstimatedCost 
+              ? `$${row.original.totalEstimatedCost.toFixed(2)}`
+              : '-'}
           </div>
-        );
+        ),
       },
-    },
-  ];
+      {
+        id: 'submittedAt',
+        accessorKey: 'submittedAt',
+        header: () => <div className="text-center">Submitted Date</div>,
+        cell: ({ row }) => (
+          <div className="text-center text-sm">
+            {row.original.submittedAt 
+              ? format(new Date(row.original.submittedAt), 'MMM dd, yyyy')
+              : '-'}
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => <div className="text-center">Status</div>,
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <Badge variant={getStatusBadgeVariant(row.original.status)}>
+              {getStatusLabel(row.original.status)}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-center">Actions</div>,
+        cell: ({ row }) => {
+          const intimation = row.original;
+          const canEdit = intimation.status === 'draft';
+          const canDelete = intimation.status === 'draft';
 
-  // Filter columns based on visibility
-  const visibleColumnsSet = new Set(visibleColumns);
-  const filteredColumns = visibleColumns.length > 0
-    ? columns.filter(col => {
-        const id = 'accessorKey' in col ? col.accessorKey as string : col.id;
-        return id && visibleColumnsSet.has(id);
-      })
-    : columns;
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleViewIntimation(intimation)}
+                className="h-8 w-8 p-0"
+                title="View"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
 
-  const table = useReactTable({
-    data,
-    columns: filteredColumns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleEditIntimation(intimation)}
+                    disabled={!canEdit}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDeleteIntimation(intimation)}
+                    disabled={!canDelete}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+      },
+    ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-muted-foreground">No intimations found</p>
-      </div>
-    );
-  }
+    // Filter columns based on visibility
+    const visibleColumnsSet = new Set(visibleColumns);
+    return visibleColumns.length > 0
+      ? allColumns.filter(col => {
+          const id = col.id;
+          return id && visibleColumnsSet.has(id);
+        })
+      : allColumns;
+  }, [visibleColumns, copiedField, copyToClipboard, handleViewIntimation, handleEditIntimation, handleDeleteIntimation]);
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <>
+      <DataTable
+        ref={tableRef}
+        columns={columns}
+        data={tableData}
+        loading={isLoading}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalPages: Math.ceil(totalItems / pageSize),
+          totalItems,
+          onPageChange: setPageIndex,
+          onPageSizeChange: setPageSize,
+        }}
+        paginationVariant="default"
+        fixedPagination={true}
+        emptyState={{
+          title: 'No intimations found',
+          description: 'Try adjusting your filters or create a new intimation',
+        }}
+      />
 
       {/* View Modals */}
       {selectedIntimation?.type === 'travel' ? (
@@ -315,16 +459,16 @@ export function IntimationTable({ data, loading = false, visibleColumns = [] }: 
           intimation={selectedIntimation}
           open={viewModalOpen}
           onClose={handleCloseModal}
-          onEdit={handleEdit}
+          onEdit={handleEditIntimation}
         />
-      ) : (
+      ) : selectedIntimation ? (
         <OtherIntimationViewModal
           intimation={selectedIntimation}
           open={viewModalOpen}
           onClose={handleCloseModal}
-          onEdit={handleEdit}
+          onEdit={handleEditIntimation}
         />
-      )}
-    </div>
+      ) : null}
+    </>
   );
 }

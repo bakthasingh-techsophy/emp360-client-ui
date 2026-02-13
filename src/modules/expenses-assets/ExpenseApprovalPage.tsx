@@ -213,7 +213,7 @@ export function ExpenseApprovalPage() {
     </div>
   );
 
-  const originalTotal = expense.amount;
+  const originalTotal = expense.totalRequestedAmount || 0;
   const adjustedTotal = calculateTotal();
   const hasAdjustments = originalTotal !== adjustedTotal;
 
@@ -234,7 +234,7 @@ export function ExpenseApprovalPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg">
-                    {expense.expenseNumber}
+                    {expense.firstName} {expense.lastName} - {expense.id}
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">

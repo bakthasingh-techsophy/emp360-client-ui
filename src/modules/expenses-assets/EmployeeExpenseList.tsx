@@ -38,9 +38,9 @@ export function EmployeeExpenseList() {
     approved: userExpenses.filter(e => e.status === 'approved').length,
     rejected: userExpenses.filter(e => e.status === 'rejected').length,
     paid: userExpenses.filter(e => e.status === 'paid').length,
-    totalAmount: userExpenses.reduce((sum, e) => sum + e.amount, 0),
-    pendingAmount: userExpenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0),
-    paidAmount: userExpenses.filter(e => e.status === 'paid').reduce((sum, e) => sum + e.amount, 0),
+    totalAmount: userExpenses.reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
+    pendingAmount: userExpenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
+    paidAmount: userExpenses.filter(e => e.status === 'paid').reduce((sum, e) => sum + (e.totalRequestedAmount || 0), 0),
   };
 
   // Filter fields
@@ -59,34 +59,6 @@ export function EmployeeExpenseList() {
         { label: 'Cancelled', value: 'cancelled' },
       ],
     },
-    {
-      id: 'category',
-      label: 'Category',
-      type: 'select',
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Travel', value: 'travel' },
-        { label: 'Accommodation', value: 'accommodation' },
-        { label: 'Meals', value: 'meals' },
-        { label: 'Transport', value: 'transport' },
-        { label: 'Office Supplies', value: 'office_supplies' },
-        { label: 'Equipment', value: 'equipment' },
-        { label: 'Training', value: 'training' },
-        { label: 'Entertainment', value: 'entertainment' },
-        { label: 'Software', value: 'software' },
-        { label: 'Other', value: 'other' },
-      ],
-    },
-    {
-      id: 'dateFrom',
-      label: 'From Date',
-      type: 'date',
-    },
-    {
-      id: 'dateTo',
-      label: 'To Date',
-      type: 'date',
-    },
   ];
 
   // Convert activeFilters to record for easier access
@@ -97,20 +69,11 @@ export function EmployeeExpenseList() {
 
   // Apply filters
   let filteredExpenses = userExpenses.filter(expense => {
-    if (searchQuery && !expense.expenseNumber.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    if (searchQuery && !expense.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !expense.description.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     if (filters.status && expense.status !== filters.status) {
-      return false;
-    }
-    if (filters.category && !expense.lineItems.some(item => item.category === filters.category)) {
-      return false;
-    }
-    if (filters.dateFrom && expense.lineItems.length > 0 && new Date(expense.lineItems[0].fromDate) < new Date(filters.dateFrom as string)) {
-      return false;
-    }
-    if (filters.dateTo && expense.lineItems.length > 0 && new Date(expense.lineItems[expense.lineItems.length - 1].toDate) > new Date(filters.dateTo as string)) {
       return false;
     }
     return true;
@@ -122,7 +85,7 @@ export function EmployeeExpenseList() {
   };
 
   const handleEdit = (expense: ExpenseListItem) => {
-    navigate(`/expenses/edit/${expense.id}`);
+    navigate(`/expense-management/expense?mode=edit&id=${expense.id}`);
   };
 
   const handleCancel = (expense: ExpenseListItem) => {
@@ -146,7 +109,7 @@ export function EmployeeExpenseList() {
       onExportAll={handleExport}
       showAddButton={true}
       addButtonLabel="New Expense"
-      onAdd={() => navigate('/expenses/new')}
+      onAdd={() => navigate('/expense-management/expense?mode=create&type=expense')}
     />
   );
 
@@ -177,7 +140,7 @@ export function EmployeeExpenseList() {
         {filteredExpenses.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No expenses found</p>
-            <Button className="mt-4" onClick={() => navigate('/expenses/new')}>
+            <Button className="mt-4" onClick={() => navigate('/expense-management/expense?mode=create&type=expense')}>
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Expense
             </Button>

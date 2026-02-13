@@ -112,7 +112,7 @@ export const mockExpenses: Expense[] = [
   // Paid expense - Business trip with multiple items
   {
     id: 'exp-001',
-    expenseNumber: 'EXP-2024-001',
+    companyId: 'company-001',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -179,7 +179,7 @@ export const mockExpenses: Expense[] = [
   // Awaiting Level 3 (Finance) approval
   {
     id: 'exp-002',
-    expenseNumber: 'EXP-2024-002',
+    companyId: 'company-002',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -253,7 +253,7 @@ export const mockExpenses: Expense[] = [
   // Pending Level 1 - Multiple meal expenses
   {
     id: 'exp-003',
-    expenseNumber: 'EXP-2024-003',
+    companyId: 'company-003',
     type: 'expense',
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
@@ -308,7 +308,7 @@ export const mockExpenses: Expense[] = [
   // Rejected - Single item
   {
     id: 'exp-004',
-    expenseNumber: 'EXP-2024-004',
+    companyId: 'company-001',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -344,7 +344,7 @@ export const mockExpenses: Expense[] = [
   // Cancelled by employee
   {
     id: 'exp-005',
-    expenseNumber: 'EXP-2024-005',
+    companyId: 'company-002',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -380,7 +380,7 @@ export const mockExpenses: Expense[] = [
   // Draft - Multi-item office supplies
   {
     id: 'exp-006',
-    expenseNumber: 'EXP-2024-006',
+    companyId: 'company-001',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -423,7 +423,7 @@ export const mockExpenses: Expense[] = [
   // Pending Level 1 - Software subscription
   {
     id: 'exp-007',
-    expenseNumber: 'EXP-2024-007',
+    companyId: 'company-002',
     type: 'expense',
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
@@ -467,7 +467,7 @@ export const mockExpenses: Expense[] = [
   // Pending Level 2 - Taxi expenses
   {
     id: 'exp-008',
-    expenseNumber: 'EXP-2024-008',
+    companyId: 'company-003',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -531,7 +531,7 @@ export const mockExpenses: Expense[] = [
   // Pending Level 1 - Training course
   {
     id: 'exp-009',
-    expenseNumber: 'EXP-2024-009',
+    companyId: 'company-001',
     type: 'expense',
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
@@ -566,7 +566,7 @@ export const mockExpenses: Expense[] = [
   // Draft - Work from home setup
   {
     id: 'exp-010',
-    expenseNumber: 'EXP-2024-010',
+    companyId: 'company-002',
     type: 'expense',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -610,7 +610,7 @@ export const mockExpenses: Expense[] = [
   // Cancelled - Duplicate submission
   {
     id: 'exp-011',
-    expenseNumber: 'EXP-2024-011',
+    companyId: 'company-003',
     type: 'expense',
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
@@ -645,7 +645,7 @@ export const mockExpenses: Expense[] = [
   // Advance Request - Pending approval
   {
     id: 'adv-001',
-    expenseNumber: 'ADV-2024-001',
+    companyId: 'company-001',
     type: 'advance',
     employeeId: 'user-001',
     employeeName: 'John Doe',
@@ -691,7 +691,7 @@ export const mockExpenses: Expense[] = [
   // Advance Request - Approved
   {
     id: 'adv-002',
-    expenseNumber: 'ADV-2024-002',
+    companyId: 'company-002',
     type: 'advance',
     employeeId: 'user-002',
     employeeName: 'Jane Smith',
@@ -799,7 +799,7 @@ export const mockIntimations: Intimation[] = [
       },
     ],
     estimatedTotalCost: 1050.00,
-    additionalNotes: 'Need to finalize Q1 project planning with west coast teams.',
+    description: 'Need to finalize Q1 project planning with west coast teams.',
     status: 'pending_approval',
     currentApprovalLevel: 'level1',
     createdAt: '2026-01-15T09:30:00Z',
@@ -827,7 +827,7 @@ export const mockIntimations: Intimation[] = [
       },
     ],
     estimatedTotalCost: 200.00,
-    additionalNotes: 'Attending annual marketing summit.',
+    description: 'Attending annual marketing summit.',
     status: 'acknowledged',
     createdAt: '2026-01-14T11:20:00Z',
     updatedAt: '2026-01-16T14:45:00Z',
@@ -841,8 +841,7 @@ export const mockIntimations: Intimation[] = [
     employeeEmail: 'john.doe@company.com',
     department: 'Engineering',
     type: 'other',
-    description: 'Need to purchase new development hardware including high-performance workstation and additional monitors for the new team members joining next month. Estimated total cost around $5000.',
-    additionalNotes: 'Urgent requirement as new hires start on Feb 1st.',
+    description: 'Need to purchase new development hardware including high-performance workstation and additional monitors for the new team members joining next month. Estimated total cost around $5000. Urgent requirement as new hires start on Feb 1st.',
     status: 'submitted',
     createdAt: '2026-01-18T10:15:00Z',
     updatedAt: '2026-01-18T10:15:00Z',
@@ -856,8 +855,7 @@ export const mockIntimations: Intimation[] = [
     employeeEmail: 'jane.smith@company.com',
     department: 'Marketing',
     type: 'other',
-    description: 'Planning to organize a client appreciation event in March. Expected expenses include venue rental, catering, and promotional materials. Estimated budget: $8000.',
-    additionalNotes: 'Event date tentatively set for March 15th.',
+    description: 'Planning to organize a client appreciation event in March. Expected expenses include venue rental, catering, and promotional materials. Estimated budget: $8000. Event date tentatively set for March 15th.',
     status: 'draft',
     createdAt: '2026-01-17T15:30:00Z',
     updatedAt: '2026-01-17T15:30:00Z',
@@ -909,7 +907,7 @@ export const mockIntimations: Intimation[] = [
       },
     ],
     estimatedTotalCost: 350.00,
-    additionalNotes: 'Attending AWS Summit.',
+    description: 'Attending AWS Summit.',
     status: 'acknowledged',
     createdAt: '2026-01-16T12:00:00Z',
     updatedAt: '2026-01-18T16:20:00Z',

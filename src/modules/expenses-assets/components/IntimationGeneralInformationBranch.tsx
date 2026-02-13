@@ -1,9 +1,8 @@
 /**
- * General Information Form Branch
- * Child form component for general request details (applicable to all request types)
+ * Intimation General Information Branch
+ * Child form component for general intimation details
  */
 
-import { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,53 +17,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CompanyDropdown } from '@/components/context-aware/CompanyDropdown';
-import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { ExpenseCategoryConfig } from '../types/settings.types';
-import { ExpenseFormData } from '../types/expense.types';
+import { IntimationFormData, IntimationType } from '../types/intimation.types';
 
-interface GeneralInformationFormBranchProps {
-  form: UseFormReturn<ExpenseFormData>;
+interface IntimationGeneralInformationBranchProps {
+  form: UseFormReturn<IntimationFormData>;
   mode: 'create' | 'edit';
 }
 
-export function GeneralInformationFormBranch({ form }: GeneralInformationFormBranchProps) {
+export function IntimationGeneralInformationBranch({ form }: IntimationGeneralInformationBranchProps) {
   const { watch, setValue } = form;
   const { user } = useAuth();
-  const expenseType = watch('type');
+  const intimationType = watch('type');
   const raisedFor = watch('raisedFor') || 'myself';
   const selectedEmployeeId = watch('employeeId') || '';
-  const { searchExpenseCategories } = useExpenseManagement();
-
-  // Expense category state
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryConfig[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-
-  // Fetch expense categories using context
-  useEffect(() => {
-    const fetchExpenseCategories = async () => {
-      setIsLoadingCategories(true);
-      try {
-        const result = await searchExpenseCategories(
-          {
-            filters: {},
-          },
-          0,
-          100
-        );
-        
-        if (result && result.content) {
-          setExpenseCategories(result.content);
-        }
-      } catch (error) {
-        console.error('Failed to fetch expense categories:', error);
-      } finally {
-        setIsLoadingCategories(false);
-      }
-    };
-
-    fetchExpenseCategories();
-  }, []);
 
   // Handle raisedFor change to set employeeId and raisedByEmployeeId accordingly
   const handleRaisedForChange = (value: string) => {
@@ -85,12 +51,17 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
     }
   };
 
+  // Handle type change
+  const handleTypeChange = (value: IntimationType) => {
+    setValue('type', value);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>General Information</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Provide overall details about this request
+          Provide overall details about this intimation
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -103,14 +74,31 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
             placeholder="Select company"
           />
           <p className="text-xs text-muted-foreground">
-            Select the company for this expense/advance request
+            Select the company for this intimation
+          </p>
+        </div>
+
+        {/* Intimation Type */}
+        <div className="space-y-2">
+          <Label htmlFor="intimation-type">Intimation Type *</Label>
+          <Select value={intimationType} onValueChange={handleTypeChange}>
+            <SelectTrigger id="intimation-type">
+              <SelectValue placeholder="Select intimation type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="travel">Travel</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Choose the type of intimation you want to submit
           </p>
         </div>
 
         {/* Raising For */}
         <div className="space-y-3">
           <Label>
-            Raising this request for *
+            Raising this intimation for *
           </Label>
           <RadioGroup
             value={raisedFor}
@@ -148,7 +136,7 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
               onChange={(e) => setValue('employeeId', e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Enter the employee ID for whom you are raising this request
+              Enter the employee ID for whom you are raising this intimation
             </p>
           </div>
         )}
@@ -194,38 +182,15 @@ export function GeneralInformationFormBranch({ form }: GeneralInformationFormBra
           <Label htmlFor="description">Purpose/Description *</Label>
           <Textarea
             id="description"
-            rows={3}
-            placeholder="Provide details about this expense/advance request"
+            rows={4}
+            placeholder="Provide details about this intimation request"
             className="resize-none"
             {...form.register('description')}
           />
           <p className="text-xs text-muted-foreground">
-            Explain the purpose and nature of this request
+            Explain the purpose and nature of this intimation
           </p>
         </div>
-
-        {/* Expense Category - Only for expense type */}
-        {expenseType === 'expense' && (
-          <div className="space-y-2">
-            <Label htmlFor="expense-category">Expense Category *</Label>
-            <Select value={watch('expenseCategoryId') || ''} onValueChange={(value) => setValue('expenseCategoryId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select expense category"} />
-              </SelectTrigger>
-              <SelectContent>
-                {expenseCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.category}
-                    {category.description && ` - ${category.description}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Select the category that best describes this expense
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

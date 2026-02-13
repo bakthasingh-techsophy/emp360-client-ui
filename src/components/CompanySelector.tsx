@@ -65,6 +65,12 @@ export function CompanySelector(): JSX.Element | null {
         // no active company for 'all'
         return;
       }
+      // Validate that the second segment is actually a valid company ID
+      const isValidCompanyId = companies?.some(c => c.id === second);
+      if (!isValidCompanyId) {
+        // Not a company ID, skip setting active company
+        return;
+      }
       const urlCompanyId = second;
       if (activeCompany?.id !== urlCompanyId) {
         setActiveCompany(urlCompanyId).catch(() => {
@@ -76,7 +82,7 @@ export function CompanySelector(): JSX.Element | null {
       // ignore
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, companies]);
 
   // Early UI states
   if (loading) {

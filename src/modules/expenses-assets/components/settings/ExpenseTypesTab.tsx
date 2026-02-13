@@ -4,32 +4,61 @@
  * Integrated with ExpenseManagementContext for API operations
  */
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable';
-import { Form } from '@/components/ui/form';
-import { ExpenseTypeConfig } from '../../types/settings.types';
-import { useToast } from '@/hooks/use-toast';
-import { useExpenseManagement } from '@/contexts/ExpenseManagementContext';
+import { useEffect, useState, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  EditableItemsTable,
+  TableColumn,
+} from "@/components/common/EditableItemsTable";
+import { Form } from "@/components/ui/form";
+import { ExpenseTypeConfig } from "../../types/settings.types";
+import { useExpenseManagement } from "@/contexts/ExpenseManagementContext";
+import { useCompany } from "@/contexts/CompanyContext";
+import { CompanyAssignmentModal } from "@/components/context-aware/CompanyAssignmentModal";
+import { GenericToolbar } from "@/components/GenericToolbar/GenericToolbar";
+import UniversalSearchRequest from "@/types/search";
 
 const expenseTypeSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
-  type: z.string().min(1, 'Type is required'),
-  description: z.string().min(1, 'Description is required'),
+  id: z.string().min(1, "ID is required"),
+  type: z.string().min(1, "Type is required"),
+  description: z.string().min(1, "Description is required"),
+  companyIds: z.array(z.string()).optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
 });
 
 const expenseTypesFormSchema = z.object({
-  items: z.array(expenseTypeSchema).min(1, 'At least one expense type is required'),
+  items: z
+    .array(expenseTypeSchema)
+    .min(1, "At least one expense type is required"),
 });
 
 type ExpenseTypesFormData = z.infer<typeof expenseTypesFormSchema>;
 
 export function ExpenseTypesTab() {
-  const { toast } = useToast();
-  const { listExpenseTypes, createExpenseType, deleteExpenseType, updateExpenseType } = useExpenseManagement();
+  const {
+    createExpenseType,
+    updateExpenseType,
+    searchExpenseTypes,
+    deleteExpenseType,
+  } = useExpenseManagement();
+  const { companies } = useCompany();
+
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modal state for company assignment
+  const [companyModalState, setCompanyModalState] = useState<{
+    isOpen: boolean;
+    itemIndex: number | null;
+    selectedCompanyIds: string[];
+  }>({
+    isOpen: false,
+    itemIndex: null,
+    selectedCompanyIds: [],
+  });
 
   const form = useForm<ExpenseTypesFormData>({
     resolver: zodResolver(expenseTypesFormSchema),
@@ -39,25 +68,30 @@ export function ExpenseTypesTab() {
   });
 
   const { watch, setValue } = form;
-  const items = watch('items') as ExpenseTypeConfig[];
+  const items = watch("items");
+
+  // Filter items based on search query
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+
+    const lowerQuery = searchQuery.toLowerCase();
+    return items.filter(
+      (item) =>
+        item.type?.toLowerCase().includes(lowerQuery) ||
+        item.description?.toLowerCase().includes(lowerQuery)
+    );
+  }, [items, searchQuery]);
 
   // Load expense types on mount
   const loadExpenseTypes = async () => {
     setIsLoadingInitial(true);
-    try {
-      const types = await listExpenseTypes();
-      if (types && types.length > 0) {
-        setValue('items', types as any, { shouldValidate: false });
-      } else {
-        // If no types, start with one empty row
-        setValue('items', [{ id: '', type: '', description: '' }] as any, { shouldValidate: false });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load expense types',
-        variant: 'destructive',
-      });
+    // Build search request - no specific company filtering, load all
+    const searchRequest: UniversalSearchRequest = {};
+    const result = await searchExpenseTypes(searchRequest, 0, 100);
+    if (result?.content) {
+      setValue("items", result.content, { shouldValidate: false });
+    } else {
+      setValue("items", [], { shouldValidate: false });
     }
     setIsLoadingInitial(false);
   };
@@ -66,89 +100,180 @@ export function ExpenseTypesTab() {
     loadExpenseTypes();
   }, []);
 
-  const columns: TableColumn<Record<string, any>>[] = [
+  const columns: TableColumn<ExpenseTypeConfig>[] = [
     {
-      key: 'type',
-      header: 'Type',
-      type: 'text',
+      key: "type",
+      header: "Type",
+      type: "text",
       required: true,
-      placeholder: 'Enter type...',
-      width: '200px',
-      minWidth: '200px',
+      placeholder: "Enter expense type...",
+      width: "200px",
+      minWidth: "200px",
     },
     {
-      key: 'description',
-      header: 'Description',
-      type: 'text',
+      key: "description",
+      header: "Description",
+      type: "text",
       required: true,
-      placeholder: 'Enter description...',
-      width: '300px',
-      minWidth: '300px',
+      placeholder: "Enter description...",
+      flex: 1,
+    },
+    {
+      key: "companyIds",
+      header: "Companies",
+      type: "multiselect",
+      required: false,
+      placeholder: "Select companies...",
+      options: companies.map((c) => ({ value: c.id, label: c.name })),
+      width: "200px",
+      minWidth: "200px",
     },
   ];
 
-  const handleSave = async () => {
-    const valid = await form.trigger();
-    if (!valid) return;
+  const emptyItem: ExpenseTypeConfig = {
+    id: "",
+    type: "",
+    description: "",
+    companyIds: [],
+    createdAt: new Date().toISOString(),
+  };
 
-    try {
-      // For new items (without ID), create them
-      // For existing items, update them
-      for (const item of items) {
-        if (!item.id) {
-          // Create new item
-          const result = await createExpenseType({
-            type: item.type,
-            description: item.description,
-          });
-          if (!result) {
-            throw new Error('Failed to create expense type');
-          }
-        } else {
-          // Update existing item
-          const result = await updateExpenseType(item.id, {
-            type: item.type,
-            description: item.description,
-          });
-          if (!result) {
-            throw new Error('Failed to update expense type');
-          }
-        }
-      }
-      
-      // Reload to get latest data with IDs
-      await loadExpenseTypes();
-      toast({
-        title: 'Success',
-        description: 'Expense types saved successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save expense types',
-        variant: 'destructive',
+  // Handle multiselect (companies) click - opens modal
+  const handleMultiselectClick = (
+    columnKey: string,
+    index: number,
+    currentValue: string[]
+  ) => {
+    if (columnKey === "companyIds") {
+      setCompanyModalState({
+        isOpen: true,
+        itemIndex: index,
+        selectedCompanyIds: currentValue || [],
       });
     }
   };
 
-  const handleDelete = async (item: Record<string, any>) => {
+  // Handle company selection in modal - automatically saves after applying
+  const handleApplyCompanies = async (selectedCompanyIds: string[]) => {
+    if (companyModalState.itemIndex === null) return;
+
+    const itemIndex = companyModalState.itemIndex;
+    const updatedItem = {
+      ...items[itemIndex],
+      companyIds: selectedCompanyIds,
+    };
+
+    // Update items state first
+    const updatedItems = [...items];
+    updatedItems[itemIndex] = updatedItem;
+    setValue("items", updatedItems, { shouldValidate: true });
+
+    // Close modal
+    setCompanyModalState({
+      isOpen: false,
+      itemIndex: null,
+      selectedCompanyIds: [],
+    });
+
+    // Automatically save the updated item
+    await handleSave(updatedItem, itemIndex);
+  };
+
+  const handleItemsChange = (newItems: ExpenseTypeConfig[]) => {
+    setValue("items", newItems, { shouldValidate: true });
+  };
+
+  const handleSave = async (item: ExpenseTypeConfig, index: number) => {
+    console.log("handleSave called for item:", item, "at index:", index);
+
+    // Validate current item has required fields
+    if (!item.type || !item.description) {
+      console.warn("Validation failed: missing required fields");
+      return;
+    }
+
     try {
-      if (item.id) {
-        // Only delete if it has an ID (already saved to backend)
-        const success = await deleteExpenseType(item.id);
-        if (!success) {
-          throw new Error('Failed to delete expense type');
+      // Check if this is an existing item (has a valid ID from server)
+      const isExistingItem = item.id && item.id.trim() !== "";
+
+      if (isExistingItem) {
+        // Update existing expense type
+        console.log("Updating expense type with ID:", item.id);
+
+        const updatePayload = {
+          type: item.type,
+          description: item.description,
+          companyIds: item.companyIds,
+          updatedAt: new Date().toISOString(),
+        };
+
+        console.log("Calling updateExpenseType with payload:", updatePayload);
+
+        const result = await updateExpenseType(item.id, updatePayload);
+
+        console.log("API result:", result);
+
+        if (result) {
+          // Update the item with any returned data
+          const updatedItems = [...items];
+          updatedItems[index] = result;
+          setValue("items", updatedItems);
+          console.log("Item updated successfully:", result);
+        }
+      } else {
+        // Create new expense type
+        // Generate ID if not present
+        const itemId = `EXP_TYPE_${Date.now()}`;
+
+        console.log("Creating expense type with ID:", itemId);
+
+        // Create carrier object for API call
+        const carrier = {
+          type: item.type,
+          description: item.description,
+          companyIds: item.companyIds,
+          createdAt: new Date().toISOString(),
+        };
+
+        console.log("Calling createExpenseType with carrier:", carrier);
+
+        // Call create expense type API
+        const result = await createExpenseType(carrier);
+
+        console.log("API result:", result);
+
+        if (result) {
+          // Update the item with any returned data (e.g., ID from server)
+          const updatedItems = [...items];
+          updatedItems[index] = result;
+          setValue("items", updatedItems);
+          console.log("Item created successfully:", result);
         }
       }
-      
-      const filtered = items.filter((i) => i.id !== item.id);
-      setValue('items', filtered as any);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete expense type',
-        variant: 'destructive',
-      });
+      console.error("Error saving expense type:", error);
+    }
+  };
+
+  const handleDelete = async (item: ExpenseTypeConfig, index: number) => {
+    console.log("handleDelete called for item:", item, "at index:", index);
+
+    try {
+      if (!item.id || item.id.trim() === "") {
+        console.warn("Cannot delete item without ID");
+        return;
+      }
+
+      const success = await deleteExpenseType(item.id);
+
+      if (success) {
+        // Remove the item from the form state
+        const updatedItems = items.filter((_: any, i: number) => i !== index);
+        setValue("items", updatedItems, { shouldValidate: true });
+        console.log("Expense type deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error deleting expense type:", error);
     }
   };
 
@@ -157,6 +282,20 @@ export function ExpenseTypesTab() {
       <form>
         {/* Centered Container - Full width on mobile, constrained on larger screens */}
         <div className="w-full max-w-5xl mx-auto">
+          {/* Toolbar with search */}
+          <div className="mb-4">
+            <GenericToolbar
+              showSearch
+              searchPlaceholder="Search expense types by name or description..."
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              showFilters={false}
+              showExport={false}
+              showConfigureView={false}
+              showBulkActions={false}
+            />
+          </div>
+
           {isLoadingInitial ? (
             <div className="flex items-center justify-center py-12">
               <p className="text-muted-foreground">Loading expense types...</p>
@@ -164,9 +303,9 @@ export function ExpenseTypesTab() {
           ) : (
             <EditableItemsTable
               columns={columns}
-              items={items}
-              onChange={(newData: any) => setValue('items', newData)}
-              emptyItemTemplate={{ id: '', type: '', description: '' }}
+              items={(filteredItems ?? []) as ExpenseTypeConfig[]}
+              onChange={handleItemsChange}
+              emptyItemTemplate={emptyItem}
               minItems={1}
               maxItems={20}
               showAddButton={true}
@@ -175,10 +314,30 @@ export function ExpenseTypesTab() {
               allowSave={true}
               onSave={handleSave}
               onDelete={handleDelete}
+              onMultiselectClick={handleMultiselectClick}
             />
           )}
         </div>
       </form>
+
+      {/* Company Assignment Modal */}
+      {companyModalState.isOpen && companyModalState.itemIndex !== null && (
+        <CompanyAssignmentModal
+          isOpen={companyModalState.isOpen}
+          onClose={() =>
+            setCompanyModalState({
+              isOpen: false,
+              itemIndex: null,
+              selectedCompanyIds: [],
+            })
+          }
+          onApply={handleApplyCompanies}
+          selectedCompanyIds={companyModalState.selectedCompanyIds}
+          companies={companies}
+          title="Assign Companies to Expense Type"
+          description="Select the companies this expense type applies to"
+        />
+      )}
     </Form>
   );
 }

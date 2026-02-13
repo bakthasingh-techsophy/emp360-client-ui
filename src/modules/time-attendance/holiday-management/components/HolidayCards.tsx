@@ -12,7 +12,7 @@ import { Building2, Edit2, Trash2 } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useHoliday } from '@/contexts/HolidayContext';
 import { useToast } from '@/hooks/use-toast';
-import { HolidayCompanyModal } from './HolidayCompanyModal';
+import { CompanyAssignmentModal } from '@/components/context-aware/CompanyAssignmentModal';
 
 interface HolidayCardsProps {
   holidays: Holiday[];
@@ -208,13 +208,15 @@ export const HolidayCards: React.FC<HolidayCardsProps> = ({
 
       {/* Company Modal */}
       {companyModalState.isOpen && companyModalState.holidayId && (
-        <HolidayCompanyModal
+        <CompanyAssignmentModal
           isOpen={companyModalState.isOpen}
           onClose={() => setCompanyModalState(prev => ({ ...prev, isOpen: false }))}
           onApply={handleApplyCompanies}
           selectedCompanyIds={companyModalState.selectedCompanyIds}
           companies={companies}
           isLoading={companyModalState.isSaving}
+          title="Assign Companies to Holiday"
+          description={`Select companies where "${companyModalState.holidayName}" applies`}
         />
       )}
     </>

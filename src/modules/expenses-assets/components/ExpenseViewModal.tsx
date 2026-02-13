@@ -256,7 +256,7 @@ export function ExpenseViewModal({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <DialogTitle className="text-xl">{expense.expenseNumber}</DialogTitle>
+                <DialogTitle className="text-xl">{expense.firstName || ''} {expense.lastName || ''} - {expense.id}</DialogTitle>
                 <Badge className={EXPENSE_STATUS_COLORS[expense.status]}>
                   {EXPENSE_STATUS_LABELS[expense.status]}
                 </Badge>
@@ -312,30 +312,29 @@ export function ExpenseViewModal({
                 <InfoField 
                   icon={User} 
                   label="Name" 
-                  value={expense.employeeName} 
+                  value={`${expense.firstName || ''} ${expense.lastName || ''}`}
                 />
                 <InfoField 
                   icon={Building2} 
                   label="Employee ID" 
                   value={expense.employeeId} 
                 />
-                <InfoField 
-                  icon={Building2} 
-                  label="Department" 
-                  value={expense.department} 
-                />
-                <InfoField 
-                  icon={Mail} 
-                  label="Email" 
-                  value={expense.employeeEmail}
-                  copyable
-                />
-                <InfoField 
-                  icon={Phone} 
-                  label="Phone" 
-                  value={expense.employeePhone}
-                  copyable
-                />
+                {expense.email && (
+                  <InfoField 
+                    icon={Mail} 
+                    label="Email" 
+                    value={expense.email}
+                    copyable
+                  />
+                )}
+                {expense.phone && (
+                  <InfoField 
+                    icon={Phone} 
+                    label="Phone" 
+                    value={expense.phone}
+                    copyable
+                  />
+                )}
               </div>
             </div>
 
@@ -353,14 +352,14 @@ export function ExpenseViewModal({
                   label="Total Amount" 
                   value={
                     <span className="text-lg font-bold text-primary">
-                      ${expense.amount.toLocaleString()} {expense.currency}
+                      ${(expense.totalRequestedAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   }
                 />
                 <InfoField 
                   icon={Receipt} 
                   label="Number of Items" 
-                  value={`${expense.lineItems.length} ${expense.lineItems.length === 1 ? 'item' : 'items'}`}
+                  value={`${(expense.lineItemIds?.length || 0)} ${(expense.lineItemIds?.length || 0) === 1 ? 'item' : 'items'}`}
                 />
               </div>
             </div>
@@ -382,15 +381,15 @@ export function ExpenseViewModal({
             </div>
 
             {/* Additional Notes */}
-            {expense.notes && (
+            {expense.description && expense.description.length > 120 && (
               <>
                 <Separator />
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Additional Notes
+                    Full Description
                   </h3>
-                  <p className="text-sm text-muted-foreground">{expense.notes}</p>
+                  <p className="text-sm text-muted-foreground">{expense.description}</p>
                 </div>
               </>
             )}

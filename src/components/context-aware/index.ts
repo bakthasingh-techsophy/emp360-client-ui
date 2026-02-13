@@ -6,4 +6,5 @@
  */
 
 export { UsersSelector } from './UsersSelector';
-export { CompanySelector } from './CompanySelector';
+export { CompanyDropdown as CompanySelector } from './CompanyDropdown';
+export { CompanyAssignmentModal } from './CompanyAssignmentModal';
