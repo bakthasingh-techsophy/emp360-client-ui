@@ -3,8 +3,8 @@
  * DataTable view with tabs for different expense states
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,23 @@ import { Bell, Plus, Settings } from 'lucide-react';
 
 export function ExpenseList() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
-  const [parentTab, setParentTab] = useState('expenses');
+  
+  // Get initial tab from URL params or default to 'expenses'
+  const initialTab = searchParams.get('tab') || 'expenses';
+  const [parentTab, setParentTab] = useState(initialTab);
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Update URL when tab changes
+  useEffect(() => {
+    if (parentTab !== 'expenses') {
+      setSearchParams({ tab: parentTab });
+    } else {
+      setSearchParams({});
+    }
+  }, [parentTab, setSearchParams]);
   
   // Column visibility configuration
   const allColumns = [

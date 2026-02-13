@@ -332,16 +332,16 @@ export function TravelIntimationViewModal({
               </div>
             </div>
 
-            {/* Additional Notes */}
-            {intimation.additionalNotes && (
+            {/* Description */}
+            {intimation.description && (
               <>
                 <Separator />
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Additional Notes
+                    Description
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intimation.additionalNotes}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intimation.description}</p>
                 </div>
               </>
             )}

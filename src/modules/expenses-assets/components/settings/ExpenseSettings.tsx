@@ -12,7 +12,6 @@ import { PageLayout } from '@/components/PageLayout';
 import { ExpenseSettingsTabsNavigation } from './ExpenseSettingsTabsNavigation';
 import { ExpenseTypesTab } from './ExpenseTypesTab';
 import { ExpenseCategoriesTab } from './ExpenseCategoriesTab';
-import { ExpenseManagementProvider } from '@/contexts/ExpenseManagementContext';
 
 export interface SettingsTab {
   key: string;
@@ -33,8 +32,7 @@ export function ExpenseSettings() {
   };
 
   return (
-    <ExpenseManagementProvider>
-      <PageLayout
+    <PageLayout
         toolbar={
           <div className="space-y-4">
             {/* Page Header with Back Button */}
@@ -81,6 +79,5 @@ export function ExpenseSettings() {
           </div>
         </Tabs>
       </PageLayout>
-    </ExpenseManagementProvider>
   );
 }

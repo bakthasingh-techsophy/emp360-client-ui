@@ -1,15 +1,17 @@
 /**
  * Journey Form Branch Component
- * Branch form for travel intimations with journey segments
+ * Accordion-based form for travel intimations with cost breakdown
+ * Each journey is independently editable and expandable
  */
 
 import { useState, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { EditableItemsTable, TableColumn } from '@/components/common/EditableItemsTable/EditableItemsTable';
-import { JourneySegment } from '../types/intimation.types';
+import { JourneySegment, JourneyCostBreakdown } from '../types/intimation.types';
+import { JourneyCard } from './JourneyCard';
 import { format } from 'date-fns';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus, ChevronsDown, ChevronsUp } from 'lucide-react';
 
 interface JourneyFormBranchProps {
   value: JourneySegment[];
@@ -21,242 +23,222 @@ export interface JourneyFormBranchRef {
   clearErrors: () => void;
 }
 
-export const JourneyFormBranch = forwardRef<JourneyFormBranchRef, JourneyFormBranchProps>(({ value, onChange }, ref) => {
-  const segments = value;
-  const [validationErrors, setValidationErrors] = useState<Record<number, Record<string, string>>>({});
-  const [errorMessages, setErrorMessages] = useState<string[]>([]);
-  const [showErrors, setShowErrors] = useState(false);
+export const JourneyFormBranch = forwardRef<JourneyFormBranchRef, JourneyFormBranchProps>(
+  ({ value, onChange }, ref) => {
+    const segments = value;
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  const getTotalEstimatedCost = () => {
-    return segments.reduce((sum, seg) => sum + Number(seg.estimatedCost || 0), 0);
-  };
+    // Calculate total cost for all journeys
+    const getTotalEstimatedCost = () => {
+      return segments.reduce((sum, seg) => sum + Number(seg.totalCost || 0), 0);
+    };
 
-  // Validation function
-  const validateSegments = (items: JourneySegment[]) => {
-    const errors: Record<number, Record<string, string>> = {};
-    const messages: string[] = [];
+    // Count saved journeys
+    const getSavedJourneysCount = () => {
+      return segments.filter((seg) => seg.isSaved).length;
+    };
 
-    items.forEach((segment, index) => {
-      const rowErrors: Record<string, string> = {};
+    // Expand all journeys
+    const handleExpandAll = () => {
+      const allIds = segments.filter(seg => seg.isSaved).map(seg => seg.id);
+      setExpandedItems(new Set(allIds));
+    };
 
-      // Validate from location
-      if (!segment.from || segment.from.trim() === '') {
-        rowErrors.from = 'From location is required';
+    // Collapse all journeys
+    const handleCollapseAll = () => {
+      setExpandedItems(new Set());
+    };
+
+    // Handle individual journey expand/collapse
+    const handleExpandChange = (segmentId: string, expanded: boolean) => {
+      const newExpanded = new Set(expandedItems);
+      if (expanded) {
+        newExpanded.add(segmentId);
+      } else {
+        newExpanded.delete(segmentId);
+      }
+      setExpandedItems(newExpanded);
+    };
+
+    // Validate all journeys
+    const validateSegments = (): boolean => {
+      // Check if there's at least one journey
+      if (segments.length === 0) {
+        setErrorMessage('Please add at least one journey');
+        return false;
       }
 
-      // Validate to location
-      if (!segment.to || segment.to.trim() === '') {
-        rowErrors.to = 'To location is required';
+      // Check if all journeys are saved
+      const unsavedCount = segments.filter((seg) => !seg.isSaved).length;
+      if (unsavedCount > 0) {
+        setErrorMessage(
+          `Please save all journeys before submitting (${unsavedCount} unsaved)`
+        );
+        return false;
       }
 
-      // Validate from date
-      if (!segment.fromDate) {
-        rowErrors.fromDate = 'From date is required';
+      // Check if at least one journey has cost
+      const totalCost = getTotalEstimatedCost();
+      if (totalCost <= 0) {
+        setErrorMessage('At least one journey must have estimated costs');
+        return false;
       }
 
-      // Validate to date
-      if (!segment.toDate) {
-        rowErrors.toDate = 'To date is required';
+      setErrorMessage('');
+      return true;
+    };
+
+    // Expose validation methods to parent via ref
+    useImperativeHandle(ref, () => ({
+      validate: () => {
+        return validateSegments();
+      },
+      clearErrors: () => {
+        setErrorMessage('');
+      },
+    }));
+
+    // Handle journey save
+    const handleSaveJourney = (updatedSegment: JourneySegment) => {
+      const updatedSegments = segments.map((seg) =>
+        seg.id === updatedSegment.id ? updatedSegment : seg
+      );
+      onChange(updatedSegments);
+      setErrorMessage(''); // Clear errors when a journey is saved
+    };
+
+    // Handle journey delete
+    const handleDeleteJourney = (segmentId: string) => {
+      const updatedSegments = segments.filter((seg) => seg.id !== segmentId);
+      onChange(updatedSegments);
+      
+      // If deleting the last journey, clear errors
+      if (updatedSegments.length === 0) {
+        setErrorMessage('');
       }
+    };
 
-      // Validate date range
-      if (segment.fromDate && segment.toDate) {
-        const fromDate = new Date(segment.fromDate);
-        const toDate = new Date(segment.toDate);
-        if (toDate < fromDate) {
-          rowErrors.toDate = 'To date must be after from date';
-          if (!messages.includes('Segment ' + (index + 1) + ': To date must be after from date')) {
-            messages.push('Segment ' + (index + 1) + ': To date must be after from date');
-          }
-        }
-      }
+    // Add new journey
+    const handleAddJourney = () => {
+      const newSegment: JourneySegment = {
+        id: `journey-${Date.now()}`,
+        from: '',
+        to: '',
+        fromDate: format(new Date(), 'yyyy-MM-dd'),
+        toDate: format(new Date(), 'yyyy-MM-dd'),
+        modeOfTransport: '',
+        notes: '',
+        costBreakdown: {
+          transport: 0,
+          accommodation: 0,
+          food: 0,
+          miscellaneous: 0,
+        } as JourneyCostBreakdown,
+        totalCost: 0,
+        isEditing: true,
+        isSaved: false,
+      };
+      onChange([...segments, newSegment]);
+    };
 
-      // Validate mode of transport
-      if (!segment.modeOfTransport || segment.modeOfTransport === '') {
-        rowErrors.modeOfTransport = 'Transport mode is required';
-      }
+    return (
+      <div className="space-y-4">
+        {/* Error Messages */}
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
 
-      // Validate estimated cost
-      if (!segment.estimatedCost || segment.estimatedCost <= 0) {
-        rowErrors.estimatedCost = 'Cost must be greater than 0';
-      }
+        {/* Main Journey Card - Contains Everything */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Journey Details</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            {/* Header with Stats and Controls */}
+            <div className="flex items-center justify-between gap-4 pb-3 border-b">
+              <div className="flex items-center gap-4 md:gap-6 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Journeys:</span>
+                  <span className="ml-2 font-semibold">{segments.length}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Saved:</span>
+                  <span className="ml-2 font-semibold">
+                    {getSavedJourneysCount()}/{segments.length}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Expand/Collapse All Controls */}
+                {getSavedJourneysCount() > 0 && (
+                  <div className="flex gap-1 mr-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleExpandAll}
+                      className="h-7 text-xs"
+                    >
+                      <ChevronsDown className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Expand All</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCollapseAll}
+                      className="h-7 text-xs"
+                    >
+                      <ChevronsUp className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">Collapse All</span>
+                    </Button>
+                  </div>
+                )}
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground mr-2">Total:</span>
+                  <span className="text-lg font-bold text-primary">
+                    ${getTotalEstimatedCost().toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-      if (Object.keys(rowErrors).length > 0) {
-        errors[index] = rowErrors;
-        
-        // Add general error message for this segment
-        const fieldNames = Object.keys(rowErrors).map(key => {
-          const fieldMap: Record<string, string> = {
-            from: 'From location',
-            to: 'To location',
-            fromDate: 'From date',
-            toDate: 'To date',
-            modeOfTransport: 'Transport mode',
-            estimatedCost: 'Estimated cost',
-          };
-          return fieldMap[key] || key;
-        });
-        
-        if (fieldNames.length > 0 && !messages.some(msg => msg.startsWith('Segment ' + (index + 1)))) {
-          messages.push(`Segment ${index + 1}: Please fill in ${fieldNames.join(', ')}`);
-        }
-      }
-    });
-
-    setValidationErrors(errors);
-    setErrorMessages(messages);
-    setShowErrors(true);
-    return errors;
-  };
-
-  // Expose validation methods to parent via ref
-  useImperativeHandle(ref, () => ({
-    validate: () => {
-      const errors = validateSegments(segments);
-      return Object.keys(errors).length === 0;
-    },
-    clearErrors: () => {
-      setValidationErrors({});
-      setErrorMessages([]);
-      setShowErrors(false);
-    },
-  }));
-
-  // Define columns for the editable table
-  const columns: TableColumn<JourneySegment>[] = [
-    {
-      key: 'from',
-      header: 'From Location',
-      type: 'text',
-      required: true,
-      placeholder: 'Starting location',
-      flex: 1,
-    },
-    {
-      key: 'to',
-      header: 'To Location',
-      type: 'text',
-      required: true,
-      placeholder: 'Destination',
-      flex: 1,
-    },
-    {
-      key: 'fromDate',
-      header: 'From Date',
-      type: 'date',
-      required: true,
-      width: '140px',
-      align: 'center',
-    },
-    {
-      key: 'toDate',
-      header: 'To Date',
-      type: 'date',
-      required: true,
-      width: '140px',
-      align: 'center',
-    },
-    {
-      key: 'modeOfTransport',
-      header: 'Transport',
-      type: 'select',
-      required: true,
-      width: '140px',
-      align: 'center',
-      options: [
-        { label: 'Flight', value: 'flight' },
-        { label: 'Train', value: 'train' },
-        { label: 'Bus', value: 'bus' },
-        { label: 'Car', value: 'car' },
-        { label: 'Taxi/Cab', value: 'taxi' },
-        { label: 'Metro', value: 'metro' },
-        { label: 'Ship/Ferry', value: 'ship' },
-        { label: 'Other', value: 'other' },
-      ],
-    },
-    {
-      key: 'estimatedCost',
-      header: 'Est. Cost',
-      type: 'number',
-      required: true,
-      min: 0,
-      step: 0.01,
-      placeholder: '0.00',
-      width: '120px',
-      align: 'center',
-    },
-    {
-      key: 'notes',
-      header: 'Notes',
-      type: 'text',
-      placeholder: 'Optional notes...',
-      flex: 1,
-    },
-  ];
-
-  const emptySegment: JourneySegment = {
-    id: `segment-${Date.now()}`,
-    from: '',
-    to: '',
-    fromDate: format(new Date(), 'yyyy-MM-dd'),
-    toDate: format(new Date(), 'yyyy-MM-dd'),
-    modeOfTransport: '',
-    estimatedCost: 0,
-    notes: '',
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Error Messages - Only show when explicitly validated */}
-      {showErrors && errorMessages.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="font-semibold mb-1">Please correct the following errors:</div>
-            <ul className="list-disc list-inside space-y-1">
-              {errorMessages.map((message, index) => (
-                <li key={index} className="text-sm">{message}</li>
+            {/* Journey Cards */}
+            <div className="space-y-2">
+              {segments.map((segment, index) => (
+                <JourneyCard
+                  key={segment.id}
+                  segment={segment}
+                  index={index}
+                  onSave={handleSaveJourney}
+                  onDelete={handleDeleteJourney}
+                  expanded={expandedItems.has(segment.id)}
+                  onExpandChange={(expanded) => handleExpandChange(segment.id, expanded)}
+                />
               ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+            </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Journey Details</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Add journey segments and estimated costs for each leg of your travel
-          </p>
-        </CardHeader>
-        <CardContent>
-          <EditableItemsTable
-            columns={columns}
-            items={segments}
-            onChange={onChange}
-            emptyItemTemplate={emptySegment}
-            minItems={1}
-            maxItems={20}
-            errors={showErrors ? validationErrors : {}}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Total Estimated Cost */}
-      {segments.length > 0 && getTotalEstimatedCost() > 0 && (
-        <Card className="bg-muted/50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold">Total Estimated Cost</span>
-              <span className="text-2xl font-bold">
-                ${getTotalEstimatedCost().toFixed(2)}
-              </span>
+            {/* Add Journey Button */}
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddJourney}
+                className="w-full md:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Journey
+              </Button>
             </div>
           </CardContent>
         </Card>
-      )}
-    </div>
-  );
-});
+      </div>
+    );
+  }
+);
 
 JourneyFormBranch.displayName = 'JourneyFormBranch';

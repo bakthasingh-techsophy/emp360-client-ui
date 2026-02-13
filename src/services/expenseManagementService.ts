@@ -20,6 +20,11 @@ import {
   ExpenseCarrier,
   ExpenseSnapshot,
 } from "@/modules/expenses-assets/types/expense.types";
+import {
+  Intimation,
+  IntimationCarrier,
+  IntimationSnapshot,
+} from "@/modules/expenses-assets/types/intimation.types";
 import { UniversalSearchRequest } from "@/types/search";
 import { Pagination } from "@/types/pagination";
 
@@ -259,6 +264,110 @@ export const apiDeleteExpense = async (
 };
 
 /**
+ * Get Intimation By ID
+ * GET /emp-user-management/v1/expense-management/intimations/{id}
+ * 
+ * Retrieves full intimation details by ID.
+ * Returns complete intimation object with all journey segments and details.
+ * 
+ * @param intimationId - Intimation ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Intimation>>
+ * 
+ * @example
+ * const response = await apiGetIntimationDetails('INT-2026-12345', 'tenant-001');
+ */
+export const apiGetIntimationDetails = async (
+  intimationId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Intimation>> => {
+  return apiRequest<Intimation>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/intimations/${intimationId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Create Intimation Request
+ * POST /emp-user-management/v1/expense-management/intimations/create
+ * 
+ * Creates a new intimation request through the expense management service.
+ * This is for intimations that may later be converted to expenses.
+ * 
+ * @param carrier - IntimationCarrier with intimation information
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Intimation>>
+ * 
+ * @example
+ * const response = await apiCreateIntimationRequest({
+ *   type: 'travel',
+ *   raisedFor: 'myself',
+ *   companyId: 'company-001',
+ *   employeeId: 'emp-001',
+ *   additionalNotes: 'Business trip to client site',
+ *   createdAt: new Date().toISOString()
+ * }, 'tenant-001');
+ */
+export const apiCreateIntimationRequest = async (
+  carrier: IntimationCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Intimation>> => {
+  return apiRequest<Intimation>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/intimations/create`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Search Intimation Snapshots
+ * POST /emp-user-management/v1/expense-management/intimations/snapshots/search
+ * 
+ * Searches intimation snapshots with filters and pagination.
+ * Optimized for table rendering with search, filtering, and sorting.
+ * 
+ * @param searchRequest - UniversalSearchRequest with searchText, searchFields, filters, sort
+ * @param page - Page number (0-indexed)
+ * @param size - Page size
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<Pagination<IntimationSnapshot>>>
+ * 
+ * @example
+ * const response = await apiSearchIntimationSnapshots({
+ *   searchText: 'travel',
+ *   searchFields: ['type', 'firstName', 'lastName'],
+ *   filters: { and: { status: 'PENDING_APPROVAL' } },
+ *   sort: { createdAt: -1 }
+ * }, 0, 20, 'tenant-001');
+ */
+export const apiSearchIntimationSnapshots = async (
+  searchRequest: UniversalSearchRequest,
+  page: number = 0,
+  size: number = 20,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Pagination<IntimationSnapshot>>> => {
+  const endpoint = `${BASE_ENDPOINT}/intimations/snapshots/search?page=${page}&size=${size}`;
+  
+  return apiRequest<Pagination<IntimationSnapshot>>({
+    method: "POST",
+    endpoint,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const expenseManagementService = {
@@ -269,4 +378,7 @@ export const expenseManagementService = {
   apiAddExpenseLineItem,
   apiDeleteExpenseLineItem,
   apiDeleteExpense,
+  apiGetIntimationDetails,
+  apiCreateIntimationRequest,
+  apiSearchIntimationSnapshots,
 };

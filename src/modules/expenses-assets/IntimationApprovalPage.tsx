@@ -273,12 +273,12 @@ export function IntimationApprovalPage() {
                 />
               )}
 
-              {/* Additional Notes (Read-only) */}
-              {intimation.additionalNotes && (
+              {/* Description (Read-only) */}
+              {intimation.description && (
                 <div className="space-y-2 pt-4 border-t">
-                  <Label>Additional Notes (from submitter)</Label>
+                  <Label>Description (from submitter)</Label>
                   <div className="p-3 rounded-md bg-muted text-sm">
-                    {intimation.additionalNotes}
+                    {intimation.description}
                   </div>
                 </div>
               )}

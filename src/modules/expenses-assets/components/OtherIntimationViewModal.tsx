@@ -215,17 +215,17 @@ export function OtherIntimationViewModal({
               </>
             )}
 
-            {/* Additional Notes */}
-            {intimation.additionalNotes && (
+            {/* Description */}
+            {intimation.description && (
               <>
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Additional Notes
+                    Description
                   </h3>
                   <div className="p-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/50">
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed italic">
-                      "{intimation.additionalNotes}"
+                      "{intimation.description}"
                     </p>
                   </div>
                 </div>

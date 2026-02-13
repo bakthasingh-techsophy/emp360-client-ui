@@ -75,6 +75,11 @@ import {
   ExpenseLineItem,
   ExpenseLineItemCarrier,
 } from "@/modules/expenses-assets/types/expense.types";
+import {
+  Intimation,
+  IntimationCarrier,
+  IntimationSnapshot,
+} from "@/modules/expenses-assets/types/intimation.types";
 
 /**
  * Generic update payload type
@@ -168,6 +173,17 @@ interface ExpenseManagementContextType {
   bulkUpdateExpenseLineItems: (
     payload: LineItemBulkUpdatePayload
   ) => Promise<ExpenseLineItem[] | null>;
+
+  // Intimation Methods
+  getIntimationDetailsMain: (id: string) => Promise<Intimation | null>;
+  createIntimationRequest: (
+    carrier: IntimationCarrier
+  ) => Promise<Intimation | null>;
+  searchIntimationSnapshotsMain: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<IntimationSnapshot> | null>;
 
   // Loading State
   isLoading: boolean;
@@ -616,6 +632,49 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     ) as Promise<ExpenseLineItem[] | null>;
   };
 
+  // ==================== INTIMATION METHODS ====================
+
+  const getIntimationDetailsMain = async (
+    id: string
+  ): Promise<Intimation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiGetIntimationDetails(id, tenant, accessToken),
+      "Fetch Intimation Details",
+      ""
+    ) as Promise<Intimation | null>;
+  };
+
+  const createIntimationRequest = async (
+    carrier: IntimationCarrier
+  ): Promise<Intimation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiCreateIntimationRequest(carrier, tenant, accessToken),
+      "Create Intimation Request",
+      "Intimation request created successfully"
+    ) as Promise<Intimation | null>;
+  };
+
+  const searchIntimationSnapshotsMain = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20
+  ): Promise<Pagination<IntimationSnapshot> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        expenseManagementService.apiSearchIntimationSnapshots(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken
+        ),
+      "Search Intimation Snapshots",
+      ""
+    ) as Promise<Pagination<IntimationSnapshot> | null>;
+  };
+
   // ==================== CONTEXT VALUE ====================
 
   const value: ExpenseManagementContextType = {
@@ -655,6 +714,11 @@ export function ExpenseManagementProvider({ children }: { children: ReactNode })
     searchExpenseLineItems,
     bulkDeleteExpenseLineItems,
     bulkUpdateExpenseLineItems,
+
+    // Intimation Methods
+    getIntimationDetailsMain,
+    createIntimationRequest,
+    searchIntimationSnapshotsMain,
 
     // Loading State
     isLoading,
