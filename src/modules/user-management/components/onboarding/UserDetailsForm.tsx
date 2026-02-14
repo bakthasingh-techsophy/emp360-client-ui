@@ -10,9 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CompanyDropdown } from "@/components/context-aware/CompanyDropdown";
 import { UserDetails, UserStatus } from "../../types/onboarding.types";
 import { useUserManagement } from "@/contexts/UserManagementContext";
-import { useCompany } from "@/contexts/CompanyContext";
 
 // Zod schema for UserDetails validation
 export const userDetailsSchema = z.object({
@@ -47,7 +47,6 @@ export function UserDetailsFormComponent({
   } = form;
 
   const { getUserDetailsById } = useUserManagement();
-  const { companies, loading: isLoadingCompanies } = useCompany();
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchUserDetails = async () => {
@@ -98,6 +97,7 @@ export function UserDetailsFormComponent({
           <Input
             id="id"
             placeholder="e.g., EMP001"
+            disabled={mode === 'edit'}
             {...register("id", { required: "Employee ID is required" })}
           />
           {errors.id && (
@@ -108,28 +108,16 @@ export function UserDetailsFormComponent({
         {/* Company Dropdown */}
         <div className="space-y-2">
           <Label htmlFor="companyId">Company</Label>
-          <Select
+          <CompanyDropdown
             value={watch("companyId")}
-            onValueChange={(value) => {
-              setValue("companyId", value);
+            onChange={(companyId) => {
+              setValue("companyId", companyId);
               trigger("companyId");
             }}
-            disabled={isLoadingCompanies}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={isLoadingCompanies ? "Loading companies..." : "Select company (optional)"} />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.filter(c => c).map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.companyId && (
-            <p className="text-sm text-destructive">{errors.companyId.message}</p>
-          )}
+            placeholder="Search companies..."
+            error={errors.companyId?.message}
+            showRefresh={true}
+          />
         </div>
 
         {/* Status */}

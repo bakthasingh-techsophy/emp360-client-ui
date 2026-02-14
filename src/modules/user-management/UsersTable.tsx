@@ -40,6 +40,29 @@ import { buildUniversalSearchRequest } from "@/components/GenericToolbar/searchB
 import { UserStatus, UserDetailsSnapshot } from "./types/onboarding.types";
 import { EmployeeViewModal } from "./components/EmployeeViewModal";
 
+// Helper component for truncated text with tooltip
+function TruncatedText({ text, maxLength = 30 }: { text: string; maxLength?: number }) {
+  const isTruncated = text.length > maxLength;
+  const displayText = isTruncated ? `${text.substring(0, maxLength)}...` : text;
+
+  if (!isTruncated) return <span>{text}</span>;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help border-b border-dotted border-muted-foreground">
+            {displayText}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-sm">
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 type Props = {
   searchQuery: string;
   activeFilters: ActiveFilter[];
@@ -47,6 +70,16 @@ type Props = {
   selectionMode: boolean;
   onSelectionChange: (ids: string[]) => void;
   refreshTrigger?: number;
+  permissions: {
+    canView: boolean;
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canAccessSettings: boolean;
+    hasAllPermissions: boolean;
+    hasAnyAccess: boolean;
+    roles: string[];
+  };
 };
 
 export function UsersTable({
@@ -56,6 +89,7 @@ export function UsersTable({
   selectionMode,
   onSelectionChange,
   refreshTrigger = 0,
+  permissions,
 }: Props) {
   const navigate = useNavigate();
   const { refreshUserDetailsSnapshots, deleteUser, isLoading } =
@@ -131,7 +165,7 @@ export function UsersTable({
 
   const handleEditUser = useCallback(
     (user: UserDetailsSnapshot) => {
-      navigate(`/employee-onboarding?mode=edit&id=${user.id}`);
+      navigate(`/user-management/employee-onboarding?mode=edit&id=${user.id}`);
     },
     [navigate],
   );
@@ -225,50 +259,53 @@ export function UsersTable({
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
+        header: ({ table }) =>
+          selectionMode ? (
+            <Checkbox
+              checked={table.getIsAllPageRowsSelected()}
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label="Select all"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : null,
+        cell: ({ row }) =>
+          selectionMode ? (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : null,
         enableSorting: false,
-        enableHiding: false,
+        enableHiding: true,
+        size: 50,
       },
       {
         id: "employeeId",
         accessorKey: "id",
         header: "Employee ID",
         cell: ({ row }) => <div className="font-medium">{row.original.id}</div>,
+        size: 120,
       },
       {
         id: "name",
         accessorKey: "firstName",
         header: "Name",
-        cell: ({ row }) => (
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{`${row.original.firstName} ${row.original.lastName}`}</span>
-            <span className="text-xs text-muted-foreground">
-              {row.original.designation}
-            </span>
-            {row.original.reportingTo && (
-              <span className="text-xs text-muted-foreground">
-                Reports to: {row.original.reportingTo}
+        cell: ({ row }) => {
+          const fullName = `${row.original.firstName} ${row.original.lastName}`;
+          return (
+            <div className="flex flex-col gap-1 min-w-0">
+              <TruncatedText text={fullName} maxLength={25} />
+              <span className="text-xs text-muted-foreground truncate">
+                RM: {row.original.reportingTo || "Not Assigned"}
               </span>
-            )}
-          </div>
-        ),
+            </div>
+          );
+        },
+        size: 180,
       },
       {
         id: "contactInfo",
@@ -279,16 +316,18 @@ export function UsersTable({
           const emailId = `email-${user.id}`;
           const phoneId = `phone-${user.id}`;
           return (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{user.email}</span>
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm truncate">
+                  <TruncatedText text={user.email} maxLength={25} />
+                </span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-6 w-6 flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           copyToClipboard(user.email, emailId);
@@ -307,9 +346,9 @@ export function UsersTable({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {user.phone}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs text-muted-foreground truncate">
+                  <TruncatedText text={user.phone} maxLength={15} />
                 </span>
                 <TooltipProvider>
                   <Tooltip>
@@ -317,7 +356,7 @@ export function UsersTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-6 w-6 flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           copyToClipboard(user.phone, phoneId);
@@ -339,23 +378,24 @@ export function UsersTable({
             </div>
           );
         },
+        size: 200,
       },
       {
         accessorKey: "department",
         header: "Department",
         cell: ({ row }) => {
           const designation = row.original.designation;
+          const department = row.getValue("department") as string;
           return (
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                {row.getValue("department")}
-              </span>
+            <div className="flex flex-col gap-1 min-w-0">
+              <TruncatedText text={department} maxLength={20} />
               <Badge variant="secondary" className="capitalize text-xs w-fit">
                 {designation}
               </Badge>
             </div>
           );
         },
+        size: 160,
       },
       {
         accessorKey: "status",
@@ -368,56 +408,78 @@ export function UsersTable({
             </Badge>
           );
         },
+        size: 100,
       },
       {
-        accessorKey: "location",
+        accessorKey: "workLocation",
         header: "Location",
-        cell: ({ row }) => (
-          <div className="text-sm">{row.getValue("location")}</div>
-        ),
+        cell: ({ row }) => {
+          const location = row.getValue("workLocation") as string;
+          return (
+            <div className="text-sm min-w-0">
+              <TruncatedText text={location} maxLength={20} />
+            </div>
+          );
+        },
+        size: 140,
       },
       {
         accessorKey: "joiningDate",
         header: "Joining Date",
         cell: ({ row }) => (
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             {formatDate(row.getValue("joiningDate"))}
           </div>
         ),
+        size: 120,
       },
       {
         accessorKey: "dateOfBirth",
         header: "Date of Birth",
         cell: ({ row }) => {
           const dob = row.getValue("dateOfBirth") as string | undefined;
-          return <div className="text-sm">{dob ? formatDate(dob) : "-"}</div>;
+          return (
+            <div className="text-sm whitespace-nowrap">
+              {dob ? formatDate(dob) : "-"}
+            </div>
+          );
         },
+        size: 120,
       },
       {
         accessorKey: "reportingTo",
         header: "Reporting To",
         cell: ({ row }) => {
           const reportingTo = row.getValue("reportingTo") as string | undefined;
-          return <div className="text-sm">{reportingTo || "-"}</div>;
+          return (
+            <div className="text-sm min-w-0">
+              {reportingTo ? (
+                <TruncatedText text={reportingTo} maxLength={25} />
+              ) : (
+                "-"
+              )}
+            </div>
+          );
         },
+        size: 150,
       },
       {
         accessorKey: "panNumber",
         header: "PAN Number",
         cell: ({ row }) => {
           const panNumber = row.getValue("panNumber") as string | undefined;
-          return <div className="text-sm font-mono">{panNumber || "-"}</div>;
+          return <div className="text-sm font-mono whitespace-nowrap">{panNumber || "-"}</div>;
         },
+        size: 130,
       },
       {
         accessorKey: "aadharNumber",
         header: "Aadhar Number",
         cell: ({ row }) => {
-          const aadharNumber = row.getValue("aadharNumber") as
-            | string
-            | undefined;
-          return <div className="text-sm font-mono">{aadharNumber || "-"}</div>;
+          const aadharNumber = row.getValue("aadharNumber") as string | undefined;
+          return <div className="text-sm font-mono whitespace-nowrap">{aadharNumber || "-"}</div>;
         },
+        size: 140,
       },
       {
         accessorKey: "emergencyContact",
@@ -427,11 +489,13 @@ export function UsersTable({
             | { name: string; phone: string; relation: string }
             | undefined;
           return (
-            <div className="text-sm">
+            <div className="text-sm min-w-0">
               {contact ? (
-                <div>
-                  <div className="font-medium">{contact.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <div className="font-medium min-w-0">
+                    <TruncatedText text={contact.name} maxLength={20} />
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
                     {contact.phone}
                   </div>
                 </div>
@@ -441,6 +505,7 @@ export function UsersTable({
             </div>
           );
         },
+        size: 160,
       },
       {
         accessorKey: "skills",
@@ -448,18 +513,33 @@ export function UsersTable({
         cell: ({ row }) => {
           const skills = row.getValue("skills") as string[] | undefined;
           return (
-            <div className="text-sm">
+            <div className="text-sm min-w-0">
               {skills && skills.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
-                  {skills.slice(0, 3).map((skill, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {skill}
+                  {skills.slice(0, 2).map((skill, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs whitespace-nowrap">
+                      <TruncatedText text={skill} maxLength={12} />
                     </Badge>
                   ))}
-                  {skills.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{skills.length - 3}
-                    </Badge>
+                  {skills.length > 2 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="text-xs cursor-help">
+                            +{skills.length - 2}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <div className="flex flex-wrap gap-2">
+                            {skills.slice(2).map((skill, idx) => (
+                              <span key={idx} className="block">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
               ) : (
@@ -468,20 +548,27 @@ export function UsersTable({
             </div>
           );
         },
+        size: 180,
       },
       {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => (
-          <div className="text-sm">{formatDate(row.getValue("createdAt"))}</div>
+          <div className="text-sm whitespace-nowrap">
+            {formatDate(row.getValue("createdAt"))}
+          </div>
         ),
+        size: 120,
       },
       {
         accessorKey: "updatedAt",
         header: "Updated At",
         cell: ({ row }) => (
-          <div className="text-sm">{formatDate(row.getValue("updatedAt"))}</div>
+          <div className="text-sm whitespace-nowrap">
+            {formatDate(row.getValue("updatedAt"))}
+          </div>
         ),
+        size: 120,
       },
       {
         id: "actions",
@@ -490,57 +577,69 @@ export function UsersTable({
           const user = row.original;
           return (
             <div className="flex items-center justify-center gap-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewUser(user);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
+              {/* View button - always shown if user has view permission */}
+              {permissions.canView && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewUser(user);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>View Details</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Edit button - only shown if user has edit permission */}
+              {permissions.canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditUser(user);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+
+              {/* Delete dropdown - only shown if user has delete permission */}
+              {permissions.canDelete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">More actions</span>
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View Details</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditUser(user);
-                }}
-              >
-                Edit
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <span className="sr-only">More actions</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => handleDeleteUser(user)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete User
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteUser(user)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete User
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           );
         },
+        size: 130,
       },
     ],
     [
@@ -549,6 +648,8 @@ export function UsersTable({
       handleViewUser,
       handleEditUser,
       handleDeleteUser,
+      permissions,
+      selectionMode,
     ],
   );
 
@@ -556,9 +657,9 @@ export function UsersTable({
   const filteredColumns = useMemo(
     () =>
       columns.filter((column: any) => {
-        // Always include select column if in selection mode
+        // Always include select column - React Table requires it for selection to function
         if (column.id === "select") {
-          return selectionMode;
+          return true;
         }
         // Always include action columns
         if (column.id === "actions") {
@@ -573,18 +674,18 @@ export function UsersTable({
         }
         return true;
       }),
-    [columns, visibleColumns, selectionMode],
+    [columns, visibleColumns],
   );
 
-  console.log("UsersTable: selectionMode", selectionMode);
-  console.log("UsersTable: filteredColumns count", filteredColumns.length);
-  console.log(
-    "UsersTable: has select column?",
-    filteredColumns.some((c: any) => c.id === "select"),
-  );
-  console.log(
-    "UsersTable: columns",
-    filteredColumns.map((c: any) => c.id || c.accessorKey),
+  // Memoize selection config to prevent React Table from rebuilding selection state on every render
+  const selectionConfig = useMemo(
+    () => ({
+      enabled: selectionMode ?? false,
+      onSelectionChange,
+      getRowId: (user: UserDetailsSnapshot) => user.id,
+      enableSelectAll: true,
+    }),
+    [selectionMode, onSelectionChange],
   );
 
   return (
@@ -604,12 +705,7 @@ export function UsersTable({
         }}
         paginationVariant="default"
         fixedPagination={true}
-        selection={{
-          enabled: selectionMode ?? false,
-          onSelectionChange,
-          getRowId: (user) => user.id,
-          enableSelectAll: true,
-        }}
+        selection={selectionConfig}
         emptyState={{
           title: "No users found",
           description:
@@ -625,10 +721,7 @@ export function UsersTable({
           setViewModalOpen(false);
           setSelectedUser(null);
         }}
-        onEdit={(user) => {
-          setViewModalOpen(false);
-          handleEditUser(user);
-        }}
+        permissions={permissions}
       />
 
       {/* Delete Confirmation Dialog */}

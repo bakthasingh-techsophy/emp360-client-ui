@@ -111,7 +111,7 @@ export interface UserDetailsSnapshot {
   status: UserStatus;
 
   /** Location & dates */
-  location: string;
+  workLocation: string;
   joiningDate: string; // LocalDate as ISO string
   dateOfBirth?: string; // LocalDate as ISO string
 

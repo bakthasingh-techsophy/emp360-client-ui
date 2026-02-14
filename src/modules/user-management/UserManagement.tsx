@@ -14,10 +14,12 @@ import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import { UsersTable } from './UsersTable';
 import UniversalSearchRequest from '@/types/search';
+import { useUserManagementPermissions } from '@/lib/permissions';
 
 export function UserManagement() {
   const navigate = useNavigate();
   const { bulkDeleteUsers, bulkDeactivateUsers, bulkEnableUsers } = useUserManagement();
+  const permissions = useUserManagementPermissions();
 
   // State management
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,6 +36,84 @@ export function UserManagement() {
     onConfirm: () => void;
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
+  // Action handlers
+  const handleSettings = useCallback(() => {
+    navigate('/user-management/settings');
+  }, [navigate]);
+  // If user has no access at all, show restricted message
+  if (!permissions.hasAnyAccess) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">Access Restricted</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to access User Management.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator for access.
+            </p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // If user can't view employees but has other permissions, show limited access message
+  if (!permissions.canView) {
+    return (
+      <PageLayout
+        toolbar={
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                <p className="text-muted-foreground mt-1">
+                  Manage system users, roles, and access control
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {permissions.canAccessSettings && (
+                  <Button onClick={handleSettings} variant="outline" className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
+                )}
+                {permissions.canCreate && (
+                  <Button onClick={() => navigate('/user-management/employee-onboarding')} className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Onboard New Employee
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="text-center space-y-3 max-w-md">
+            <h2 className="text-2xl font-bold">Limited Access</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to view the employee list.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {permissions.canCreate ? (
+                <>
+                  However, you can create new employees. Click the "Onboard New Employee" button above to get started.
+                </>
+              ) : permissions.canAccessSettings ? (
+                <>
+                  However, you can access settings. Click the "Settings" button above to manage employee types, designations, and more.
+                </>
+              ) : (
+                "Please contact your administrator to request additional access."
+              )}
+            </p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   // Column visibility state - minimal columns visible by default
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
@@ -168,11 +248,7 @@ export function UserManagement() {
 
   // Action handlers
   const handleAddUser = useCallback(() => {
-    navigate('/employee-onboarding');
-  }, [navigate]);
-
-  const handleSettings = useCallback(() => {
-    navigate('/user-management/settings');
+    navigate('/user-management/employee-onboarding');
   }, [navigate]);
 
   const handleExportAll = useCallback((sendEmail: boolean, email?: string) => {
@@ -186,11 +262,15 @@ export function UserManagement() {
   }, []);
 
   const handleToggleSelection = useCallback(() => {
-    setSelectionMode(prev => !prev);
-    if (selectionMode) {
-      setSelectedIds([]);
-    }
-  }, [selectionMode]);
+    setSelectionMode(prev => {
+      const newMode = !prev;
+      // Clear selection when turning OFF selection mode
+      if (prev) {
+        setSelectedIds([]);
+      }
+      return newMode;
+    });
+  }, []);
 
   const handleSelectionChange = useCallback((selectedUserIds: string[]) => {
     setSelectedIds(selectedUserIds);
@@ -315,41 +395,60 @@ export function UserManagement() {
   // Memoize activeFilters to prevent unnecessary re-renders of UsersTable
   const memoizedActiveFilters = useMemo(() => activeFilters, [activeFilters]);
 
-  // Define bulk actions
-  const bulkActions: BulkAction[] = useMemo(() => [
-    {
-      id: 'delete',
-      label: 'Delete Selected',
-      icon: <Trash2 className="h-4 w-4" />,
-      type: 'button',
-      variant: 'destructive',
-      onClick: handleBulkDelete,
-    },
-    {
-      id: 'deactivate',
-      label: 'Deactivate',
-      icon: <UserX className="h-4 w-4" />,
-      type: 'button',
-      variant: 'outline',
-      onClick: handleBulkDeactivate,
-    },
-    {
-      id: 'enable',
-      label: 'Enable Users',
-      icon: <UserCheck className="h-4 w-4" />,
-      type: 'button',
-      variant: 'outline',
-      onClick: handleBulkEnable,
-    },
-    {
-      id: 'credit-leaves',
-      label: 'Credit Leaves',
-      icon: <Gift className="h-4 w-4" />,
-      type: 'button',
-      variant: 'outline',
-      onClick: handleBulkCreditLeaves,
-    },
-  ], [handleBulkDelete, handleBulkDeactivate, handleBulkEnable, handleBulkCreditLeaves]);
+  // Define bulk actions based on permissions
+  const bulkActions: BulkAction[] = useMemo(() => {
+    const actions: BulkAction[] = [];
+    
+    // Delete action - only if user has delete permission
+    if (permissions.canDelete) {
+      actions.push({
+        id: 'delete',
+        label: 'Delete Selected',
+        icon: <Trash2 className="h-4 w-4" />,
+        type: 'button',
+        variant: 'destructive',
+        onClick: handleBulkDelete,
+      });
+    }
+    
+    // Deactivate action - only if user has deactivate permission
+    if (permissions.canDeactivate) {
+      actions.push({
+        id: 'deactivate',
+        label: 'Deactivate',
+        icon: <UserX className="h-4 w-4" />,
+        type: 'button',
+        variant: 'outline',
+        onClick: handleBulkDeactivate,
+      });
+    }
+    
+    // Enable action - only if user has enable permission
+    if (permissions.canEnable) {
+      actions.push({
+        id: 'enable',
+        label: 'Enable Users',
+        icon: <UserCheck className="h-4 w-4" />,
+        type: 'button',
+        variant: 'outline',
+        onClick: handleBulkEnable,
+      });
+    }
+    
+    // Credit leaves - only if user has edit permission
+    if (permissions.canEdit) {
+      actions.push({
+        id: 'credit-leaves',
+        label: 'Credit Leaves',
+        icon: <Gift className="h-4 w-4" />,
+        type: 'button',
+        variant: 'outline',
+        onClick: handleBulkCreditLeaves,
+      });
+    }
+    
+    return actions;
+  }, [permissions, handleBulkDelete, handleBulkDeactivate, handleBulkEnable, handleBulkCreditLeaves]);
 
   return (
     <>
@@ -365,14 +464,18 @@ export function UserManagement() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={handleSettings} variant="outline" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
-              <Button onClick={handleAddUser} className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Onboard New Employee
-              </Button>
+              {permissions.canAccessSettings && (
+                <Button onClick={handleSettings} variant="outline" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              )}
+              {permissions.canCreate && (
+                <Button onClick={handleAddUser} className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Onboard New Employee
+                </Button>
+              )}
             </div>
           </div>
 
@@ -410,6 +513,7 @@ export function UserManagement() {
         selectionMode={selectionMode}
         onSelectionChange={handleSelectionChange}
         refreshTrigger={refreshTrigger}
+        permissions={permissions}
       />
     </PageLayout>
 

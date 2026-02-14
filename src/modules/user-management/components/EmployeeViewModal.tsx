@@ -4,6 +4,7 @@
  * Custom fixed header (no default close icon) and fixed action bar at bottom
  */
 
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +31,16 @@ interface EmployeeViewModalProps {
   employee: UserDetailsSnapshot | null;
   open: boolean;
   onClose: () => void;
-  onEdit?: (employee: UserDetailsSnapshot) => void;
+  permissions: {
+    canView: boolean;
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canAccessSettings: boolean;
+    hasAllPermissions: boolean;
+    hasAnyAccess: boolean;
+    roles: string[];
+  };
 }
 
 function SkillBadge({ skill }: { skill: string }) {
@@ -41,10 +51,16 @@ function SkillBadge({ skill }: { skill: string }) {
   );
 }
 
-export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeViewModalProps) {
+export function EmployeeViewModal({ employee, open, onClose, permissions }: EmployeeViewModalProps) {
   if (!employee) return null;
 
+  const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleEdit = () => {
+    navigate(`/user-management/employee-onboarding?mode=edit&id=${employee.id}`);
+    onClose();
+  };
   
   // Construct full name from firstName and lastName
   const fullName = `${employee.firstName} ${employee.lastName}`.trim();
@@ -215,11 +231,11 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
                   label="Designation" 
                   value={employee.designation} 
                 />
-                {employee.location && (
+                {employee.workLocation && (
                   <InfoRow 
                     icon={Building2} 
                     label="Work Location" 
-                    value={employee.location} 
+                    value={employee.workLocation} 
                   />
                 )}
                 <InfoRow 
@@ -296,8 +312,8 @@ export function EmployeeViewModal({ employee, open, onClose, onEdit }: EmployeeV
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            {onEdit && (
-              <Button onClick={() => onEdit(employee)}>
+            {permissions.canEdit && (
+              <Button onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Details
               </Button>

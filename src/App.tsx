@@ -247,7 +247,7 @@ function App() {
                 {/* Administration & Security routes - Flat paths */}
                 <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/user-management/settings" element={<UserManagementSettings />} />
-                <Route path="/employee-onboarding" element={<EmployeeOnboarding />} />
+                <Route path="/user-management/employee-onboarding" element={<EmployeeOnboarding />} />
                 <Route path="/company-management" element={<CompanyManagement />} />
                 <Route path="/company-form" element={<CompanyForm />} />
                 <Route path="/role-permissions" element={<RolePermissions />} />

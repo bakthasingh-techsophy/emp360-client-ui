@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useUserManagementPermissions } from "@/lib/permissions";
 import { BankingDetailsFormComponent, bankingDetailsSchema } from "./components/onboarding/BankingDetailsForm";
 import { DocumentPoolFormComponent } from "./components/onboarding/DocumentPoolForm";
 import { EmploymentHistoryFormComponent, employmentHistorySchema } from "./components/onboarding/EmploymentHistoryForm";
@@ -47,6 +48,7 @@ export function EmployeeOnboarding() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const permissions = useUserManagementPermissions();
   const { 
     onboardUser, 
     updateUser, 
@@ -54,6 +56,31 @@ export function EmployeeOnboarding() {
     updateBankingDetails, 
     isLoading 
   } = useUserManagement();
+
+  // Check if user has create permission
+  if (!permissions.canCreate) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">Access Restricted</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to onboard employees.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator for access.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/user-management')}
+          >
+            Back to User Management
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
 
   // Determine mode and employee ID from URL params
   const mode = searchParams.get("mode") === "edit" ? "edit" : "create";

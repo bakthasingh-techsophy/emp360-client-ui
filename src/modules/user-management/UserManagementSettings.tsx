@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { PageLayout } from '@/components/PageLayout';
+import { useUserManagementPermissions } from '@/lib/permissions';
 import { SettingsTabsNavigation } from './components/settings/SettingsTabsNavigation';
 import { EmployeeTypesTab } from './components/settings/EmployeeTypesTab';
 import { WorkLocationsTab } from './components/settings/WorkLocationsTab';
@@ -22,7 +23,34 @@ export interface SettingsTab {
 
 export function UserManagementSettings() {
   const navigate = useNavigate();
+  const permissions = useUserManagementPermissions();
   const [activeTab, setActiveTab] = useState('employee-types');
+
+  // Restrict access to users with settings permission only
+  if (!permissions.canAccessSettings) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">Access Restricted</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to access User Management Settings.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please contact your administrator for access.
+            </p>
+            <Button 
+              onClick={() => navigate('/user-management')} 
+              variant="outline"
+              className="mt-4"
+            >
+              Back to User Management
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   // Define settings tabs
   const tabs: SettingsTab[] = [

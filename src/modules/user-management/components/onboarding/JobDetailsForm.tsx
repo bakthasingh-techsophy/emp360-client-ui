@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -58,7 +59,7 @@ export const jobDetailsSchema = z.object({
   departmentId: z.string().optional(),
   employeeTypeId: z.string().min(1, "Employee type is required"),
   workLocationId: z.string().min(1, "Work location is required"),
-  reportingTo: z.string().min(1, "Reporting manager is required"),
+  reportingTo: z.string().optional(),
   joiningDate: z.string().min(1, "Joining date is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   celebrationDOB: z.string().optional(),
@@ -173,6 +174,7 @@ export function JobDetailsFormComponent({
     refreshWorkLocations 
   } = useUserManagement();
   const [isLoading, setIsLoading] = useState(false);
+  const [reportingManagerType, setReportingManagerType] = useState<'dropdown' | 'email'>('dropdown');
   
   // Employee Types
   const [employeeTypesList, setEmployeeTypesList] = useState<EmployeeTypeSettings[]>([]);
@@ -482,24 +484,66 @@ export function JobDetailsFormComponent({
           </div>
 
           <div className="space-y-2">
-            <Label>
-              Reporting Manager <span className="text-destructive">*</span>
-            </Label>
-            <Combobox
-              value={watch("reportingTo")}
-              onChange={(value) => {
-                setValue("reportingTo", value);
+            <Label>Reporting Manager</Label>
+            
+            {/* Selection Type Radio */}
+            <RadioGroup
+              value={reportingManagerType}
+              onValueChange={(value: 'dropdown' | 'email') => {
+                setReportingManagerType(value);
+                setValue("reportingTo", "");
                 trigger("reportingTo");
               }}
-              options={managers}
-              placeholder="Select manager"
-              searchPlaceholder="Search manager..."
-            />
+              className="flex items-center gap-4 mb-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dropdown" id="manager-dropdown" />
+                <Label htmlFor="manager-dropdown" className="font-normal cursor-pointer">
+                  Select from list
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="email" id="manager-email" />
+                <Label htmlFor="manager-email" className="font-normal cursor-pointer">
+                  Enter email
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {/* Conditional Rendering based on type */}
+            {reportingManagerType === 'dropdown' ? (
+              <Combobox
+                value={watch("reportingTo")}
+                onChange={(value) => {
+                  setValue("reportingTo", value);
+                  trigger("reportingTo");
+                }}
+                options={managers}
+                placeholder="Select manager"
+                searchPlaceholder="Search manager..."
+              />
+            ) : (
+              <Input
+                type="email"
+                placeholder="manager@company.com"
+                value={watch("reportingTo") || ""}
+                onChange={(e) => {
+                  setValue("reportingTo", e.target.value);
+                  trigger("reportingTo");
+                }}
+              />
+            )}
+            
             {errors.reportingTo && (
               <p className="text-sm text-destructive">
                 {errors.reportingTo.message}
               </p>
             )}
+            <p className="text-xs text-muted-foreground">
+              {reportingManagerType === 'dropdown' 
+                ? 'Select manager from the list of onboarded employees'
+                : 'Enter manager\'s email if they are not yet onboarded'}
+            </p>
           </div>
 
           <div className="space-y-2">

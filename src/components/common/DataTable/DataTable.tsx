@@ -88,7 +88,7 @@ function DataTableInner<TData, TFilters = any>(
         .filter(key => rowSelection[key as keyof typeof rowSelection]);
       selection.onSelectionChange(selectedIds);
     }
-  }, [rowSelection, selection]);
+  }, [rowSelection, selection?.enabled, selection?.onSelectionChange]);
 
   // Initialize table
   const table = useReactTable({
