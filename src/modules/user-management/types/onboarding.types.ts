@@ -409,16 +409,49 @@ export interface EmployeeAggregate {
   updatedAt: string; // ISO instant
 }
 
-// Keep old names as aliases for backward compatibility
-export type PromotionHistoryItem = EventHistoryItem;
-export type PromotionHistoryForm = EventHistoryForm;
+// GeneralDetailsSnapshot (Lightweight snapshot for table rendering and display)
+export interface GeneralDetailsSnapshot {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  secondaryPhone?: string;
+  gender?: Gender;
+  bloodGroup?: string;
+  panNumber?: string;
+  aadharNumber?: string;
+  contactAddress?: string;
+  permanentAddress?: string;
+  sameAsContactAddress?: boolean;
+  emergencyContacts?: EmergencyContact[];
+  personalEmail?: string;
+  nationality?: string;
+  physicallyChallenged?: boolean;
+  passportNumber?: string;
+  passportExpiry?: string;
+  maritalStatus?: MaritalStatus;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
+}
 
-// Tab Configuration
-export interface OnboardingTab {
-  id: number;
-  key: string;
-  label: string;
-  description: string;
-  isLocked: boolean;
-  isCompleted: boolean;
+// JobDetailsSnapshot (Lightweight snapshot for table rendering and display)
+export interface JobDetailsSnapshot {
+  id: string;
+  email: string;
+  phone: string;
+  secondaryPhone?: string;
+  designation: string;
+  employeeType: string;
+  workLocation: string;
+  department: string;
+  reportingTo?: string;
+  joiningDate: string; // ISO instant
+  dateOfBirth?: string; // ISO instant
+  celebrationDOB?: string; // ISO instant
+  sameAsDOB?: boolean;
+  shift?: string;
+  probationPeriod?: number;
+  createdAt: string; // ISO instant
+  updatedAt: string; // ISO instant
 }

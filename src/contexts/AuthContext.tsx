@@ -6,6 +6,7 @@ import { getStorageItem, removeStorageItem, setStorageItem } from "@/store/local
 import { DemoUser, demoUsers } from "@/types/mockData";
 import type { ApiResponse } from "@/types/responses";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { hasResourceAccess, getResourceRoles, hasResourceRole, getAvailableResources, decodeJWT } from "@/lib/tokenUtils";
 
 // REMOVED: 'superadmin' role - platform admin features moved to separate platform admin app
 export type UserRole =
@@ -33,6 +34,7 @@ interface User {
   name: string;
   email: string;
   role: UserRole;
+  employeeId?: string;
   orgId?: string;
   companyId?: string;
 }
@@ -49,6 +51,8 @@ interface SessionPayload {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  token: string | null;
+  employeeId: string | null;
   login: (username: string, password: string) => Promise<ApiResponse<any>>;
   logout: () => void;
   can: (permission: Permission) => boolean;
@@ -58,12 +62,37 @@ interface AuthContextType {
   getDemoUsers: () => DemoUser[];
   createDemoUser: (userData: Omit<DemoUser, "id" | "createdAt">) => DemoUser;
   updateDemoUserPassword: (userId: string) => string;
+  // Resource access methods based on JWT token
+  hasResourceAccess: (resource: string) => boolean;
+  getResourceRoles: (resource: string) => string[];
+  hasResourceRole: (resource: string, role: string) => boolean;
+  getAvailableResources: () => string[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  
+  // token state
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      const session = getStorageItem<SessionPayload>(StorageKeys.SESSION);
+      return session?.token || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // employeeId state
+  const [employeeId, setEmployeeId] = useState<string | null>(() => {
+    try {
+      const stored = getStorageItem<string>(StorageKeys.EMPLOYEE_ID);
+      return stored || null;
+    } catch {
+      return null;
+    }
+  });
   
   // demo users (encrypted)
   const [users, setUsers] = useState<DemoUser[]>(() => {
@@ -109,6 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Extract auth payload from Keycloak response
       const authData = response.data;
 
+      // Decode JWT to extract additional claims
+      const decodedToken = decodeJWT(authData.access_token);
+      const tokenEmployeeId = decodedToken?.employeeId || "";
+
       // Create authenticated user object
       // Note: Username is used as ID (can be enhanced to fetch full user details from backend later)
       const authenticatedUser: User = {
@@ -116,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: username,
         email: `${username}@company.com`, // Can be fetched from backend user service
         role: "org-admin", // Default role; should be fetched from backend
+        employeeId: tokenEmployeeId,
       };
 
       // Save user to state
@@ -123,6 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Persist encrypted user to localStorage
       setStorageItem(StorageKeys.USER, authenticatedUser);
+
+      // Save employeeId to state and localStorage
+      setEmployeeId(tokenEmployeeId);
+      setStorageItem(StorageKeys.EMPLOYEE_ID, tokenEmployeeId);
 
       // Create session payload with token and expiry information
       const sessionPayload: SessionPayload = {
@@ -136,6 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Persist encrypted session to localStorage
       setStorageItem(StorageKeys.SESSION, sessionPayload);
+      
+      // Set token in state
+      setToken(authData.access_token);
 
       // Persist realm/tenant to localStorage (hardcoded as 'test-realm' for now)
       setStorageItem(StorageKeys.TENANT, 'test-realm');
@@ -167,8 +208,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
+    setEmployeeId(null);
     removeStorageItem(StorageKeys.USER);
     removeStorageItem(StorageKeys.SESSION);
+    removeStorageItem(StorageKeys.EMPLOYEE_ID);
   };
 
   const can = (permission: Permission): boolean => {
@@ -245,6 +289,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated,
+        token,
+        employeeId,
         login,
         logout,
         can,
@@ -254,6 +300,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getDemoUsers,
         createDemoUser,
         updateDemoUserPassword,
+        // Resource access methods
+        hasResourceAccess: (resource: string) => token ? hasResourceAccess(token, resource) : false,
+        getResourceRoles: (resource: string) => token ? getResourceRoles(token, resource) : [],
+        hasResourceRole: (resource: string, role: string) => token ? hasResourceRole(token, resource, role) : false,
+        getAvailableResources: () => token ? getAvailableResources(token) : [],
       }}
     >
       {children}

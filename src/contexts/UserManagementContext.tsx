@@ -43,6 +43,7 @@ import {
   apiDeleteUser,
   apiCreateSkill,
   apiUpdateSkill,
+  apiDeleteSkill,
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
   apiBulkEnableUsers,
@@ -54,6 +55,8 @@ import {
   apiDeleteDesignationViaUsers,
   apiUpdateWorkLocationViaUsers,
   apiDeleteWorkLocationViaUsers,
+  apiGetGeneralDetailsSnapshot,
+  apiGetJobDetailsSnapshot,
 } from "@/services/userManagementService";
 
 // Employee Aggregate Service
@@ -118,7 +121,6 @@ import {
 // Skill Items Service
 import {
   apiGetSkillById,
-  apiDeleteSkill,
   apiSearchSkills,
   SkillItem,
 } from "@/services/skillItemsService";
@@ -181,7 +183,9 @@ import {
   UserDetailsSnapshot,
   GeneralDetails,
   GeneralDetailsCarrier,
+  GeneralDetailsSnapshot,
   JobDetailsCarrier,
+  JobDetailsSnapshot,
   EmploymentHistoryItemCarrier,
   EventHistoryItemCarrier,
   SkillItemCarrier,
@@ -328,6 +332,10 @@ interface UserManagementContextType {
   ) => Promise<JobDetails | null>;
   deleteJobDetails: (id: string) => Promise<boolean>;
 
+  // Job Details Snapshot Methods
+  getJobDetailsSnapshot: (employeeId: string) => Promise<JobDetailsSnapshot | null>;
+  getGeneralDetailsSnapshot: (employeeId: string) => Promise<GeneralDetailsSnapshot | null>;
+
   // Banking Details Methods
   createBankingDetails: (
     carrier: BankingDetailsCarrier,
@@ -357,7 +365,7 @@ interface UserManagementContextType {
     page?: number,
     pageSize?: number,
   ) => Promise<Pagination<SkillItem> | null>;
-  deleteSkill: (id: string) => Promise<boolean>;
+  deleteSkill: (id: string, employeeId: string) => Promise<boolean>;
 
   // Document Pool Methods
   createDocument: (
@@ -1114,6 +1122,30 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== SNAPSHOTS METHODS ====================
+
+  const getJobDetailsSnapshot = async (
+    employeeId: string,
+  ): Promise<JobDetailsSnapshot | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetJobDetailsSnapshot(employeeId, tenant, accessToken),
+      "Fetch Job Details Snapshot",
+      "",
+    ) as Promise<JobDetailsSnapshot | null>;
+  };
+
+  const getGeneralDetailsSnapshot = async (
+    employeeId: string,
+  ): Promise<GeneralDetailsSnapshot | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetGeneralDetailsSnapshot(employeeId, tenant, accessToken),
+      "Fetch General Details Snapshot",
+      "",
+    ) as Promise<GeneralDetailsSnapshot | null>;
+  };
+
   // ==================== BANKING DETAILS METHODS ====================
 
   const createBankingDetails = async (
@@ -1225,9 +1257,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<Pagination<SkillItem> | null>;
   };
 
-  const deleteSkill = async (id: string): Promise<boolean> => {
+  const deleteSkill = async (id: string, employeeId: string): Promise<boolean> => {
     const result = await executeApiCall(
-      (tenant, accessToken) => apiDeleteSkill(id, tenant, accessToken),
+      (tenant, accessToken) => apiDeleteSkill(id, employeeId, tenant, accessToken),
       "Delete Skill",
       "Skill deleted successfully",
       true,
@@ -1654,6 +1686,10 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     getJobDetailsById,
     updateJobDetails,
     deleteJobDetails,
+
+    // Snapshots
+    getJobDetailsSnapshot,
+    getGeneralDetailsSnapshot,
 
     // Banking Details
     createBankingDetails,

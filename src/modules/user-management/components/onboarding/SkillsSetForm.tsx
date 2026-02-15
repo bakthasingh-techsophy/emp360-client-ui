@@ -124,9 +124,9 @@ export function SkillsSetFormComponent({ employeeId }: SkillsSetFormProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!id) return;
+    if (!id || !employeeId) return;
     
-    await deleteSkill(id);
+    await deleteSkill(id, employeeId);
     await fetchSkills();
   };
 

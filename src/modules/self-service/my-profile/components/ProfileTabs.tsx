@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserProfile } from '../types';
 import { AboutTab } from './AboutTab';
 import { ProfileTab } from './ProfileTab';
 import { JobTab } from './JobTab';
@@ -7,16 +6,17 @@ import { TimelineTab } from './TimelineTab';
 import { DocumentsTab } from './DocumentsTab';
 import { AssetsTab } from './AssetsTab';
 import { FinancesTab } from './FinancesTab';
-import { PerformanceTab } from './PerformanceTab';
-import { User, FileText, Briefcase, Clock, File, Monitor, DollarSign, BarChart2 } from 'lucide-react';
+import { SkillsTab } from './SkillsTab';
+import { EventHistoryTab } from './EventHistoryTab';
+import { User, FileText, Briefcase, History, File, Lightbulb, DollarSign, Award, TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ProfileTabsProps {
-    profile: UserProfile;
+    employeeId: string;
 }
 
-export function ProfileTabs({ profile }: ProfileTabsProps) {
+export function ProfileTabs({ employeeId }: ProfileTabsProps) {
     const [isMobile, setIsMobile] = useState(false);
     const [selectedTab, setSelectedTab] = useState('about');
 
@@ -44,13 +44,14 @@ export function ProfileTabs({ profile }: ProfileTabsProps) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="about">About</SelectItem>
-                            <SelectItem value="profile">Profile</SelectItem>
-                            <SelectItem value="job">Job</SelectItem>
-                            <SelectItem value="timeline">Timeline</SelectItem>
+                            <SelectItem value="profile">General Details</SelectItem>
+                            <SelectItem value="job">Job Details</SelectItem>
+                            <SelectItem value="timeline">Employment History</SelectItem>
+                            <SelectItem value="skills">Skills & Certifications</SelectItem>
+                            <SelectItem value="events">Event History</SelectItem>
                             <SelectItem value="documents">Documents</SelectItem>
+                            <SelectItem value="finances">Banking Details</SelectItem>
                             <SelectItem value="assets">Assets</SelectItem>
-                            <SelectItem value="finances">Finances</SelectItem>
-                            <SelectItem value="performance">Performance</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -61,25 +62,28 @@ export function ProfileTabs({ profile }: ProfileTabsProps) {
                             <User className="w-4 h-4" /> About
                         </TabsTrigger>
                         <TabsTrigger value="profile" className="flex gap-2 items-center py-2">
-                            <FileText className="w-4 h-4" /> Profile
+                            <FileText className="w-4 h-4" /> General Details
                         </TabsTrigger>
                         <TabsTrigger value="job" className="flex gap-2 items-center py-2">
-                            <Briefcase className="w-4 h-4" /> Job
+                            <Briefcase className="w-4 h-4" /> Job Details
                         </TabsTrigger>
                         <TabsTrigger value="timeline" className="flex gap-2 items-center py-2">
-                            <Clock className="w-4 h-4" /> Timeline
+                            <History className="w-4 h-4" /> Employment History
+                        </TabsTrigger>
+                        <TabsTrigger value="skills" className="flex gap-2 items-center py-2">
+                            <Award className="w-4 h-4" /> Skills
+                        </TabsTrigger>
+                        <TabsTrigger value="events" className="flex gap-2 items-center py-2">
+                            <TrendingUp className="w-4 h-4" /> Events
                         </TabsTrigger>
                         <TabsTrigger value="documents" className="flex gap-2 items-center py-2">
                             <File className="w-4 h-4" /> Documents
                         </TabsTrigger>
-                        <TabsTrigger value="assets" className="flex gap-2 items-center py-2">
-                            <Monitor className="w-4 h-4" /> Assets
-                        </TabsTrigger>
                         <TabsTrigger value="finances" className="flex gap-2 items-center py-2">
-                            <DollarSign className="w-4 h-4" /> Finances
+                            <DollarSign className="w-4 h-4" /> Banking
                         </TabsTrigger>
-                        <TabsTrigger value="performance" className="flex gap-2 items-center py-2">
-                            <BarChart2 className="w-4 h-4" /> Performance
+                        <TabsTrigger value="assets" className="flex gap-2 items-center py-2">
+                            <Lightbulb className="w-4 h-4" /> Assets
                         </TabsTrigger>
                     </TabsList>
                 </div>
@@ -87,28 +91,31 @@ export function ProfileTabs({ profile }: ProfileTabsProps) {
 
             <div className="mt-4">
                 <TabsContent value="about" className="mt-0">
-                    <AboutTab profile={profile} />
+                    <AboutTab employeeId={employeeId} />
                 </TabsContent>
                 <TabsContent value="profile" className="mt-0">
-                    <ProfileTab profile={profile} />
+                    <ProfileTab />
                 </TabsContent>
                 <TabsContent value="job" className="mt-0">
-                    <JobTab profile={profile} />
+                    <JobTab employeeId={employeeId} />
                 </TabsContent>
                 <TabsContent value="timeline" className="mt-0">
-                    <TimelineTab profile={profile} />
+                    <TimelineTab />
+                </TabsContent>
+                <TabsContent value="skills" className="mt-0">
+                    <SkillsTab />
+                </TabsContent>
+                <TabsContent value="events" className="mt-0">
+                    <EventHistoryTab />
                 </TabsContent>
                 <TabsContent value="documents" className="mt-0">
-                    <DocumentsTab profile={profile} />
-                </TabsContent>
-                <TabsContent value="assets" className="mt-0">
-                    <AssetsTab profile={profile} />
+                    <DocumentsTab employeeId={employeeId} />
                 </TabsContent>
                 <TabsContent value="finances" className="mt-0">
-                    <FinancesTab profile={profile} />
+                    <FinancesTab />
                 </TabsContent>
-                <TabsContent value="performance" className="mt-0">
-                    <PerformanceTab profile={profile} />
+                <TabsContent value="assets" className="mt-0">
+                    <AssetsTab />
                 </TabsContent>
             </div>
         </Tabs>

@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MenuPickerSheet, type GenericMenuItem, type MenuPickerCategory } from './MenuPickerDialog';
+import { getMenuResource } from '@/config/menuResourceMap';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ==================== TYPES ====================
 
@@ -163,6 +165,7 @@ export function AppShell({
 }: AppShellProps) {
   const location = useLocation();
   const isLarge = useIsLarge();
+  const auth = useAuth();
 
   // Menu picker dialog state
   const [menuPickerOpen, setMenuPickerOpen] = useState(false);
@@ -186,6 +189,45 @@ export function AppShell({
       localStorage.setItem('app-shell-sidebar-collapsed', JSON.stringify(value));
     }
   };
+
+  // Filter menu items based on resource access from JWT token
+  const filteredMenuItems = useMemo(() => {
+    if (!menuItems) return [];
+    
+    return menuItems.filter((item) => {
+      // First check explicit permission function
+      if (item.permission && !item.permission()) {
+        return false;
+      }
+      
+      // Check resource-based access
+      const resource = getMenuResource(item.id);
+      if (resource) {
+        // If menu item requires a resource, user must have access to that resource
+        return auth.hasResourceAccess(resource);
+      }
+      
+      // If no resource mapping, allow by default (unless permission check failed above)
+      return true;
+    });
+  }, [menuItems, auth, auth.token]);
+
+  // Filter all menu items for menu picker based on resource access
+  const filteredAllMenuItems = useMemo(() => {
+    if (!allMenuItems) return [];
+    
+    return allMenuItems.filter((item) => {
+      // Check resource-based access
+      const resource = getMenuResource(item.id);
+      if (resource) {
+        // If menu item requires a resource, user must have access to that resource
+        return auth.hasResourceAccess(resource);
+      }
+      
+      // If no resource mapping, allow by default
+      return true;
+    });
+  }, [allMenuItems, auth, auth.token]);
 
   // Handle sidebar toggle
   const handleToggleSidebar = () => {
@@ -253,8 +295,8 @@ export function AppShell({
       >
         {/* Pass all props to AppShellSidebar sub-component */}
         <AppShellSidebar
-          menuItems={menuItems}
-          allMenuItems={allMenuItems}
+          menuItems={filteredMenuItems}
+          allMenuItems={filteredAllMenuItems}
           pinnedMenuIds={pinnedMenuIds}
           menuGroups={menuGroups}
           collapsed={collapsed}
@@ -328,7 +370,7 @@ export function AppShell({
         <MenuPickerSheet
           open={menuPickerOpen}
           onOpenChange={setMenuPickerOpen}
-          allMenuItems={allMenuItems}
+          allMenuItems={filteredAllMenuItems}
           pinnedMenuIds={pinnedMenuIds}
           onTogglePin={onTogglePin || (() => {})}
           categories={menuCategories}

@@ -1,0 +1,607 @@
+{
+  "description": "Complete Permissions & Resources Mapping",
+  "version": "1.0",
+  "lastUpdated": "2026-02-14",
+  "note": "This JSON defines all resources and their available roles. Configure this in Keycloak and map to user tokens in resource_access claims.",
+  
+  "resources": {
+    "user-management": {
+      "description": "User Management - Manage employees, company settings, roles, permissions",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "uma",
+          "name": "User Management Admin",
+          "description": "Full access to all user management features",
+          "permissions": ["view", "create", "edit", "delete", "deactivate", "enable", "settings"]
+        },
+        {
+          "id": "umv",
+          "name": "User Management Viewer",
+          "description": "View-only access to user management",
+          "permissions": ["view"]
+        },
+        {
+          "id": "ume",
+          "name": "User Management Editor",
+          "description": "Can view and edit user details",
+          "permissions": ["view", "edit"]
+        },
+        {
+          "id": "umd",
+          "name": "User Management Deleter",
+          "description": "Can delete users",
+          "permissions": ["view", "delete"]
+        },
+        {
+          "id": "umc",
+          "name": "User Management Creator",
+          "description": "Can create new users and onboard",
+          "permissions": ["view", "create"]
+        },
+        {
+          "id": "umde",
+          "name": "User Manager Deactivator",
+          "description": "Can deactivate users",
+          "permissions": ["view", "deactivate"]
+        },
+        {
+          "id": "umen",
+          "name": "User Manager Enabler",
+          "description": "Can enable/reactivate users",
+          "permissions": ["view", "enable"]
+        },
+        {
+          "id": "ums",
+          "name": "User Management Settings",
+          "description": "Can access user management settings and configurations",
+          "permissions": ["view", "settings"]
+        }
+      ],
+      "menu_items": ["user-management", "company-management", "role-permissions", "audit-logs", "integrations", "system-settings"]
+    },
+
+    "visitor-management": {
+      "description": "Visitor Management - Manage visitor check-ins and access",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "vm_admin",
+          "name": "Visitor Management Admin",
+          "description": "Full access to visitor management",
+          "permissions": ["view", "create", "edit", "delete", "approve", "configure"]
+        },
+        {
+          "id": "vm_view",
+          "name": "Visitor Management Viewer",
+          "description": "View visitor records and check-ins",
+          "permissions": ["view"]
+        },
+        {
+          "id": "vm_checkin",
+          "name": "Visitor Check-in Officer",
+          "description": "Can check in and check out visitors",
+          "permissions": ["view", "create", "edit"]
+        },
+        {
+          "id": "vm_approve",
+          "name": "Visitor Approval Officer",
+          "description": "Can approve visitor requests",
+          "permissions": ["view", "approve"]
+        }
+      ],
+      "menu_items": ["visitor-management"]
+    },
+
+    "space-management": {
+      "description": "Space Management - Manage rooms, desks, conference halls",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "sm_admin",
+          "name": "Space Management Admin",
+          "description": "Full access to space management",
+          "permissions": ["view", "create", "edit", "delete", "configure"]
+        },
+        {
+          "id": "sm_view",
+          "name": "Space Management Viewer",
+          "description": "View available spaces and bookings",
+          "permissions": ["view"]
+        },
+        {
+          "id": "sm_book",
+          "name": "Space Booking Officer",
+          "description": "Can book spaces",
+          "permissions": ["view", "create"]
+        }
+      ],
+      "menu_items": ["room-management"]
+    },
+
+    "core-hr": {
+      "description": "Core HR - Employee database, organizational structure, documents",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "hr_admin",
+          "name": "HR Admin",
+          "description": "Full access to core HR",
+          "permissions": ["view", "create", "edit", "delete"]
+        },
+        {
+          "id": "hr_view",
+          "name": "HR Viewer",
+          "description": "View-only access to HR data",
+          "permissions": ["view"]
+        },
+        {
+          "id": "hr_edit",
+          "name": "HR Editor",
+          "description": "Can edit employee data",
+          "permissions": ["view", "edit"]
+        }
+      ],
+      "menu_items": ["employee-database", "org-structure", "employee-documents"]
+    },
+
+    "time-attendance": {
+      "description": "Time & Attendance - Attendance, leave, holidays, shifts, overtime",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "ta_admin",
+          "name": "Time & Attendance Admin",
+          "description": "Full access to time and attendance",
+          "permissions": ["view", "create", "edit", "delete", "approve", "configure"]
+        },
+        {
+          "id": "ta_view",
+          "name": "Time & Attendance Viewer",
+          "description": "View attendance and leave records",
+          "permissions": ["view"]
+        },
+        {
+          "id": "ta_approver",
+          "name": "Leave Approver",
+          "description": "Can approve leave requests",
+          "permissions": ["view", "approve"]
+        },
+        {
+          "id": "ta_edit",
+          "name": "Time & Attendance Editor",
+          "description": "Can edit attendance records",
+          "permissions": ["view", "edit"]
+        }
+      ],
+      "menu_items": ["attendance-management", "shift-schedule", "leave-holiday", "holiday-management", "overtime"]
+    },
+
+    "payroll": {
+      "description": "Payroll - Salary structure, payroll runs, payslips, compliance, bonuses",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "payroll_admin",
+          "name": "Payroll Admin",
+          "description": "Full access to payroll system",
+          "permissions": ["view", "create", "edit", "delete", "process", "configure"]
+        },
+        {
+          "id": "payroll_view",
+          "name": "Payroll Viewer",
+          "description": "View payroll data",
+          "permissions": ["view"]
+        },
+        {
+          "id": "payroll_processor",
+          "name": "Payroll Processor",
+          "description": "Can process payroll runs",
+          "permissions": ["view", "process"]
+        }
+      ],
+      "menu_items": ["salary-structure", "payroll-run", "statutory-compliance", "incentives-bonuses"]
+    },
+
+    "recruitment": {
+      "description": "Recruitment - Job requisitions, candidates, interviews, offers, onboarding",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "recruit_admin",
+          "name": "Recruitment Admin",
+          "description": "Full access to recruitment",
+          "permissions": ["view", "create", "edit", "delete", "approve"]
+        },
+        {
+          "id": "recruit_view",
+          "name": "Recruitment Viewer",
+          "description": "View recruitment data",
+          "permissions": ["view"]
+        },
+        {
+          "id": "recruit_interviewer",
+          "name": "Interviewer",
+          "description": "Can conduct and record interviews",
+          "permissions": ["view", "create"]
+        },
+        {
+          "id": "recruit_approver",
+          "name": "Offer Approver",
+          "description": "Can approve job offers",
+          "permissions": ["view", "approve"]
+        }
+      ],
+      "menu_items": ["job-requisitions", "candidate-tracking", "interviews", "offers-preboarding", "onboarding"]
+    },
+
+    "performance": {
+      "description": "Performance - Goals/OKRs, reviews, 360 feedback, training, skills",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "perf_admin",
+          "name": "Performance Admin",
+          "description": "Full access to performance management",
+          "permissions": ["view", "create", "edit", "delete", "approve"]
+        },
+        {
+          "id": "perf_view",
+          "name": "Performance Viewer",
+          "description": "View performance data",
+          "permissions": ["view"]
+        },
+        {
+          "id": "perf_reviewer",
+          "name": "Performance Reviewer",
+          "description": "Can give performance reviews",
+          "permissions": ["view", "create"]
+        }
+      ],
+      "menu_items": ["goals-okrs", "performance-reviews", "360-feedback", "training-learning", "skills-career"]
+    },
+
+    "self-service": {
+      "description": "Self-Service - My profile, attendance, payslips, expenses, requests, manager approvals",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "ssv",
+          "name": "Self-Service Viewer",
+          "description": "View-only access to own profile, employment history, and banking details",
+          "permissions": ["view"]
+        },
+        {
+          "id": "self_access",
+          "name": "Self-Service Access",
+          "description": "Access to own self-service portal with edit capabilities",
+          "permissions": ["view", "edit_own"]
+        },
+        {
+          "id": "manager_access",
+          "name": "Manager Self-Service",
+          "description": "Manager self-service with team overview and approvals",
+          "permissions": ["view", "approve"]
+        }
+      ],
+      "menu_items": ["my-profile", "my-attendance-leave", "my-payslips", "my-expenses", "my-requests", "team-overview", "manager-approvals"]
+    },
+
+    "expenses-assets": {
+      "description": "Expenses & Assets - Expense management, travel, advances/settlements, asset assignment",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "exp_admin",
+          "name": "Expenses & Assets Admin",
+          "description": "Full access to expenses and assets",
+          "permissions": ["view", "create", "edit", "delete", "approve"]
+        },
+        {
+          "id": "exp_view",
+          "name": "Expenses & Assets Viewer",
+          "description": "View expenses and assets",
+          "permissions": ["view"]
+        },
+        {
+          "id": "exp_submit",
+          "name": "Expense Submitter",
+          "description": "Can submit expenses",
+          "permissions": ["view", "create"]
+        },
+        {
+          "id": "exp_approver",
+          "name": "Expense Approver",
+          "description": "Can approve expenses",
+          "permissions": ["view", "approve"]
+        }
+      ],
+      "menu_items": ["expense-management", "travel-requests", "advances-settlements", "asset-management"]
+    },
+
+    "policy-documents": {
+      "description": "Policy & Documents - Policy library, acknowledgements, forms & templates",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "policy_admin",
+          "name": "Policy Admin",
+          "description": "Full access to policy management",
+          "permissions": ["view", "create", "edit", "delete"]
+        },
+        {
+          "id": "policy_view",
+          "name": "Policy Viewer",
+          "description": "View policies and forms",
+          "permissions": ["view"]
+        }
+      ],
+      "menu_items": ["policy-library", "acknowledgements", "forms-templates"]
+    },
+
+    "projects": {
+      "description": "Projects - Project management, task tracking, timesheets, project attendance",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "proj_admin",
+          "name": "Project Admin",
+          "description": "Full project management access",
+          "permissions": ["view", "create", "edit", "delete", "manage"]
+        },
+        {
+          "id": "proj_view",
+          "name": "Project Viewer",
+          "description": "View projects and tasks",
+          "permissions": ["view"]
+        },
+        {
+          "id": "proj_member",
+          "name": "Project Member",
+          "description": "Can work on projects and submit timesheets",
+          "permissions": ["view", "create"]
+        }
+      ],
+      "menu_items": ["project-list", "tasks-timesheets", "project-attendance"]
+    },
+
+    "analytics": {
+      "description": "Analytics - HR dashboard, workforce analytics, payroll analytics, custom reports",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "analytics_admin",
+          "name": "Analytics Admin",
+          "description": "Full access to analytics",
+          "permissions": ["view", "create", "manage"]
+        },
+        {
+          "id": "analytics_view",
+          "name": "Analytics Viewer",
+          "description": "View analytics and reports",
+          "permissions": ["view"]
+        }
+      ],
+      "menu_items": ["hr-dashboard", "workforce-analytics", "payroll-analytics", "custom-reports"]
+    },
+
+    "account": {
+      "description": "Account Management - User account settings, profile, preferences",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "manage-account",
+          "name": "Manage Account",
+          "description": "Can manage own account",
+          "permissions": ["edit_own"]
+        },
+        {
+          "id": "manage-account-links",
+          "name": "Manage Account Links",
+          "description": "Can manage account links",
+          "permissions": ["edit_own"]
+        },
+        {
+          "id": "view-profile",
+          "name": "View Profile",
+          "description": "Can view own profile",
+          "permissions": ["view"]
+        }
+      ],
+      "menu_items": []
+    },
+
+    "dashboard": {
+      "description": "Dashboard - Main dashboard and overview",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "dashboard_view",
+          "name": "Dashboard Viewer",
+          "description": "Can access main dashboard",
+          "permissions": ["view"]
+        }
+      ],
+      "menu_items": ["dashboard"]
+    }
+  },
+
+  "roleCombinations": {
+    "description": "Common role combinations for different user types",
+    "templates": {
+      "view_only_employee": {
+        "description": "Employee with view-only self-service access (cannot edit own profile)",
+        "resources": {
+          "self-service": ["ssv"],
+          "account": ["view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "employee": {
+        "description": "Regular employee",
+        "resources": {
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "manager": {
+        "description": "Team manager",
+        "resources": {
+          "self-service": ["manager_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"],
+          "time-attendance": ["ta_view", "ta_approver"],
+          "performance": ["perf_reviewer"],
+          "expenses-assets": ["exp_approver"]
+        }
+      },
+      "hr_officer": {
+        "description": "HR department officer",
+        "resources": {
+          "user-management": ["umv", "ume"],
+          "core-hr": ["hr_view", "hr_edit"],
+          "time-attendance": ["ta_view", "ta_approver"],
+          "recruitment": ["recruit_view"],
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "hr_manager": {
+        "description": "HR department manager",
+        "resources": {
+          "user-management": ["umv", "ume", "umc"],
+          "core-hr": ["hr_view", "hr_edit", "hr_admin"],
+          "time-attendance": ["ta_view", "ta_approver", "ta_edit"],
+          "recruitment": ["recruit_view", "recruit_approver"],
+          "self-service": ["manager_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "system_admin": {
+        "description": "System administrator",
+        "resources": {
+          "user-management": ["uma"],
+          "visitor-management": ["vm_admin"],
+          "space-management": ["sm_admin"],
+          "core-hr": ["hr_admin"],
+          "time-attendance": ["ta_admin"],
+          "payroll": ["payroll_admin"],
+          "recruitment": ["recruit_admin"],
+          "performance": ["perf_admin"],
+          "self-service": ["self_access"],
+          "expenses-assets": ["exp_admin"],
+          "policy-documents": ["policy_admin"],
+          "projects": ["proj_admin"],
+          "analytics": ["analytics_admin"],
+          "account": ["manage-account", "manage-account-links", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "payroll_officer": {
+        "description": "Payroll department officer",
+        "resources": {
+          "payroll": ["payroll_view", "payroll_processor"],
+          "core-hr": ["hr_view"],
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "recruiter": {
+        "description": "Recruitment specialist",
+        "resources": {
+          "recruitment": ["recruit_view", "recruit_interviewer", "recruit_approver"],
+          "core-hr": ["hr_view"],
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      }
+    }
+  },
+
+  "keycloakSetup": {
+    "description": "Instructions for mapping these permissions to Keycloak",
+    "steps": [
+      "1. Create client 'user-management' in Keycloak for emp360 app",
+      "2. For each resource in this JSON, create corresponding Keycloak roles",
+      "3. For each role, assign the permissions listed in 'permissions' field",
+      "4. Create user groups matching the roleCombinations templates",
+      "5. Assign users to groups, ensuring proper resource_access claims in token",
+      "6. Configure JWT token mapper to include resource_access in token",
+      "7. Test login and verify resource_access in JWT token"
+    ],
+    "example_token": {
+      "resource_access": {
+        "user-management": {
+          "roles": ["uma", "umv", "ume", "umd", "umc", "umde", "umen", "ums"]
+        },
+        "account": {
+          "roles": ["manage-account", "manage-account-links", "view-profile"]
+        }
+      }
+    }
+  },
+
+  "apiPermissions": {
+    "description": "Backend API endpoints that should check these resource permissions",
+    "endpoints": {
+      "user-management": [
+        "GET /api/users - ta_view",
+        "POST /api/users - umc",
+        "PUT /api/users/:id - ume",
+        "DELETE /api/users/:id - umd",
+        "PATCH /api/users/:id/deactivate - umde",
+        "PATCH /api/users/:id/enable - umen",
+        "GET /api/users/settings - ums",
+        "PUT /api/users/settings - ums"
+      ],
+      "visitor-management": [
+        "GET /api/visitors - vm_view",
+        "POST /api/visitors/checkin - vm_checkin",
+        "POST /api/visitors/checkout - vm_checkin",
+        "POST /api/visitors/approve - vm_approve"
+      ],
+      "time-attendance": [
+        "GET /api/attendance - ta_view",
+        "POST /api/leave/request - ta_view",
+        "PUT /api/leave/request/:id/approve - ta_approver",
+        "PUT /api/attendance/:id - ta_edit"
+      ],
+      "payroll": [
+        "GET /api/payroll - payroll_view",
+        "POST /api/payroll/run - payroll_processor",
+        "GET /api/salary-structure - payroll_view"
+      ]
+    }
+  },
+
+  "notes": {
+    "important": [
+      "This is a reference document. Actual role assignments are managed in Keycloak.",
+      "Backend must validate permissions on every API request.",
+      "Client-side permission checks are for UX only, not security.",
+      "Roles can be combined. A user can have multiple roles in a single resource.",
+      "The roleCombinations section shows common patterns. Modify as needed for your organization.",
+      "Always validate tokens on the backend. Never trust client-side checks alone."
+    ],
+    "modifications": [
+      "Feel free to rename any role IDs (e.g., 'uma' to 'user_management_admin')",
+      "Add new roles as needed for your organization",
+      "Remove resources that your organization doesn't use",
+      "Create new role combinations for specific job functions",
+      "Add or remove permissions for roles as needed"
+    ],
+    "nextSteps": [
+      "1. Review this JSON and modify role names/permissions as needed",
+      "2. Share with your Keycloak admin for configuration",
+      "3. Configure Keycloak clients and roles",
+      "4. Test with sample users and verify tokens",
+      "5. Implement route protection with RequireResource wrapper",
+      "6. Implement backend permission validation"
+    ]
+  }
+}

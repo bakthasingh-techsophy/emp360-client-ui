@@ -8,6 +8,7 @@ enum StorageKeys {
     SESSION = "app-session",
     ORG_SETTINGS = "org-settings",
     TENANT = "app-tenant",
+    EMPLOYEE_ID = "app-employee-id",
 
 
 }

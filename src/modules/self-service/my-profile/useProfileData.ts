@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserManagement } from "@/contexts/UserManagementContext";
 import { UserProfile } from "./types";
-import { MaritalStatus, Gender, EventType, DocumentType } from '../../user-management/types/onboarding.types';
+import { MaritalStatus, Gender, EventType, DocumentType, UserDetailsSnapshot } from '../../user-management/types/onboarding.types';
+import UniversalSearchRequest from "@/types/search";
 
 const DUMMY_PROFILE: UserProfile = {
   id: "u1",
@@ -114,7 +117,119 @@ const DUMMY_PROFILE: UserProfile = {
 };
 
 export function useProfileData() {
+  const { user } = useAuth();
+  const { refreshUserDetailsSnapshots } = useUserManagement();
+  
   const [profile, setProfile] = useState<UserProfile>(DUMMY_PROFILE);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load user profile on mount
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!user?.id) {
+          setError('User ID not available');
+          setIsLoading(false);
+          return;
+        }
+
+        // Search for current user's profile
+        const searchRequest: UniversalSearchRequest = {
+          idsList: [user.id],
+        };
+
+        const result = await refreshUserDetailsSnapshots(searchRequest, 0, 1);
+
+        if (result?.content && result.content.length > 0) {
+          const snapshot = result.content[0];
+          const mappedProfile = mapSnapshotToProfile(snapshot);
+          setProfile(mappedProfile);
+          setError(null);
+        } else {
+          setError('Unable to load profile data');
+          // Keep dummy profile as fallback
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        setError('Failed to load your profile');
+        // Keep dummy profile as fallback
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [user?.id, refreshUserDetailsSnapshots]);
+
+  // Map UserDetailsSnapshot to UserProfile
+  const mapSnapshotToProfile = (snapshot: UserDetailsSnapshot): UserProfile => {
+    return {
+      id: snapshot.id,
+      employeeId: snapshot.id,
+      firstName: snapshot.firstName,
+      lastName: snapshot.lastName,
+      fullName: `${snapshot.firstName} ${snapshot.lastName}`,
+      email: snapshot.email,
+      phone: snapshot.phone,
+      designation: snapshot.designation,
+      department: snapshot.department,
+      location: snapshot.workLocation,
+      profileImage: "https://github.com/shadcn.png", // Placeholder
+      about: {
+        aboutMe: "",
+        bloodGroup: "",
+        emergencyContact: snapshot.emergencyContact ? {
+          name: snapshot.emergencyContact.name,
+          relationship: snapshot.emergencyContact.relation || "",
+          phone: snapshot.emergencyContact.phone,
+        } : {
+          name: "",
+          relationship: "",
+          phone: "",
+        },
+        personalEmail: "",
+        address: "",
+      },
+      personal: {
+        firstName: snapshot.firstName,
+        lastName: snapshot.lastName,
+        phone: snapshot.phone,
+        personalEmail: "",
+        maritalStatus: MaritalStatus.SINGLE,
+        gender: Gender.MALE,
+        officialEmail: snapshot.email,
+        createdAt: snapshot.createdAt,
+      },
+      job: {
+        designationId: snapshot.designation,
+        departmentId: snapshot.department,
+        reportingManager: snapshot.reportingTo || "",
+        joiningDate: snapshot.joiningDate,
+        workLocationId: snapshot.workLocation,
+        officialEmail: snapshot.email,
+        employeeTypeId: snapshot.employeeType,
+        createdAt: snapshot.createdAt,
+      },
+      timeline: [],
+      documents: [],
+      assets: [],
+      finances: {
+        salaryStructure: "",
+        bankAccount: {
+          bankName: "",
+          accountNumber: "",
+          ifsc: "",
+        },
+        pfAccount: "",
+        uan: "",
+        taxRegime: "New",
+      },
+      performance: [],
+    };
+  };
 
   const updateProfile = (section: keyof UserProfile, data: any) => {
     setProfile((prev) => ({
@@ -154,6 +269,8 @@ export function useProfileData() {
 
   return {
     profile,
+    isLoading,
+    error,
     updateProfile,
     updateField,
     updateNestedProfile,

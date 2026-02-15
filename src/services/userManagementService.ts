@@ -17,7 +17,14 @@ import { apiRequest } from "@/services/utils";
 import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
-import { UserDetails, UserDetailsCarrier, SkillItem, SkillItemCarrier } from "@/modules/user-management/types/onboarding.types";
+import { 
+  UserDetails, 
+  UserDetailsCarrier, 
+  SkillItem, 
+  SkillItemCarrier,
+  GeneralDetailsSnapshot,
+  JobDetailsSnapshot 
+} from "@/modules/user-management/types/onboarding.types";
 import { EmployeeType, Department, Designation, WorkLocation } from "@/modules/user-management/types/settings.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
@@ -220,6 +227,37 @@ export const apiUpdateSkill = async (
     tenant,
     accessToken,
     body: payload,
+  });
+};
+
+/**
+ * Delete Skill
+ * DELETE /emp-user-management/v1/users/skills/{skillId}?employeeId={employeeId}
+ * 
+ * Deletes a skill from an employee's skills list.
+ * Requires both skillId (path param) and employeeId (query param).
+ * Returns void wrapped in ApiResponse.
+ * 
+ * @param skillId - Skill ID to delete
+ * @param employeeId - Employee ID (query parameter)
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiDeleteSkill('SKILL-123', 'EMP-001', 'tenant-001');
+ */
+export const apiDeleteSkill = async (
+  skillId: string,
+  employeeId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/skills/${skillId}?employeeId=${employeeId}`,
+    tenant,
+    accessToken,
   });
 };
 
@@ -567,6 +605,63 @@ export const apiDeleteWorkLocationViaUsers = async (
 };
 
 /**
+ * Get GeneralDetailsSnapshot By UserId
+ * GET /emp-user-management/v1/users/{employeeId}/general-details-snapshot
+ *
+ * Retrieves a lightweight snapshot of general details for a user.
+ * Optimized for table rendering and display purposes.
+ *
+ * @param employeeId - Employee ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<GeneralDetailsSnapshot>>
+ *
+ * @example
+ * const response = await apiGetGeneralDetailsSnapshot('EMP-001', 'tenant-001');
+ */
+export const apiGetGeneralDetailsSnapshot = async (
+  employeeId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<GeneralDetailsSnapshot>> => {
+  return apiRequest<GeneralDetailsSnapshot>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/${employeeId}/general-details-snapshot`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Get JobDetailsSnapshot By UserId
+ * GET /emp-user-management/v1/users/{employeeId}/job-details-snapshot
+ *
+ * Retrieves a lightweight snapshot of job details for a user.
+ * Optimized for table rendering and display purposes.
+ * Includes cached display names for designation, department, employee type, and work location.
+ *
+ * @param employeeId - Employee ID
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<JobDetailsSnapshot>>
+ *
+ * @example
+ * const response = await apiGetJobDetailsSnapshot('EMP-001', 'tenant-001');
+ */
+export const apiGetJobDetailsSnapshot = async (
+  employeeId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<JobDetailsSnapshot>> => {
+  return apiRequest<JobDetailsSnapshot>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/${employeeId}/job-details-snapshot`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const userManagementService = {
@@ -576,6 +671,7 @@ export const userManagementService = {
   apiDeleteUser,
   apiCreateSkill,
   apiUpdateSkill,
+  apiDeleteSkill,
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
   apiBulkEnableUsers,
@@ -587,4 +683,6 @@ export const userManagementService = {
   apiDeleteDesignationViaUsers,
   apiUpdateWorkLocationViaUsers,
   apiDeleteWorkLocationViaUsers,
+  apiGetGeneralDetailsSnapshot,
+  apiGetJobDetailsSnapshot,
 };
