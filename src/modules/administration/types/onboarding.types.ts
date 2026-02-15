@@ -159,6 +159,52 @@ export interface EventHistoryForm {
 export type PromotionHistoryItem = EventHistoryItem;
 export type PromotionHistoryForm = EventHistoryForm;
 
+// Profile Summary - Employee about/summary text
+export interface ProfileSummary {
+  id?: string;
+  employeeId: string;
+  aboutText?: string; // Professional summary/bio
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProfileSummaryForm {
+  id?: string;
+  employeeId: string;
+  aboutText?: string; // Professional summary/bio
+}
+
+// Assets - Company assets allocated to employee
+export interface Asset {
+  id?: string;
+  employeeId: string;
+  assetName: string;
+  code: string; // Unique asset identifier (formerly assetTag)
+  givenDate: string; // When asset was allocated (formerly allocationDate)
+  takeDate?: string; // When asset will be returned
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AssetFormData {
+  assetName: string;
+  code: string;
+  givenDate: string;
+  takeDate?: string;
+}
+
+export interface Assets {
+  id?: string;
+  employeeId: string;
+  items: Asset[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AssetsForm {
+  items: Asset[];
+}
+
 // Tab Configuration
 export interface OnboardingTab {
   id: number;

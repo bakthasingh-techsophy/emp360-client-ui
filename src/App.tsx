@@ -77,7 +77,7 @@ import { IntimationForm } from './modules/expenses-assets/IntimationForm';
 import { IntimationApprovalPage } from './modules/expenses-assets/IntimationApprovalPage';
 import { TravelRequests } from './modules/expenses-assets/TravelRequests';
 import { AdvancesSettlements } from './modules/expenses-assets/AdvancesSettlements';
-import { AssetManagement } from './modules/expenses-assets/AssetManagement';
+import { AssetManagement } from './modules/asset-management';
 
 // Policy & Document Center modules
 import { PolicyLibrary } from './modules/policy-documents/PolicyLibrary';

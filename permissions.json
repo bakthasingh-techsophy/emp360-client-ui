@@ -288,19 +288,19 @@
     },
 
     "expenses-assets": {
-      "description": "Expenses & Assets - Expense management, travel, advances/settlements, asset assignment",
+      "description": "Expenses & Assets - Expense management, travel, advances/settlements",
       "enabled": true,
       "roles": [
         {
           "id": "exp_admin",
           "name": "Expenses & Assets Admin",
-          "description": "Full access to expenses and assets",
+          "description": "Full access to expenses and travel",
           "permissions": ["view", "create", "edit", "delete", "approve"]
         },
         {
           "id": "exp_view",
           "name": "Expenses & Assets Viewer",
-          "description": "View expenses and assets",
+          "description": "View expenses and travel",
           "permissions": ["view"]
         },
         {
@@ -316,7 +316,45 @@
           "permissions": ["view", "approve"]
         }
       ],
-      "menu_items": ["expense-management", "travel-requests", "advances-settlements", "asset-management"]
+      "menu_items": ["expense-management", "travel-requests", "advances-settlements"]
+    },
+
+    "asset-management": {
+      "description": "Asset Management - Track and manage company assets, assignments, and inventory",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "asset_admin",
+          "name": "Asset Management Admin",
+          "description": "Full access to asset management including configuration",
+          "permissions": ["view", "create", "edit", "delete", "assign", "unassign", "configure"]
+        },
+        {
+          "id": "asset_view",
+          "name": "Asset Viewer",
+          "description": "View-only access to asset inventory and assignments",
+          "permissions": ["view"]
+        },
+        {
+          "id": "asset_manager",
+          "name": "Asset Manager",
+          "description": "Can manage assets and assignments",
+          "permissions": ["view", "create", "edit", "assign", "unassign"]
+        },
+        {
+          "id": "asset_assignor",
+          "name": "Asset Assignor",
+          "description": "Can assign and unassign assets to employees",
+          "permissions": ["view", "assign", "unassign"]
+        },
+        {
+          "id": "asset_creator",
+          "name": "Asset Creator",
+          "description": "Can add new assets to inventory",
+          "permissions": ["view", "create"]
+        }
+      ],
+      "menu_items": ["asset-management"]
     },
 
     "policy-documents": {
@@ -493,10 +531,32 @@
           "performance": ["perf_admin"],
           "self-service": ["self_access"],
           "expenses-assets": ["exp_admin"],
+          "asset-management": ["asset_admin"],
           "policy-documents": ["policy_admin"],
           "projects": ["proj_admin"],
           "analytics": ["analytics_admin"],
           "account": ["manage-account", "manage-account-links", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "it_admin": {
+        "description": "IT administrator - manages assets and equipment",
+        "resources": {
+          "asset-management": ["asset_admin"],
+          "user-management": ["umv"],
+          "core-hr": ["hr_view"],
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
+          "dashboard": ["dashboard_view"]
+        }
+      },
+      "procurement_officer": {
+        "description": "Procurement officer - manages asset procurement",
+        "resources": {
+          "asset-management": ["asset_manager"],
+          "expenses-assets": ["exp_view"],
+          "self-service": ["self_access"],
+          "account": ["manage-account", "view-profile"],
           "dashboard": ["dashboard_view"]
         }
       },
@@ -539,6 +599,9 @@
         "user-management": {
           "roles": ["uma", "umv", "ume", "umd", "umc", "umde", "umen", "ums"]
         },
+        "asset-management": {
+          "roles": ["asset_admin"]
+        },
         "account": {
           "roles": ["manage-account", "manage-account-links", "view-profile"]
         }
@@ -575,6 +638,19 @@
         "GET /api/payroll - payroll_view",
         "POST /api/payroll/run - payroll_processor",
         "GET /api/salary-structure - payroll_view"
+      ],
+      "asset-management": [
+        "GET /api/assets - asset_view",
+        "POST /api/assets - asset_creator",
+        "PUT /api/assets/:id - asset_manager",
+        "DELETE /api/assets/:id - asset_admin",
+        "POST /api/assets/:id/assign - asset_assignor",
+        "POST /api/assets/:id/unassign - asset_assignor",
+        "GET /api/assets/assignments - asset_view",
+        "GET /api/assets/categories - asset_view",
+        "POST /api/assets/categories - asset_admin",
+        "GET /api/assets/settings - asset_admin",
+        "PUT /api/assets/settings - asset_admin"
       ]
     }
   },

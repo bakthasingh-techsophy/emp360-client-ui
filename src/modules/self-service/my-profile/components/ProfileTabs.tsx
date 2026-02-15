@@ -1,14 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AboutTab } from './AboutTab';
+// import { AboutTab } from './AboutTab';
 import { ProfileTab } from './ProfileTab';
 import { JobTab } from './JobTab';
 import { TimelineTab } from './TimelineTab';
 import { DocumentsTab } from './DocumentsTab';
-import { AssetsTab } from './AssetsTab';
+// import { AssetsTab } from './AssetsTab';
 import { FinancesTab } from './FinancesTab';
 import { SkillsTab } from './SkillsTab';
 import { EventHistoryTab } from './EventHistoryTab';
-import { User, FileText, Briefcase, History, File, Lightbulb, DollarSign, Award, TrendingUp } from 'lucide-react';
+import { FileText, Briefcase, History, File, DollarSign, Award, TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -18,7 +18,7 @@ interface ProfileTabsProps {
 
 export function ProfileTabs({ employeeId }: ProfileTabsProps) {
     const [isMobile, setIsMobile] = useState(false);
-    const [selectedTab, setSelectedTab] = useState('about');
+    const [selectedTab, setSelectedTab] = useState('profile');
 
     useEffect(() => {
         const handleResize = () => {
@@ -35,7 +35,7 @@ export function ProfileTabs({ employeeId }: ProfileTabsProps) {
     };
 
     return (
-        <Tabs defaultValue="about" value={selectedTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs defaultValue="profile" value={selectedTab} onValueChange={handleTabChange} className="w-full">
             {isMobile ? (
                 <div className="pb-2 mb-4">
                     <Select value={selectedTab} onValueChange={handleTabChange}>
@@ -43,7 +43,6 @@ export function ProfileTabs({ employeeId }: ProfileTabsProps) {
                             <SelectValue placeholder="Select Tab" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="about">About</SelectItem>
                             <SelectItem value="profile">General Details</SelectItem>
                             <SelectItem value="job">Job Details</SelectItem>
                             <SelectItem value="timeline">Employment History</SelectItem>
@@ -51,16 +50,12 @@ export function ProfileTabs({ employeeId }: ProfileTabsProps) {
                             <SelectItem value="events">Event History</SelectItem>
                             <SelectItem value="documents">Documents</SelectItem>
                             <SelectItem value="finances">Banking Details</SelectItem>
-                            <SelectItem value="assets">Assets</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             ) : (
                 <div className="overflow-x-auto pb-2 mb-4">
                     <TabsList className="w-full justify-start inline-flex h-auto p-1 bg-muted/50">
-                        <TabsTrigger value="about" className="flex gap-2 items-center py-2">
-                            <User className="w-4 h-4" /> About
-                        </TabsTrigger>
                         <TabsTrigger value="profile" className="flex gap-2 items-center py-2">
                             <FileText className="w-4 h-4" /> General Details
                         </TabsTrigger>
@@ -82,17 +77,14 @@ export function ProfileTabs({ employeeId }: ProfileTabsProps) {
                         <TabsTrigger value="finances" className="flex gap-2 items-center py-2">
                             <DollarSign className="w-4 h-4" /> Banking
                         </TabsTrigger>
-                        <TabsTrigger value="assets" className="flex gap-2 items-center py-2">
-                            <Lightbulb className="w-4 h-4" /> Assets
-                        </TabsTrigger>
                     </TabsList>
                 </div>
             )}
 
             <div className="mt-4">
-                <TabsContent value="about" className="mt-0">
+                {/* <TabsContent value="about" className="mt-0">
                     <AboutTab employeeId={employeeId} />
-                </TabsContent>
+                </TabsContent> */}
                 <TabsContent value="profile" className="mt-0">
                     <ProfileTab />
                 </TabsContent>
@@ -113,9 +105,6 @@ export function ProfileTabs({ employeeId }: ProfileTabsProps) {
                 </TabsContent>
                 <TabsContent value="finances" className="mt-0">
                     <FinancesTab />
-                </TabsContent>
-                <TabsContent value="assets" className="mt-0">
-                    <AssetsTab />
                 </TabsContent>
             </div>
         </Tabs>

@@ -32,6 +32,7 @@ import {
   MessageSquare,
   Layers,
   MapPin,
+  // Package, // Commented out with asset-management menu item
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -289,13 +290,13 @@ export const allMenuItems: AppShellMenuItem[] = [
     label: 'Advances & Settlements',
     category: 'Expenses & Assets',
   },
-  {
-    id: 'asset-management',
-    to: '/asset-management',
-    icon: Briefcase,
-    label: 'Asset Assignment',
-    category: 'Expenses & Assets',
-  },
+  // {
+  //   id: 'asset-management',
+  //   to: '/asset-management',
+  //   icon: Package,
+  //   label: 'Asset Management',
+  //   category: 'Expenses & Assets',
+  // },
 
   // Policy & Document Center
   {

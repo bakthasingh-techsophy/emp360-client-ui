@@ -101,3 +101,38 @@ export interface DepartmentCarrier {
   description: string; // required
   createdAt: string; // ISO date string
 }
+/**
+ * Asset Code
+ * Represents a unique code for an asset (e.g., AX12, AT56)
+ */
+export interface AssetCode {
+  id: string;
+  code: string;
+  status?: 'available' | 'assigned' | 'retired';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Asset Type
+ * Represents available assets in the company (Laptop, Mouse, Keyboard, etc.)
+ */
+export interface AssetType {
+  id: string;
+  assetName: string;
+  description?: string;
+  codes?: AssetCode[]; // List of available codes for this asset
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Asset Type Carrier
+ * Payload for creating/updating asset types
+ */
+export interface AssetTypeCarrier {
+  id: string; // required, unique identifier
+  assetName: string; // required, asset name (e.g., "Laptop", "Mouse")
+  description?: string; // optional, description
+  createdAt?: string; // ISO date string
+}

@@ -455,3 +455,6 @@ export interface JobDetailsSnapshot {
   createdAt: string; // ISO instant
   updatedAt: string; // ISO instant
 }
+
+// Re-export types from administration module for backward compatibility
+export type { OnboardingTab, PromotionHistoryForm, PromotionHistoryItem, ProfileSummary, ProfileSummaryForm, Assets, AssetsForm, Asset } from '@/modules/administration/types/onboarding.types';

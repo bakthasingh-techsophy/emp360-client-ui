@@ -27,6 +27,8 @@ import { OnboardingTabsNavigation } from "./components/onboarding/OnboardingTabs
 import { PromotionHistoryFormComponent } from "./components/onboarding/PromotionHistoryForm";
 import { SkillsSetFormComponent, skillsSetSchema } from "./components/onboarding/SkillsSetForm";
 import { UserDetailsFormComponent, userDetailsSchema } from "./components/onboarding/UserDetailsForm";
+// import { ProfileSummaryFormComponent } from "./components/onboarding/ProfileSummaryForm";
+// import { AssetsFormComponent, assetsSchema } from "./components/onboarding/AssetsForm";
 import {
   BankingDetails,
   DocumentPool,
@@ -42,6 +44,8 @@ import {
   UserDetails,
   UserDetailsCarrier,
   UserStatus,
+  // ProfileSummaryForm,
+  // AssetsForm,
 } from './types/onboarding.types';
 
 export function EmployeeOnboarding() {
@@ -208,6 +212,22 @@ export function EmployeeOnboarding() {
     },
   });
 
+  // const profileSummaryForm = useForm<ProfileSummaryForm>({
+  //   defaultValues: {
+  //     id: "",
+  //     employeeId: "",
+  //     personalInfoSummary: [],
+  //     professionalSummary: [],
+  //   },
+  // });
+
+  // const assetsForm = useForm<AssetsForm>({
+  //   resolver: zodResolver(assetsSchema),
+  //   defaultValues: {
+  //     items: [],
+  //   },
+  // });
+
   // Tab configuration - lock tabs until user is created
   const tabs: OnboardingTab[] = [
     {
@@ -282,6 +302,22 @@ export function EmployeeOnboarding() {
       isLocked: !isUserCreated,
       isCompleted: false,
     },
+    // {
+    //   id: 10,
+    //   key: "profile-summary",
+    //   label: "Profile Summary",
+    //   description: "Employee profile overview",
+    //   isLocked: !isUserCreated,
+    //   isCompleted: false,
+    // },
+    // {
+    //   id: 11,
+    //   key: "assets",
+    //   label: "Assets",
+    //   description: "Company assets allocation",
+    //   isLocked: !isUserCreated,
+    //   isCompleted: false,
+    // },
   ];
 
   // Note: getCurrentForm() was removed to avoid TypeScript union type complexity issues
@@ -290,6 +326,12 @@ export function EmployeeOnboarding() {
     // List of tabs that don't need save (handle their own CRUD)
     const selfManagedTabs = ["employment-history", "skills-set", "document-pool"];
     
+    // If tab is self-managed, just skip
+    if (selfManagedTabs.includes(activeTab)) {
+      console.log(`Skipping save for self-managed tab: ${activeTab}`);
+      return;
+    }
+
     // List of forms that have validation implemented
     const formsWithValidation = [
       "user-details",
@@ -654,6 +696,30 @@ export function EmployeeOnboarding() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Profile Summary Tab */}
+          {/* <TabsContent value="profile-summary" className="mt-6">
+            <div className="max-w-6xl mx-auto">
+              <Card className="p-6">
+                <ProfileSummaryFormComponent
+                  form={profileSummaryForm}
+                  employeeId={employeeId || undefined}
+                />
+              </Card>
+            </div>
+          </TabsContent> */}
+
+          {/* Assets Tab - Hidden for now */}
+          {/* <TabsContent value="assets" className="mt-6">
+            <div className="max-w-6xl mx-auto">
+              <Card className="p-6">
+                <AssetsFormComponent
+                  form={assetsForm}
+                  employeeId={employeeId || undefined}
+                />
+              </Card>
+            </div>
+          </TabsContent> */}
         </Tabs>
       </div>
 
