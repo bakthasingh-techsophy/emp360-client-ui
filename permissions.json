@@ -357,6 +357,32 @@
       "menu_items": ["asset-management"]
     },
 
+    "leave-management-system": {
+      "description": "Leave Management System - Manage leaves, holidays, and leave policies",
+      "enabled": true,
+      "roles": [
+        {
+          "id": "lmsa",
+          "name": "Leave Management System Admin",
+          "description": "Full access to leave management including configuration and settings",
+          "permissions": ["view", "create", "edit", "delete", "approve", "reject", "configure", "settings"]
+        },
+        {
+          "id": "lmss",
+          "name": "Leave Management Settings",
+          "description": "Can manage leave settings and configurations",
+          "permissions": ["view", "settings", "configure"]
+        },
+        {
+          "id": "lmsv",
+          "name": "Leave Management Viewer",
+          "description": "View-only access to leave records and holidays",
+          "permissions": ["view"]
+        }
+      ],
+      "menu_items": ["leave-holiday", "holiday-management", "leave-settings"]
+    },
+
     "policy-documents": {
       "description": "Policy & Documents - Policy library, acknowledgements, forms & templates",
       "enabled": true,
@@ -500,6 +526,7 @@
           "user-management": ["umv", "ume"],
           "core-hr": ["hr_view", "hr_edit"],
           "time-attendance": ["ta_view", "ta_approver"],
+          "leave-management-system": ["lmsv", "lmsa"],
           "recruitment": ["recruit_view"],
           "self-service": ["self_access"],
           "account": ["manage-account", "view-profile"],
@@ -512,6 +539,7 @@
           "user-management": ["umv", "ume", "umc"],
           "core-hr": ["hr_view", "hr_edit", "hr_admin"],
           "time-attendance": ["ta_view", "ta_approver", "ta_edit"],
+          "leave-management-system": ["lmsa", "lmss"],
           "recruitment": ["recruit_view", "recruit_approver"],
           "self-service": ["manager_access"],
           "account": ["manage-account", "view-profile"],
@@ -526,6 +554,7 @@
           "space-management": ["sm_admin"],
           "core-hr": ["hr_admin"],
           "time-attendance": ["ta_admin"],
+          "leave-management-system": ["lmsa", "lmss"],
           "payroll": ["payroll_admin"],
           "recruitment": ["recruit_admin"],
           "performance": ["perf_admin"],
@@ -599,6 +628,9 @@
         "user-management": {
           "roles": ["uma", "umv", "ume", "umd", "umc", "umde", "umen", "ums"]
         },
+        "leave-management-system": {
+          "roles": ["lmsa", "lmss", "lmsv"]
+        },
         "asset-management": {
           "roles": ["asset_admin"]
         },
@@ -651,6 +683,25 @@
         "POST /api/assets/categories - asset_admin",
         "GET /api/assets/settings - asset_admin",
         "PUT /api/assets/settings - asset_admin"
+      ],
+      "leave-management-system": [
+        "GET /api/leaves - lmsv",
+        "POST /api/leaves/apply - lmsv",
+        "PUT /api/leaves/:id - lmsa",
+        "DELETE /api/leaves/:id - lmsa",
+        "POST /api/leaves/:id/approve - lmsa",
+        "POST /api/leaves/:id/reject - lmsa",
+        "GET /api/leaves/balance - lmsv",
+        "GET /api/holidays - lmsv",
+        "POST /api/holidays - lmsa",
+        "PUT /api/holidays/:id - lmsa",
+        "DELETE /api/holidays/:id - lmsa",
+        "GET /api/leave-types - lmsv",
+        "POST /api/leave-types - lmss",
+        "PUT /api/leave-types/:id - lmss",
+        "DELETE /api/leave-types/:id - lmsa",
+        "GET /api/leave-settings - lmss",
+        "PUT /api/leave-settings - lmss"
       ]
     }
   },

@@ -2,7 +2,7 @@
  * Mock data for Leave Management
  */
 
-import { LeaveType, LeaveBalance, LeaveApplication, Holiday } from '../types/leave.types';
+import { LeaveType, LeaveBalance, LeaveApplication, HolidayInfo } from '../types/leave.types';
 
 export const mockLeaveTypes: LeaveType[] = [
   {
@@ -224,7 +224,7 @@ export const mockLeaveApplications: LeaveApplication[] = [
   },
 ];
 
-export const mockHolidays: Holiday[] = [
+export const mockHolidays: HolidayInfo[] = [
   {
     id: 'h-001',
     name: 'Good Friday',

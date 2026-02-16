@@ -36,7 +36,7 @@ import UniversalSearchRequest from "@/types/search";
 import {
   Holiday,
   HolidayCarrier,
-} from "@/modules/time-attendance/holiday-management/types";
+} from "@/modules/leave-management-system/holiday-management/types";
 
 /**
  * Generic update payload type

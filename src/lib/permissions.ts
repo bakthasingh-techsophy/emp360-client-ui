@@ -50,6 +50,15 @@ export enum UserManagementRole {
 }
 
 /**
+ * Leave Management System Permission Roles
+ */
+export enum LeaveManagementSystemRole {
+  ADMIN = 'lmsa',           // Full access (view + create + edit + delete + approve + reject + configure + settings)
+  SETTINGS = 'lmss',        // Settings and configuration permission
+  VIEW = 'lmsv',            // View only
+}
+
+/**
  * Decode JWT token (Base64 decode)
  */
 export function decodeJWT(token: string): DecodedToken | null {
@@ -231,5 +240,119 @@ export function useUserManagementPermissions() {
     hasAllPermissions: UserManagementPermissions.hasAllPermissions(),
     hasAnyAccess: UserManagementPermissions.hasAnyAccess(),
     roles: UserManagementPermissions.getRoles(),
+  };
+}
+
+/**
+ * Leave Management System Permission Checker
+ */
+export class LeaveManagementSystemPermissions {
+  private static readonly RESOURCE_NAME = 'leave-management-system';
+  
+  /**
+   * Check if user has ADMIN permissions (lmsa role)
+   */
+  static hasAdminPermissions(): boolean {
+    return hasResourceRole(this.RESOURCE_NAME, LeaveManagementSystemRole.ADMIN);
+  }
+  
+  /**
+   * Check if user can view leave/holiday details
+   */
+  static canView(): boolean {
+    return (
+      this.hasAdminPermissions() ||
+      hasResourceRole(this.RESOURCE_NAME, LeaveManagementSystemRole.VIEW) ||
+      hasResourceRole(this.RESOURCE_NAME, LeaveManagementSystemRole.SETTINGS)
+    );
+  }
+  
+  /**
+   * Check if user can create leave requests or holidays
+   */
+  static canCreate(): boolean {
+    return this.hasAdminPermissions();
+  }
+  
+  /**
+   * Check if user can edit leave requests or holidays
+   */
+  static canEdit(): boolean {
+    return this.hasAdminPermissions();
+  }
+  
+  /**
+   * Check if user can delete leave requests or holidays
+   */
+  static canDelete(): boolean {
+    return this.hasAdminPermissions();
+  }
+  
+  /**
+   * Check if user can approve leave requests
+   */
+  static canApprove(): boolean {
+    return this.hasAdminPermissions();
+  }
+  
+  /**
+   * Check if user can reject leave requests
+   */
+  static canReject(): boolean {
+    return this.hasAdminPermissions();
+  }
+  
+  /**
+   * Check if user can access settings
+   */
+  static canAccessSettings(): boolean {
+    return (
+      this.hasAdminPermissions() ||
+      hasResourceRole(this.RESOURCE_NAME, LeaveManagementSystemRole.SETTINGS)
+    );
+  }
+  
+  /**
+   * Check if user can configure leave management system
+   */
+  static canConfigure(): boolean {
+    return (
+      this.hasAdminPermissions() ||
+      hasResourceRole(this.RESOURCE_NAME, LeaveManagementSystemRole.SETTINGS)
+    );
+  }
+  
+  /**
+   * Get all leave management system roles
+   */
+  static getRoles(): string[] {
+    return getResourceRoles(this.RESOURCE_NAME);
+  }
+  
+  /**
+   * Check if user has any leave management system access
+   */
+  static hasAnyAccess(): boolean {
+    const roles = this.getRoles();
+    return roles.length > 0;
+  }
+}
+
+/**
+ * React Hook for Leave Management System Permissions
+ */
+export function useLeaveManagementSystemPermissions() {
+  return {
+    canView: LeaveManagementSystemPermissions.canView(),
+    canCreate: LeaveManagementSystemPermissions.canCreate(),
+    canEdit: LeaveManagementSystemPermissions.canEdit(),
+    canDelete: LeaveManagementSystemPermissions.canDelete(),
+    canApprove: LeaveManagementSystemPermissions.canApprove(),
+    canReject: LeaveManagementSystemPermissions.canReject(),
+    canAccessSettings: LeaveManagementSystemPermissions.canAccessSettings(),
+    canConfigure: LeaveManagementSystemPermissions.canConfigure(),
+    hasAdminPermissions: LeaveManagementSystemPermissions.hasAdminPermissions(),
+    hasAnyAccess: LeaveManagementSystemPermissions.hasAnyAccess(),
+    roles: LeaveManagementSystemPermissions.getRoles(),
   };
 }

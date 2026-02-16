@@ -20,7 +20,7 @@ import UniversalSearchRequest from "@/types/search";
 import {
   Holiday,
   HolidayCarrier,
-} from "@/modules/time-attendance/holiday-management/types";
+} from "@/modules/leave-management-system/holiday-management/types";
 import { apiRequest } from "./utils";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/holidays";

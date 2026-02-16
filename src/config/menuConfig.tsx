@@ -92,25 +92,27 @@ export const allMenuItems: AppShellMenuItem[] = [
     category: 'Time & Attendance',
   },
   {
+    id: 'overtime',
+    to: '/overtime',
+    icon: Clock,
+    label: 'Overtime Management',
+    category: 'Time & Attendance',
+  },
+
+  // Leave Management
+  {
     id: 'leave-holiday',
     to: '/leave-holiday',
     icon: Calendar,
     label: 'Leave & Holiday',
-    category: 'Time & Attendance',
+    category: 'Leave Management',
   },
   {
     id: 'holiday-management',
     to: '/holiday-management',
     icon: Calendar,
     label: 'Holiday Management',
-    category: 'Time & Attendance',
-  },
-  {
-    id: 'overtime',
-    to: '/overtime',
-    icon: Clock,
-    label: 'Overtime Management',
-    category: 'Time & Attendance',
+    category: 'Leave Management',
   },
 
   // Payroll & Compensation

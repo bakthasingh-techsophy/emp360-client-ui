@@ -11,6 +11,7 @@ import { PolicyProvider } from './contexts/PolicyContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { VisitorManagementProvider } from './contexts/VisitorManagementContext';
 import { HolidayProvider } from './contexts/HolidayContext';
+import { LeaveManagementProvider } from './contexts/LeaveManagementContext';
 import { ExpenseManagementProvider } from './contexts/ExpenseManagementContext';
 
 // Auth modules
@@ -32,12 +33,15 @@ import { EmployeeDatabase } from './modules/core-hr/EmployeeDatabase';
 import { OrgStructure } from './modules/core-hr/OrgStructure';
 import { EmployeeDocuments } from './modules/core-hr/EmployeeDocuments';
 
-// Time, Leave & Attendance modules
+// Time & Attendance modules
 import { AttendanceManagement } from './modules/time-attendance/AttendanceManagement';
 import { ShiftSchedule } from './modules/time-attendance/ShiftSchedule';
-import { LeaveHoliday } from './modules/time-attendance/LeaveHoliday';
-import { LeaveSettings } from './modules/time-attendance/LeaveSettings';
 import { OvertimeManagement } from './modules/time-attendance/OvertimeManagement';
+
+// Leave Management System modules
+import { LeaveHoliday } from './modules/leave-management-system/LeaveHoliday';
+import { LeaveSettings } from './modules/leave-management-system/LeaveSettings';
+import { LeaveConfigurationFormPage } from './modules/leave-management-system/LeaveConfigurationFormPage';
 
 // Payroll & Compensation modules
 import { SalaryStructure } from './modules/payroll/SalaryStructure';
@@ -99,7 +103,7 @@ import { BookingPage } from './modules/visitor-room/BookingPage';
 import { RoomManagement } from './modules/visitor-room';
 
 // Holiday Management modules
-import { HolidayManagement, HolidayForm } from './modules/time-attendance/holiday-management';
+import { HolidayManagement, HolidayForm } from './modules/leave-management-system/holiday-management';
 
 // Administration & Security modules
 import { UserManagement } from './modules/user-management/UserManagement';
@@ -128,8 +132,9 @@ function App() {
               <NotificationProvider>
                 <PolicyProvider>
                   <HolidayProvider>
-                    <ExpenseManagementProvider>
-                      <BrowserRouter>
+                    <LeaveManagementProvider>
+                      <ExpenseManagementProvider>
+                        <BrowserRouter>
                     <Routes>
               {/* Public auth routes */}
               <Route path="/auth/login" element={<Login />} />
@@ -162,7 +167,8 @@ function App() {
                 <Route path="/attendance-management" element={<AttendanceManagement />} />
                 <Route path="/shift-schedule" element={<ShiftSchedule />} />
                 <Route path="/leave-holiday" element={<LeaveHoliday />} />
-                <Route path="/leave-holiday/settings" element={<LeaveSettings />} />
+                <Route path="/leave-settings" element={<LeaveSettings />} />
+                <Route path="/leave-configuration-form" element={<LeaveConfigurationFormPage />} />
                 <Route path="/holiday-management" element={
                   <HolidayManagement />
                 } />
@@ -266,9 +272,10 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
-                      </BrowserRouter>
-                      <Toaster />
-                    </ExpenseManagementProvider>
+                        </BrowserRouter>
+                        <Toaster />
+                      </ExpenseManagementProvider>
+                    </LeaveManagementProvider>
                   </HolidayProvider>
                 </PolicyProvider>
               </NotificationProvider>

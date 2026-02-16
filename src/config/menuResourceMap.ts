@@ -14,12 +14,14 @@ export const menuResourceMap: Record<string, string> = {
   'org-structure': 'core-hr',
   'employee-documents': 'core-hr',
 
-  // Time, Leave & Attendance
+  // Time & Attendance
   'attendance-management': 'time-attendance',
   'shift-schedule': 'time-attendance',
-  'leave-holiday': 'time-attendance',
-  'holiday-management': 'time-attendance',
   'overtime': 'time-attendance',
+
+  // Leave Management System
+  'leave-holiday': 'leave-management-system',
+  'holiday-management': 'leave-management-system',
 
   // Payroll & Compensation
   'salary-structure': 'payroll',

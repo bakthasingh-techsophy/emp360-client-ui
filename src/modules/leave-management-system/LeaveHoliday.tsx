@@ -207,7 +207,7 @@ export function LeaveHoliday() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate('/leave-holiday/settings')}>
+            <Button variant="outline" onClick={() => navigate('/leave-settings')}>
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -279,7 +279,7 @@ export function LeaveHoliday() {
 
       <ApplyLeaveDialog
         open={applyLeaveOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setApplyLeaveOpen(open);
           if (!open) {
             setSelectedLeaveTypeId(undefined);

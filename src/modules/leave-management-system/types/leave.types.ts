@@ -77,7 +77,11 @@ export interface ApplyLeaveFormData {
   attachments?: File[];
 }
 
-export interface Holiday {
+/**
+ * HolidayInfo - Simple holiday information for display
+ * Note: For full Holiday CRUD operations, use Holiday from holiday-management/types
+ */
+export interface HolidayInfo {
   id: string;
   name: string;
   date: string;

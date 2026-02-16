@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
-import { AddRequestModal } from './AddRequestModal';
+import { AddRequestModal } from '@/modules/leave-management-system/components/AddRequestModal';
 import {
   AlertCircle,
   CheckCircle2,
