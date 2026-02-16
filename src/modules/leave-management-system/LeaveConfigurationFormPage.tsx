@@ -46,20 +46,40 @@ import {
 
 // Simple form schema focusing on core required fields
 const leaveConfigurationFormSchema = z.object({
-  // Basic Information
-  name: z.string().min(2, "Leave type name must be at least 2 characters"),
-  code: z.string().min(2, "Leave code is required").max(10),
-  tagline: z.string().optional(),
-  description: z.string().optional(),
-  category: z.enum(['flexible', 'accrued', 'special', 'monetization']),
+  // Basic Information - All required with validations
+  name: z
+    .string()
+    .min(2, "Leave type name must be at least 2 characters")
+    .max(50, "Leave type name cannot exceed 50 characters"),
+  code: z
+    .string()
+    .min(2, "Leave code must be at least 2 characters")
+    .max(10, "Leave code cannot exceed 10 characters")
+    .regex(
+      /^[A-Z0-9_]+$/,
+      "Code must contain only uppercase letters, numbers, and underscores",
+    ),
+  tagline: z
+    .string()
+    .min(1, "Tagline is required")
+    .max(100, "Tagline cannot exceed 100 characters"),
+  description: z
+    .string()
+    .min(5, "Description must be at least 5 characters")
+    .max(500, "Description cannot exceed 500 characters"),
+  category: z.enum(["flexible", "accrued", "special", "monetization"]),
 
   // Leave Properties
-  allowedTypes: z.array(z.enum(['fullDay', 'partialDay', 'partialTimings'])).min(1),
+  allowedTypes: z
+    .array(z.enum(["fullDay", "partialDay", "partialTimings"]))
+    .min(1),
 
-// Credit Policy
+  // Credit Policy
   allowCreditPolicy: z.boolean().default(true),
   creditValue: z.number().min(0).default(0),
-  creditFrequency: z.enum(['monthly', 'yearly', 'quarterly', 'custom']).default('yearly'),
+  creditFrequency: z
+    .enum(["monthly", "yearly", "quarterly", "custom"])
+    .default("yearly"),
   creditMaxLimit: z.number().min(0).default(0),
   creditCustomDates: z.array(z.string()).default([]),
 
@@ -71,14 +91,16 @@ const leaveConfigurationFormSchema = z.object({
   // Expiration
   allowExpirePolicy: z.boolean().default(false),
   carryForward: z.boolean().default(true),
-  expireFrequency: z.enum(['monthly', 'afterCredit', 'yearly', 'custom']).default('yearly'),
+  expireFrequency: z
+    .enum(["monthly", "afterCredit", "yearly", "custom"])
+    .default("yearly"),
   afterCreditExpiryDays: z.number().min(0).default(0),
   expireCustomDates: z.array(z.string()).default([]),
 
   // Calendar
-  monthType: z.enum(['standard', 'custom']).default('standard'),
+  monthType: z.enum(["standard", "custom"]).default("standard"),
   startDay: z.number().min(1).max(31).default(1),
-  yearType: z.enum(['standard', 'custom']).default('standard'),
+  yearType: z.enum(["standard", "custom"]).default("standard"),
   startMonth: z.number().min(1).max(12).default(1),
 
   // Restrictions
@@ -92,9 +114,9 @@ const leaveConfigurationFormSchema = z.object({
 
   // Applicability
   isForAllEmployeeTypes: z.boolean().default(true),
-  gender: z.enum(['male', 'female', 'other', 'all']).default('all'),
-  marriedStatus: z.enum(['married', 'single', 'all']).default('all'),
-  employeeTypes: z.array(z.enum(['fullTime', 'partTime', 'intern', 'contract', 'all'])).default(['all']),
+  selectAllEmployeeTypes: z.boolean().default(true),
+  gender: z.enum(["male", "female", "other", "all"]).default("all"),
+  marriedStatus: z.enum(["married", "single", "all"]).default("all"),
 });
 
 type LeaveConfigFormData = z.infer<typeof leaveConfigurationFormSchema>;
@@ -111,7 +133,9 @@ export function LeaveConfigurationFormPage() {
     getLeaveConfigurationById,
   } = useLeaveManagement();
 
-  const [leaveConfig, setLeaveConfig] = useState<LeaveConfiguration | null>(null);
+  const [leaveConfig, setLeaveConfig] = useState<LeaveConfiguration | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
 
@@ -149,9 +173,9 @@ export function LeaveConfigurationFormPage() {
       includeHolidaysWeekends: false,
       probationAllowed: false,
       isForAllEmployeeTypes: true,
+      selectAllEmployeeTypes: true,
       gender: "all",
       marriedStatus: "all",
-      employeeTypes: ["all"],
     },
   });
 
@@ -161,6 +185,7 @@ export function LeaveConfigurationFormPage() {
       if (mode === "edit" && configId) {
         setLoadingConfig(true);
         const config = await getLeaveConfigurationById(configId);
+        console.log("Loaded config for editing:", config); 
         if (config) {
           setLeaveConfig(config);
           form.reset({
@@ -172,16 +197,19 @@ export function LeaveConfigurationFormPage() {
             allowedTypes: config.leaveProperties.allowedTypes as any,
             allowCreditPolicy: config.allowCreditPolicy,
             creditValue: config.creditPolicy?.value || 0,
-            creditFrequency: (config.creditPolicy?.frequency as any) || "yearly",
+            creditFrequency:
+              (config.creditPolicy?.frequency as any) || "yearly",
             creditMaxLimit: config.creditPolicy?.maxLimit || 0,
             creditCustomDates: config.creditPolicy?.customDates || [],
             allowMonetization: config.allowMonetization,
             encashableCount: config.monetizationPolicy?.encashableCount || 0,
             encashableLimit: config.monetizationPolicy?.encashableLimit || 0,
             allowExpirePolicy: config.allowExpirePolicy,
-            carryForward: config.expirePolicy?.carryForward || true,
-            expireFrequency: (config.expirePolicy?.expireFrequency as any) || "yearly",
-            afterCreditExpiryDays: config.expirePolicy?.afterCreditExpiryDays || 0,
+            carryForward: config.expirePolicy?.carryForward ?? true,
+            expireFrequency:
+              (config.expirePolicy?.expireFrequency as any) || "yearly",
+            afterCreditExpiryDays:
+              config.expirePolicy?.afterCreditExpiryDays || 0,
             expireCustomDates: config.expirePolicy?.customDates || [],
             monthType: config.calendarConfiguration.monthType as any,
             startDay: config.calendarConfiguration.startDay,
@@ -192,12 +220,12 @@ export function LeaveConfigurationFormPage() {
             maxConsecutiveDays: config.restrictions?.maxConsecutiveDays || 0,
             minGapBetweenLeaves: config.restrictions?.minGapBetweenLeaves || 0,
             maxRequestsPerYear: config.restrictions?.maxRequestsPerYear || 0,
-            includeHolidaysWeekends: config.restrictions?.includeHolidaysWeekends || false,
-            probationAllowed: config.restrictions?.probationRestrictions.allowed || false,
-            isForAllEmployeeTypes: config.applicableCategories.isForAllEmployeeTypes,
+            includeHolidaysWeekends:
+              config.restrictions?.includeHolidaysWeekends || false,
+            probationAllowed:
+              config.restrictions?.probationRestrictions.allowed || false,
             gender: config.applicableCategories.gender as any,
             marriedStatus: config.applicableCategories.marriedStatus as any,
-            employeeTypes: config.applicableCategories.employeeTypes as any,
           });
         }
         setLoadingConfig(false);
@@ -209,7 +237,7 @@ export function LeaveConfigurationFormPage() {
   // Auto-enable/disable policies based on category
   useEffect(() => {
     const category = form.watch("category");
-    
+
     // For accrued: enable expiry and credit policies, remove partialTimings
     if (category === "accrued") {
       form.setValue("allowExpirePolicy", true);
@@ -217,23 +245,29 @@ export function LeaveConfigurationFormPage() {
       // Remove partialTimings if present
       const allowedTypes = form.getValues("allowedTypes");
       if (allowedTypes.includes("partialTimings")) {
-        form.setValue("allowedTypes", allowedTypes.filter(t => t !== "partialTimings"));
+        form.setValue(
+          "allowedTypes",
+          allowedTypes.filter((t) => t !== "partialTimings"),
+        );
       }
     }
-    
+
     // For flexible: disable expiry and credit policies
     if (category === "flexible") {
       form.setValue("allowExpirePolicy", false);
       form.setValue("allowCreditPolicy", false);
     }
-    
+
     // For special: disable credit policy, remove partialTimings
     if (category === "special") {
       form.setValue("allowCreditPolicy", false);
       // Remove partialTimings if present
       const allowedTypes = form.getValues("allowedTypes");
       if (allowedTypes.includes("partialTimings")) {
-        form.setValue("allowedTypes", allowedTypes.filter(t => t !== "partialTimings"));
+        form.setValue(
+          "allowedTypes",
+          allowedTypes.filter((t) => t !== "partialTimings"),
+        );
       }
     }
 
@@ -245,7 +279,10 @@ export function LeaveConfigurationFormPage() {
       // Remove partialTimings if present
       const allowedTypes = form.getValues("allowedTypes");
       if (allowedTypes.includes("partialTimings")) {
-        form.setValue("allowedTypes", allowedTypes.filter(t => t !== "partialTimings"));
+        form.setValue(
+          "allowedTypes",
+          allowedTypes.filter((t) => t !== "partialTimings"),
+        );
       }
     }
   }, [form.watch("category")]);
@@ -261,31 +298,37 @@ export function LeaveConfigurationFormPage() {
           tagline: data.tagline || "",
           description: data.description || "",
           category: data.category,
-          startDate: new Date().toISOString().split('T')[0], // Auto-set to current date
+          startDate: new Date().toISOString().split("T")[0], // Auto-set to current date
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
           },
           allowCreditPolicy: data.allowCreditPolicy,
-          creditPolicy: data.allowCreditPolicy ? {
-            onDemandCredit: data.category === 'special', // Auto-set based on category
-            value: data.creditValue,
-            frequency: data.creditFrequency,
-            customDates: data.creditCustomDates || [],
-            maxLimit: data.creditMaxLimit,
-          } : null,
+          creditPolicy: data.allowCreditPolicy
+            ? {
+                onDemandCredit: data.category === "special", // Auto-set based on category
+                value: data.creditValue,
+                frequency: data.creditFrequency,
+                customDates: data.creditCustomDates || [],
+                maxLimit: data.creditMaxLimit,
+              }
+            : null,
           allowMonetization: data.allowMonetization,
-          monetizationPolicy: data.allowMonetization ? {
-            encashableCount: data.encashableCount,
-            encashableLimit: data.encashableLimit,
-          } : null,
+          monetizationPolicy: data.allowMonetization
+            ? {
+                encashableCount: data.encashableCount,
+                encashableLimit: data.encashableLimit,
+              }
+            : null,
           allowExpirePolicy: data.allowExpirePolicy,
-          expirePolicy: data.allowExpirePolicy ? {
-            carryForward: data.carryForward,
-            expireFrequency: data.expireFrequency,
-            afterCreditExpiryDays: data.afterCreditExpiryDays,
-            customDates: data.expireCustomDates || [],
-          } : null,
+          expirePolicy: data.allowExpirePolicy
+            ? {
+                carryForward: data.carryForward,
+                expireFrequency: data.expireFrequency,
+                afterCreditExpiryDays: data.afterCreditExpiryDays,
+                customDates: data.expireCustomDates || [],
+              }
+            : null,
           calendarConfiguration: {
             monthType: data.monthType,
             startDay: data.startDay,
@@ -293,21 +336,21 @@ export function LeaveConfigurationFormPage() {
             startMonth: data.startMonth,
           },
           allowRestrictions: data.allowRestrictions,
-          restrictions: data.allowRestrictions ? {
-            approvalRequired: data.approvalRequired,
-            maxConsecutiveDays: data.maxConsecutiveDays,
-            minGapBetweenLeaves: data.minGapBetweenLeaves,
-            maxRequestsPerYear: data.maxRequestsPerYear,
-            includeHolidaysWeekends: data.includeHolidaysWeekends,
-            probationRestrictions: {
-              allowed: data.probationAllowed,
-            },
-          } : null,
+          restrictions: data.allowRestrictions
+            ? {
+                approvalRequired: data.approvalRequired,
+                maxConsecutiveDays: data.maxConsecutiveDays,
+                minGapBetweenLeaves: data.minGapBetweenLeaves,
+                maxRequestsPerYear: data.maxRequestsPerYear,
+                includeHolidaysWeekends: data.includeHolidaysWeekends,
+                probationRestrictions: {
+                  allowed: data.probationAllowed,
+                },
+              }
+            : null,
           applicableCategories: {
-            isForAllEmployeeTypes: data.isForAllEmployeeTypes,
             gender: data.gender,
             marriedStatus: data.marriedStatus,
-            employeeTypes: data.employeeTypes,
           },
           employeeIds: [],
         };
@@ -324,31 +367,37 @@ export function LeaveConfigurationFormPage() {
           tagline: data.tagline,
           description: data.description,
           category: data.category,
-          startDate: new Date().toISOString().split('T')[0], // Auto-set to current date
+          startDate: new Date().toISOString().split("T")[0], // Auto-set to current date
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
           },
           allowCreditPolicy: data.allowCreditPolicy,
-          creditPolicy: data.allowCreditPolicy ? {
-            onDemandCredit: data.category === 'special', // Auto-set based on category
-            value: data.creditValue,
-            frequency: data.creditFrequency,
-            customDates: data.creditCustomDates || [],
-            maxLimit: data.creditMaxLimit,
-          } : null,
+          creditPolicy: data.allowCreditPolicy
+            ? {
+                onDemandCredit: data.category === "special", // Auto-set based on category
+                value: data.creditValue,
+                frequency: data.creditFrequency,
+                customDates: data.creditCustomDates || [],
+                maxLimit: data.creditMaxLimit,
+              }
+            : null,
           allowMonetization: data.allowMonetization,
-          monetizationPolicy: data.allowMonetization ? {
-            encashableCount: data.encashableCount,
-            encashableLimit: data.encashableLimit,
-          } : null,
+          monetizationPolicy: data.allowMonetization
+            ? {
+                encashableCount: data.encashableCount,
+                encashableLimit: data.encashableLimit,
+              }
+            : null,
           allowExpirePolicy: data.allowExpirePolicy,
-          expirePolicy: data.allowExpirePolicy ? {
-            carryForward: data.carryForward,
-            expireFrequency: data.expireFrequency,
-            afterCreditExpiryDays: data.afterCreditExpiryDays,
-            customDates: data.expireCustomDates || [],
-          } : null,
+          expirePolicy: data.allowExpirePolicy
+            ? {
+                carryForward: data.carryForward,
+                expireFrequency: data.expireFrequency,
+                afterCreditExpiryDays: data.afterCreditExpiryDays,
+                customDates: data.expireCustomDates || [],
+              }
+            : null,
           calendarConfiguration: {
             monthType: data.monthType,
             startDay: data.startDay,
@@ -356,21 +405,22 @@ export function LeaveConfigurationFormPage() {
             startMonth: data.startMonth,
           },
           allowRestrictions: data.allowRestrictions,
-          restrictions: data.allowRestrictions ? {
-            approvalRequired: data.approvalRequired,
-            maxConsecutiveDays: data.maxConsecutiveDays,
-            minGapBetweenLeaves: data.minGapBetweenLeaves,
-            maxRequestsPerYear: data.maxRequestsPerYear,
-            includeHolidaysWeekends: data.includeHolidaysWeekends,
-            probationRestrictions: {
-              allowed: data.probationAllowed,
-            },
-          } : null,
+          restrictions: data.allowRestrictions
+            ? {
+                approvalRequired: data.approvalRequired,
+                maxConsecutiveDays: data.maxConsecutiveDays,
+                minGapBetweenLeaves: data.minGapBetweenLeaves,
+                maxRequestsPerYear: data.maxRequestsPerYear,
+                includeHolidaysWeekends: data.includeHolidaysWeekends,
+                probationRestrictions: {
+                  allowed: data.probationAllowed,
+                },
+              }
+            : null,
           applicableCategories: {
             isForAllEmployeeTypes: data.isForAllEmployeeTypes,
             gender: data.gender,
             marriedStatus: data.marriedStatus,
-            employeeTypes: data.employeeTypes,
           },
         };
 
@@ -516,10 +566,7 @@ export function LeaveConfigurationFormPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -529,7 +576,9 @@ export function LeaveConfigurationFormPage() {
                         <SelectItem value="flexible">Flexible</SelectItem>
                         <SelectItem value="accrued">Accrued</SelectItem>
                         <SelectItem value="special">Special</SelectItem>
-                        <SelectItem value="monetization">Monetization</SelectItem>
+                        <SelectItem value="monetization">
+                          Monetization
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -541,7 +590,9 @@ export function LeaveConfigurationFormPage() {
 
           {/* Calendar Configuration */}
           <Card className="p-6">
-            <h3 className="text-base font-semibold mb-4">Calendar Configuration</h3>
+            <h3 className="text-base font-semibold mb-4">
+              Calendar Configuration
+            </h3>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -567,12 +618,17 @@ export function LeaveConfigurationFormPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="standard">Standard (Calendar)</SelectItem>
-                          <SelectItem value="custom">Custom (Fiscal)</SelectItem>
+                          <SelectItem value="standard">
+                            Standard (Calendar)
+                          </SelectItem>
+                          <SelectItem value="custom">
+                            Custom (Fiscal)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Standard starts in January, Custom allows custom start month
+                        Standard starts in January, Custom allows custom start
+                        month
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -586,7 +642,9 @@ export function LeaveConfigurationFormPage() {
                     <FormItem>
                       <FormLabel>Start Month</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
                         value={field.value?.toString()}
                         disabled={form.watch("yearType") === "standard"}
                       >
@@ -611,7 +669,9 @@ export function LeaveConfigurationFormPage() {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        {form.watch("yearType") === "standard" ? "Locked to January for standard year" : "Select fiscal year start month"}
+                        {form.watch("yearType") === "standard"
+                          ? "Locked to January for standard year"
+                          : "Select fiscal year start month"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -661,7 +721,9 @@ export function LeaveConfigurationFormPage() {
                     <FormItem>
                       <FormLabel>Start Day</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
                         value={field.value?.toString()}
                         disabled={form.watch("monthType") === "standard"}
                       >
@@ -671,15 +733,19 @@ export function LeaveConfigurationFormPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Array.from({ length: 26 }, (_, i) => i + 1).map((day) => (
-                            <SelectItem key={day} value={day.toString()}>
-                              {day}
-                            </SelectItem>
-                          ))}
+                          {Array.from({ length: 26 }, (_, i) => i + 1).map(
+                            (day) => (
+                              <SelectItem key={day} value={day.toString()}>
+                                {day}
+                              </SelectItem>
+                            ),
+                          )}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        {form.watch("monthType") === "standard" ? "Locked to day 1 for standard month" : "Select custom start day (1-26)"}
+                        {form.watch("monthType") === "standard"
+                          ? "Locked to day 1 for standard month"
+                          : "Select custom start day (1-26)"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -701,37 +767,41 @@ export function LeaveConfigurationFormPage() {
                   <FormItem>
                     <FormLabel>Allowed Leave Types *</FormLabel>
                     <div className="flex gap-4 p-3 border rounded-md">
-                      {(['fullDay', 'partialDay', 'partialTimings'] as const)
-                        .filter(type => type !== 'partialTimings' || form.watch('category') === 'flexible')
+                      {(["fullDay", "partialDay", "partialTimings"] as const)
+                        .filter(
+                          (type) =>
+                            type !== "partialTimings" ||
+                            form.watch("category") === "flexible",
+                        )
                         .map((type) => (
-                        <FormField
-                          key={type}
-                          control={form.control}
-                          name="allowedTypes"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(type)}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...current, type]);
-                                    } else {
-                                      field.onChange(
-                                        current.filter((val) => val !== type)
-                                      );
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-normal capitalize">
-                                {type.replace(/([A-Z])/g, ' $1').trim()}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                          <FormField
+                            key={type}
+                            control={form.control}
+                            name="allowedTypes"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(type)}
+                                    onCheckedChange={(checked) => {
+                                      const current = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...current, type]);
+                                      } else {
+                                        field.onChange(
+                                          current.filter((val) => val !== type),
+                                        );
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal capitalize">
+                                  {type.replace(/([A-Z])/g, " $1").trim()}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -741,105 +811,254 @@ export function LeaveConfigurationFormPage() {
           </Card>
 
           {/* Expiration Policy - Hidden for flexible category */}
-          {(form.watch("category") !== "flexible") && (
-          <Card className="p-6">
-            <Accordion 
-              type="single" 
-              collapsible={form.watch("category") !== "accrued" && form.watch("category") !== "monetization"}
-              value={form.watch("allowExpirePolicy") || form.watch("category") === "accrued" || form.watch("category") === "monetization" ? "expiry" : ""}
-              onValueChange={(value) => {
-                if (form.watch("category") !== "accrued" && form.watch("category") !== "monetization") {
-                  form.setValue("allowExpirePolicy", value === "expiry");
+          {form.watch("category") !== "flexible" && (
+            <Card className="p-6">
+              <Accordion
+                type="single"
+                collapsible={
+                  form.watch("category") !== "accrued" &&
+                  form.watch("category") !== "monetization"
                 }
-              }}
-            >
-              <AccordionItem value="expiry" className="border-none">
-                <AccordionTrigger className="hover:no-underline py-0 mb-4" disabled={form.watch("category") === "accrued" || form.watch("category") === "monetization"}>
-                  <div className="flex items-center justify-between w-full pr-2">
-                    <h3 className="text-base font-semibold">Expiration Policy</h3>
-                    {(form.watch("category") !== "accrued" && form.watch("category") !== "monetization") && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">Enable</span>
-                        <div className="h-4 w-4 border border-input rounded flex items-center justify-center bg-background cursor-pointer">
-                          {form.watch("allowExpirePolicy") && (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {(form.watch("category") === "accrued" || form.watch("category") === "monetization") && (
-                      <span className="text-xs text-muted-foreground">Always enabled for {form.watch("category")} leaves</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="carryForward"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Allow Carry Forward</FormLabel>
-                            <FormDescription>
-                              Leaves won't expire if enabled
-                            </FormDescription>
+                value={
+                  form.watch("allowExpirePolicy") ||
+                  form.watch("category") === "accrued" ||
+                  form.watch("category") === "monetization"
+                    ? "expiry"
+                    : ""
+                }
+                onValueChange={(value) => {
+                  if (
+                    form.watch("category") !== "accrued" &&
+                    form.watch("category") !== "monetization"
+                  ) {
+                    form.setValue("allowExpirePolicy", value === "expiry");
+                  }
+                }}
+              >
+                <AccordionItem value="expiry" className="border-none">
+                  <AccordionTrigger
+                    className="hover:no-underline py-0 mb-4"
+                    disabled={
+                      form.watch("category") === "accrued" ||
+                      form.watch("category") === "monetization"
+                    }
+                  >
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <h3 className="text-base font-semibold">
+                        Expiration Policy
+                      </h3>
+                      {form.watch("category") !== "accrued" &&
+                        form.watch("category") !== "monetization" && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">Enable</span>
+                            <div className="h-4 w-4 border border-input rounded flex items-center justify-center bg-background cursor-pointer">
+                              {form.watch("allowExpirePolicy") && (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </div>
                           </div>
-                        </FormItem>
+                        )}
+                      {(form.watch("category") === "accrued" ||
+                        form.watch("category") === "monetization") && (
+                        <span className="text-xs text-muted-foreground">
+                          Always enabled for {form.watch("category")} leaves
+                        </span>
                       )}
-                    />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 pt-4 px-4">
+                      <FormField
+                        control={form.control}
+                        name="carryForward"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Allow Carry Forward</FormLabel>
+                              <FormDescription>
+                                Leaves won't expire if enabled
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
 
-                    {!form.watch("carryForward") && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="expireFrequency"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Expire Frequency</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="yearly">Yearly</SelectItem>
-                                  <SelectItem value="monthly">Monthly</SelectItem>
-                                  {form.watch("category") === "special" && (
-                                    <SelectItem value="afterCredit">After Credit</SelectItem>
-                                  )}
-                                  <SelectItem value="custom">Custom</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {form.watch("expireFrequency") === "afterCredit" && (
+                      {!form.watch("carryForward") && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="afterCreditExpiryDays"
+                            name="expireFrequency"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Expiry Days After Credit</FormLabel>
+                                <FormLabel>Expire Frequency</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="yearly">
+                                      Yearly
+                                    </SelectItem>
+                                    <SelectItem value="monthly">
+                                      Monthly
+                                    </SelectItem>
+                                    {form.watch("category") === "special" && (
+                                      <SelectItem value="afterCredit">
+                                        After Credit
+                                      </SelectItem>
+                                    )}
+                                    <SelectItem value="custom">
+                                      Custom
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {form.watch("expireFrequency") === "afterCredit" && (
+                            <FormField
+                              control={form.control}
+                              name="afterCreditExpiryDays"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    Expiry Days After Credit
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      {...field}
+                                      onChange={(e) =>
+                                        field.onChange(
+                                          parseInt(e.target.value) || 0,
+                                        )
+                                      }
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {form.watch("expireFrequency") === "custom" && (
+                            <FormField
+                              control={form.control}
+                              name="expireCustomDates"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Custom Expiry Dates</FormLabel>
+                                  <FormControl>
+                                    <MultiDatePicker
+                                      value={field.value}
+                                      onChange={field.onChange}
+                                      placeholder="Select expiry dates"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </Card>
+          )}
+
+          {/* Credit Policy - Hidden for flexible and special categories */}
+          {form.watch("category") !== "flexible" &&
+            form.watch("category") !== "special" && (
+              <Card className="p-6">
+                <Accordion
+                  type="single"
+                  collapsible={
+                    form.watch("category") !== "accrued" &&
+                    form.watch("category") !== "monetization"
+                  }
+                  value={
+                    form.watch("allowCreditPolicy") ||
+                    form.watch("category") === "accrued" ||
+                    form.watch("category") === "monetization"
+                      ? "credit"
+                      : ""
+                  }
+                  onValueChange={(value) => {
+                    if (
+                      form.watch("category") !== "accrued" &&
+                      form.watch("category") !== "monetization"
+                    ) {
+                      form.setValue("allowCreditPolicy", value === "credit");
+                    }
+                  }}
+                >
+                  <AccordionItem value="credit" className="border-none">
+                    <AccordionTrigger
+                      className="hover:no-underline py-0 mb-4"
+                      disabled={
+                        form.watch("category") === "accrued" ||
+                        form.watch("category") === "monetization"
+                      }
+                    >
+                      <div className="flex items-center justify-between w-full pr-2">
+                        <h3 className="text-base font-semibold">
+                          Credit Policy
+                        </h3>
+                        {form.watch("category") !== "accrued" &&
+                          form.watch("category") !== "monetization" && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">Enable</span>
+                              <div className="h-4 w-4 border border-input rounded flex items-center justify-center bg-background cursor-pointer">
+                                {form.watch("allowCreditPolicy") && (
+                                  <Check className="h-3 w-3" />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        {(form.watch("category") === "accrued" ||
+                          form.watch("category") === "monetization") && (
+                          <span className="text-xs text-muted-foreground">
+                            Always enabled for {form.watch("category")} leaves
+                          </span>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4 pt-4 px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="creditValue"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Credit Value (Days)</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
                                     min="0"
+                                    step="0.5"
                                     {...field}
                                     onChange={(e) =>
-                                      field.onChange(parseInt(e.target.value) || 0)
+                                      field.onChange(
+                                        parseFloat(e.target.value) || 0,
+                                      )
                                     }
                                   />
                                 </FormControl>
@@ -847,20 +1066,55 @@ export function LeaveConfigurationFormPage() {
                               </FormItem>
                             )}
                           />
-                        )}
 
-                        {form.watch("expireFrequency") === "custom" && (
                           <FormField
                             control={form.control}
-                            name="expireCustomDates"
+                            name="creditFrequency"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Custom Expiry Dates</FormLabel>
+                                <FormLabel>Frequency</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="yearly">
+                                      Yearly
+                                    </SelectItem>
+                                    <SelectItem value="monthly">
+                                      Monthly
+                                    </SelectItem>
+                                    <SelectItem value="quarterly">
+                                      Quarterly
+                                    </SelectItem>
+                                    <SelectItem value="custom">
+                                      Custom
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {form.watch("creditFrequency") === "custom" && (
+                          <FormField
+                            control={form.control}
+                            name="creditCustomDates"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Custom Credit Dates</FormLabel>
                                 <FormControl>
                                   <MultiDatePicker
                                     value={field.value}
                                     onChange={field.onChange}
-                                    placeholder="Select expiry dates"
+                                    placeholder="Select credit dates"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -868,167 +1122,57 @@ export function LeaveConfigurationFormPage() {
                             )}
                           />
                         )}
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </Card>
-          )}
 
-          {/* Credit Policy - Hidden for flexible and special categories */}
-          {(form.watch("category") !== "flexible" && form.watch("category") !== "special") && (
-          <Card className="p-6">
-            <Accordion 
-              type="single" 
-              collapsible={form.watch("category") !== "accrued" && form.watch("category") !== "monetization"}
-              value={form.watch("allowCreditPolicy") || form.watch("category") === "accrued" || form.watch("category") === "monetization" ? "credit" : ""}
-              onValueChange={(value) => {
-                if (form.watch("category") !== "accrued" && form.watch("category") !== "monetization") {
-                  form.setValue("allowCreditPolicy", value === "credit");
-                }
-              }}
-            >
-              <AccordionItem value="credit" className="border-none">
-                <AccordionTrigger className="hover:no-underline py-0 mb-4" disabled={form.watch("category") === "accrued" || form.watch("category") === "monetization"}>
-                  <div className="flex items-center justify-between w-full pr-2">
-                    <h3 className="text-base font-semibold">Credit Policy</h3>
-                    {(form.watch("category") !== "accrued" && form.watch("category") !== "monetization") && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">Enable</span>
-                        <div className="h-4 w-4 border border-input rounded flex items-center justify-center bg-background cursor-pointer">
-                          {form.watch("allowCreditPolicy") && (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {(form.watch("category") === "accrued" || form.watch("category") === "monetization") && (
-                      <span className="text-xs text-muted-foreground">Always enabled for {form.watch("category")} leaves</span>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4 pt-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="creditValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Credit Value (Days)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.5"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(parseFloat(e.target.value) || 0)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="creditFrequency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Frequency</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
+                        <FormField
+                          control={form.control}
+                          name="creditMaxLimit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Maximum Credit Limit</FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || 0,
+                                    )
+                                  }
+                                />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="yearly">Yearly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="quarterly">Quarterly</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {form.watch("creditFrequency") === "custom" && (
-                      <FormField
-                        control={form.control}
-                        name="creditCustomDates"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Custom Credit Dates</FormLabel>
-                            <FormControl>
-                              <MultiDatePicker
-                                value={field.value}
-                                onChange={field.onChange}
-                                placeholder="Select credit dates"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    <FormField
-                      control={form.control}
-                      name="creditMaxLimit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Maximum Credit Limit</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value) || 0)
-                              }
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            0 for unlimited
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </Card>
-          )}
+                              <FormDescription>0 for unlimited</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </Card>
+            )}
 
           {/* Monetization Policy - Only show for 'monetization' category */}
           {form.watch("category") === "monetization" && (
             <Card className="p-6">
-              <Accordion 
-                type="single" 
-                collapsible={false}
-                value="monetization"
-              >
+              <Accordion type="single" collapsible={false} value="monetization">
                 <AccordionItem value="monetization" className="border-none">
-                  <AccordionTrigger className="hover:no-underline py-0 mb-4" disabled>
+                  <AccordionTrigger
+                    className="hover:no-underline py-0 mb-4"
+                    disabled
+                  >
                     <div className="flex items-center justify-between w-full pr-2">
-                      <h3 className="text-base font-semibold">Monetization Policy</h3>
-                      <span className="text-xs text-muted-foreground">Always enabled for monetization leaves</span>
+                      <h3 className="text-base font-semibold">
+                        Monetization Policy
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        Always enabled for monetization leaves
+                      </span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 px-4">
                       <FormField
                         control={form.control}
                         name="encashableCount"
@@ -1079,8 +1223,8 @@ export function LeaveConfigurationFormPage() {
 
           {/* Restrictions */}
           <Card className="p-6">
-            <Accordion 
-              type="single" 
+            <Accordion
+              type="single"
               collapsible
               value={form.watch("allowRestrictions") ? "restrictions" : ""}
               onValueChange={(value) => {
@@ -1102,7 +1246,7 @@ export function LeaveConfigurationFormPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pt-2">
+                  <div className="space-y-4 pt-4 px-4">
                     <FormField
                       control={form.control}
                       name="approvalRequired"
@@ -1232,24 +1376,6 @@ export function LeaveConfigurationFormPage() {
             <h3 className="text-base font-semibold mb-4">Applicability</h3>
 
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="isForAllEmployeeTypes"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>For All Employee Types</FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

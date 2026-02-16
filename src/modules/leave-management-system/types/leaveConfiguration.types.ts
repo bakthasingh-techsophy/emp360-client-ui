@@ -73,10 +73,8 @@ export interface LeaveProperties {
  * ApplicableCategories - Defines the categories of employees for whom this leave is applicable
  */
 export interface ApplicableCategories {
-  isForAllEmployeeTypes: boolean; // applicable to all employee types
   gender: string; // male, female, other, all
   marriedStatus: string; // married, single, all
-  employeeTypes: string[]; // fullTime, partTime, intern, contract, all
 }
 
 /**
@@ -281,6 +279,5 @@ export interface LeaveConfigurationFormData {
   isForAllEmployeeTypes: boolean;
   gender: Gender;
   marriedStatus: MarriageStatus;
-  employeeTypes: EmployeeTypeOption[];
   employeeIds: string[];
 }

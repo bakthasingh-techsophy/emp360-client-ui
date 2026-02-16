@@ -35,10 +35,7 @@ export type UpdatePayload = Record<string, any>;
  * Bulk update request body
  */
 export interface BulkUpdateRequest {
-  filters: {
-    and?: Record<string, any>;
-    or?: Record<string, any>;
-  };
+  filters: UniversalSearchRequest;
   updates: UpdatePayload;
 }
 
