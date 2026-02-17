@@ -37,16 +37,36 @@ import {
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { MultiDatePicker } from "@/components/common/MultiDatePicker";
 import { CompanyDropdown } from "@/components/context-aware/CompanyDropdown";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Users } from "lucide-react";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import {
   LeaveConfigurationCarrier,
 } from "./types/leaveConfiguration.types";
+import { ManageEmployeesModal } from "./components/ManageEmployeesModal";
 
 // Simple form schema focusing on core required fields
 const leaveConfigurationFormSchema = z.object({
-  // Reference to basic details
-  leaveConfigurationBasicDetailsId: z.string().min(1, "Basic details reference is required"),
+  // Basic Information
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name cannot exceed 50 characters"),
+  code: z
+    .string()
+    .min(2, "Code must be at least 2 characters")
+    .max(10, "Code cannot exceed 10 characters")
+    .toUpperCase(),
+  tagline: z
+    .string()
+    .min(1, "Tagline is required")
+    .max(100, "Tagline cannot exceed 100 characters"),
+  description: z
+    .string()
+    .min(5, "Description must be at least 5 characters")
+    .max(500, "Description cannot exceed 500 characters"),
+
+  // Company
+  companyId: z.string().min(1, "Company is required"),
 
   // Category
   category: z.enum(["flexible", "accrued", "special", "monetization"]),
@@ -95,7 +115,6 @@ const leaveConfigurationFormSchema = z.object({
   probationAllowed: z.boolean().default(false),
 
   // Applicability
-  companyId: z.string().min(1, "Company is required"),
   isForAllEmployeeTypes: z.boolean().default(true),
   selectAllEmployeeTypes: z.boolean().default(true),
   gender: z.enum(["male", "female", "other", "all"]).default("all"),
@@ -109,7 +128,6 @@ export function LeaveConfigurationFormPage() {
   const [searchParams] = useSearchParams();
   const mode = (searchParams.get("mode") as "create" | "edit") || "create";
   const configId = searchParams.get("id");
-  const leaveTypeId = searchParams.get("leaveTypeId"); // Get leaveTypeId from URL
 
   const {
     createLeaveConfiguration,
@@ -119,11 +137,17 @@ export function LeaveConfigurationFormPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
+  const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
+  const [employeeIds, setEmployeeIds] = useState<string[]>([]);
 
   const form = useForm<LeaveConfigFormData>({
     resolver: zodResolver(leaveConfigurationFormSchema),
     defaultValues: {
-      leaveConfigurationBasicDetailsId: leaveTypeId || "", // Pre-fill with leaveTypeId if available
+      name: "",
+      code: "",
+      tagline: "",
+      description: "",
+      companyId: "",
       category: "accrued",
       allowedTypes: ["fullDay"],
       allowCreditPolicy: true,
@@ -152,7 +176,6 @@ export function LeaveConfigurationFormPage() {
       probationAllowed: false,
       isForAllEmployeeTypes: true,
       selectAllEmployeeTypes: true,
-      companyId: "",
       gender: "all",
       marriedStatus: "all",
     },
@@ -167,7 +190,10 @@ export function LeaveConfigurationFormPage() {
         console.log("Loaded config for editing:", config); 
         if (config) {
           form.reset({
-            leaveConfigurationBasicDetailsId: "", // Would need to be fetched or derived
+            name: config.name || "",
+            code: config.code || "",
+            tagline: config.tagline || "",
+            description: config.description || "",
             category: config.category as any,
             allowedTypes: config.leaveProperties.allowedTypes as any,
             allowCreditPolicy: config.allowCreditPolicy,
@@ -199,10 +225,12 @@ export function LeaveConfigurationFormPage() {
               config.restrictions?.includeHolidaysWeekends || false,
             probationAllowed:
               config.restrictions?.probationRestrictions.allowed || false,
-            companyId: config.applicableCategories.companyId || "",
-            gender: config.applicableCategories.gender as any,
-            marriedStatus: config.applicableCategories.marriedStatus as any,
+            companyId: config.companyId || "",
+            gender: config.gender as any,
+            marriedStatus: config.marriedStatus as any,
           });
+          // Load employee IDs separately
+          setEmployeeIds(config.employeeIds || []);
         }
         setLoadingConfig(false);
       }
@@ -263,14 +291,35 @@ export function LeaveConfigurationFormPage() {
     }
   }, [form.watch("category")]);
 
+  const handleManageEmployees = () => {
+    setManageEmployeesOpen(true);
+  };
+
+  const handleInvolveAll = () => {
+    // Clear employee IDs - backend will interpret as "all employees"
+    setEmployeeIds([]);
+    setManageEmployeesOpen(false);
+  };
+
+  const handleInvolveSelected = (selectedIds: string[]) => {
+    setEmployeeIds(selectedIds);
+    setManageEmployeesOpen(false);
+  };
+
   const handleSubmit = async (data: LeaveConfigFormData) => {
     setIsSubmitting(true);
 
     try {
       if (mode === "create") {
         const carrier: LeaveConfigurationCarrier = {
-          leaveConfigurationBasicDetailsId: data.leaveConfigurationBasicDetailsId,
+          name: data.name,
+          code: data.code,
+          tagline: data.tagline,
+          description: data.description,
+          companyId: data.companyId,
           category: data.category,
+          gender: data.gender,
+          marriedStatus: data.marriedStatus,
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
@@ -320,28 +369,24 @@ export function LeaveConfigurationFormPage() {
                 },
               }
             : null,
-          applicableCategories: {
-            companyId: data.companyId,
-            gender: data.gender,
-            marriedStatus: data.marriedStatus,
-          },
-          employeeIds: [],
+          employeeIds: employeeIds,
         };
 
         const newConfig = await createLeaveConfiguration(carrier);
         if (newConfig) {
-          // Navigate back to LeaveTypeManagement if we came from there
-          if (leaveTypeId) {
-            navigate(`/leave-type-management?id=${leaveTypeId}`);
-          } else {
-            navigate("/leave-settings");
-          }
+          navigate("/leave-settings");
         }
       } else {
         // For update, use the update carrier with all fields
         const updates = {
-          leaveConfigurationBasicDetailsId: data.leaveConfigurationBasicDetailsId,
+          name: data.name,
+          code: data.code,
+          tagline: data.tagline,
+          description: data.description,
+          companyId: data.companyId,
           category: data.category,
+          gender: data.gender,
+          marriedStatus: data.marriedStatus,
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
@@ -391,22 +436,12 @@ export function LeaveConfigurationFormPage() {
                 },
               }
             : null,
-          applicableCategories: {
-            companyId: data.companyId,
-            isForAllEmployeeTypes: data.isForAllEmployeeTypes,
-            gender: data.gender,
-            marriedStatus: data.marriedStatus,
-          },
+          employeeIds: employeeIds,
         };
 
         const updated = await updateLeaveConfiguration(configId!, updates);
         if (updated) {
-          // Navigate back to LeaveTypeManagement if we came from there
-          if (leaveTypeId) {
-            navigate(`/leave-type-management?id=${leaveTypeId}`);
-          } else {
-            navigate("/leave-settings");
-          }
+          navigate("/leave-settings");
         }
       }
     } catch (error) {
@@ -417,13 +452,7 @@ export function LeaveConfigurationFormPage() {
   };
 
   const handleCancel = () => {
-    if (leaveTypeId) {
-      // If we came from LeaveTypeManagement, go back there
-      navigate(`/leave-type-management?id=${leaveTypeId}`);
-    } else {
-      // Otherwise go to leave settings
-      navigate("/leave-settings");
-    }
+    navigate("/leave-settings");
   };
 
   if (loadingConfig) {
@@ -444,26 +473,40 @@ export function LeaveConfigurationFormPage() {
   return (
     <div className="container max-w-4xl mx-auto p-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleCancel}
-          className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold">
-            {mode === "edit" ? "Edit Leave Type" : "Add Leave Type"}
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {mode === "edit"
-              ? `Update configuration for ID: ${configId || ""}`
-              : "Configure a new leave type and its policies"}
-          </p>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleCancel}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">
+              {mode === "edit" ? "Edit Leave Type" : "Add Leave Type"}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {mode === "edit"
+                ? `Update configuration for ID: ${configId || ""}`
+                : "Configure a new leave type and its policies"}
+            </p>
+          </div>
         </div>
+        {mode === "edit" && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleManageEmployees}
+            className="gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Manage Employees ({employeeIds.length})
+          </Button>
+        )}
       </div>
 
       {/* Form */}
@@ -472,6 +515,85 @@ export function LeaveConfigurationFormPage() {
           onSubmit={form.handleSubmit(handleSubmit)}
           className="space-y-6 pb-24"
         >
+          {/* Basic Information */}
+          <Card className="p-6">
+            <h3 className="text-base font-semibold mb-4">Basic Information</h3>
+
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Casual Leave"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., CL"
+                        maxLength={10}
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
+                    </FormControl>
+                    <FormDescription>Max 10 characters, uppercase only</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tagline"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tagline *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., For casual reasons"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description *</FormLabel>
+                    <FormControl>
+                      <textarea
+                        placeholder="Provide a detailed description of this leave type"
+                        className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </Card>
+
           {/* Configuration Reference */}
           <Card className="p-6">
             <h3 className="text-base font-semibold mb-4">Configuration Reference</h3>
@@ -479,21 +601,18 @@ export function LeaveConfigurationFormPage() {
             <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="leaveConfigurationBasicDetailsId"
+                name="companyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Leave Configuration Basic Details *</FormLabel>
+                    <FormLabel>Company *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter Basic Details ID"
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      <CompanyDropdown
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Search companies..."
+                        showRefresh={true}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Reference to the Leave Configuration Basic Details (ID)
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -532,25 +651,6 @@ export function LeaveConfigurationFormPage() {
             <h3 className="text-base font-semibold mb-4">Applicability</h3>
 
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="companyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company *</FormLabel>
-                    <FormControl>
-                      <CompanyDropdown
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Search companies..."
-                        showRefresh={true}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -1402,6 +1502,18 @@ export function LeaveConfigurationFormPage() {
           />
         </form>
       </Form>
+
+      {/* Manage Employees Modal - Only in edit mode */}
+      {mode === "edit" && (
+        <ManageEmployeesModal
+          open={manageEmployeesOpen}
+          onOpenChange={setManageEmployeesOpen}
+          selectedEmployeeIds={employeeIds}
+          onInvolveAll={handleInvolveAll}
+          onInvolveSelected={handleInvolveSelected}
+          leaveTypeName="Leave Configuration"
+        />
+      )}
     </div>
   );
 }

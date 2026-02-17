@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // ============ REAL API LOGIN - Keycloak Integration ============
       // Call Keycloak authentication endpoint
-      const response = await apiLogin(username, password, "test-realm");
+      const response = await apiLogin(username, password, "techsophy");
       
       if (!response.success) {
         // Show error toast with descriptive message
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Decode JWT to extract additional claims
       const decodedToken = decodeJWT(authData.access_token);
-      const tokenEmployeeId = decodedToken?.employeeId || "";
+      const tokenEmployeeId = decodedToken?.['preferred_username'] || "";
 
       // Create authenticated user object
       // Note: Username is used as ID (can be enhanced to fetch full user details from backend later)

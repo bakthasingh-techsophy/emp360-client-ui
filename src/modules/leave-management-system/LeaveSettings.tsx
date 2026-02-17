@@ -5,9 +5,6 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { PageLayout } from '@/components/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,73 +17,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Edit2, Trash2, CalendarDays, FileX, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, Users, FileX } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { LeaveConfigurationBasicDetails, LeaveConfigurationBasicDetailsCarrier } from '@/services/leaveConfigurationBasicDetailsService';
 import { useLeaveManagement } from '@/contexts/LeaveManagementContext';
-
-// Form schema for basic information
-const leaveConfigurationBasicInfoFormSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Leave type name must be at least 2 characters")
-    .max(50, "Leave type name cannot exceed 50 characters"),
-  code: z
-    .string()
-    .min(2, "Leave code must be at least 2 characters")
-    .max(100, "Leave code cannot exceed 100 characters")
-    .regex(
-      /^[a-z0-9_]+$/,
-      "Code must contain only lowercase letters, numbers, and underscores",
-    ),
-  tagline: z
-    .string()
-    .min(1, "Tagline is required")
-    .max(100, "Tagline cannot exceed 100 characters"),
-  description: z
-    .string()
-    .min(5, "Description must be at least 5 characters")
-    .max(500, "Description cannot exceed 500 characters"),
-});
-
-type LeaveConfigBasicInfoFormData = z.infer<typeof leaveConfigurationBasicInfoFormSchema>;
+import { useCompany } from '@/contexts/CompanyContext';
+import { LeaveConfiguration } from './types/leaveConfiguration.types';
+import UniversalSearchRequest from '@/types/search';
 
 export function LeaveSettings() {
   const navigate = useNavigate();
   const { 
-    searchLeaveConfigurationBasicDetails, 
-    deleteLeaveConfigurationBasicDetailsById,
-    createLeaveConfigurationBasicDetails,
-    updateLeaveConfigurationBasicDetails,
-    getLeaveConfigurationBasicDetailsById,
+    searchLeaveConfigurations,
+    deleteLeaveConfigurationById,
     isLoading 
   } = useLeaveManagement();
+  const { companies } = useCompany();
 
-  const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfigurationBasicDetails[]>([]);
+  const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -101,16 +50,6 @@ export function LeaveSettings() {
     action: () => {},
   });
 
-  const form = useForm<LeaveConfigBasicInfoFormData>({
-    resolver: zodResolver(leaveConfigurationBasicInfoFormSchema),
-    defaultValues: {
-      name: "",
-      code: "",
-      tagline: "",
-      description: "",
-    },
-  });
-
   // Load leave configurations on mount
   useEffect(() => {
     loadLeaveConfigurations();
@@ -118,11 +57,10 @@ export function LeaveSettings() {
 
   const loadLeaveConfigurations = async () => {
     setLoading(true);
-    const result = await searchLeaveConfigurationBasicDetails(
-      { filters: {} },
-      0,
-      100
-    );
+    const searchRequest: UniversalSearchRequest = {
+      filters: {}
+    };
+    const result = await searchLeaveConfigurations(searchRequest, 0, 100);
     if (result) {
       setLeaveConfigurations(result.content);
     }
@@ -134,38 +72,14 @@ export function LeaveSettings() {
   };
 
   const handleAddLeaveType = () => {
-    setModalMode('create');
-    setEditingConfigId(null);
-    form.reset({
-      name: "",
-      code: "",
-      tagline: "",
-      description: "",
-    });
-    setIsModalOpen(true);
+    navigate('/leave-configuration-form?mode=create');
   };
 
-  const handleEditLeaveType = async (config: LeaveConfigurationBasicDetails) => {
-    setModalMode('edit');
-    setEditingConfigId(config.id || null);
-    
-    // Load full config data
-    if (config.id) {
-      const fullConfig = await getLeaveConfigurationBasicDetailsById(config.id);
-      if (fullConfig) {
-        form.reset({
-          name: fullConfig.name,
-          code: fullConfig.code,
-          tagline: fullConfig.tagline || "",
-          description: fullConfig.description || "",
-        });
-      }
-    }
-    
-    setIsModalOpen(true);
+  const handleEditLeaveType = (config: LeaveConfiguration) => {
+    navigate(`/leave-configuration-form?mode=edit&id=${config.id}`);
   };
 
-  const handleDeleteLeaveType = (config: LeaveConfigurationBasicDetails) => {
+  const handleDeleteLeaveType = (config: LeaveConfiguration) => {
     setConfirmDialog({
       open: true,
       title: 'Delete Leave Type',
@@ -182,7 +96,7 @@ export function LeaveSettings() {
       confirmText: 'Delete',
       variant: 'destructive',
       action: async () => {
-        const success = await deleteLeaveConfigurationBasicDetailsById(config.id!);
+        const success = await deleteLeaveConfigurationById(config.id);
         if (success) {
           loadLeaveConfigurations();
         }
@@ -190,55 +104,29 @@ export function LeaveSettings() {
     });
   };
 
-  const handleManageLeaveType = (config: LeaveConfigurationBasicDetails) => {
-    navigate(`/leave-type-management?id=${config.id}`);
+  const getCompanyName = (companyId: string): string => {
+    const company = companies.find(c => c.id === companyId);
+    return company?.name || companyId;
   };
 
-  const handleModalSubmit = async (data: LeaveConfigBasicInfoFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      if (modalMode === 'create') {
-        const carrier: LeaveConfigurationBasicDetailsCarrier = {
-          name: data.name,
-          code: data.code,
-          tagline: data.tagline,
-          description: data.description,
-          createdAt: new Date().toISOString(),
-        };
-
-        const newConfig = await createLeaveConfigurationBasicDetails(carrier);
-        if (newConfig) {
-          setIsModalOpen(false);
-          loadLeaveConfigurations();
-        }
-      } else {
-        // For update
-        const updates: Partial<LeaveConfigurationBasicDetailsCarrier> = {
-          name: data.name,
-          tagline: data.tagline,
-          description: data.description,
-        };
-
-        const updated = await updateLeaveConfigurationBasicDetails(
-          editingConfigId!,
-          updates
-        );
-        if (updated) {
-          setIsModalOpen(false);
-          loadLeaveConfigurations();
-        }
-      }
-    } catch (error) {
-      console.error("Error submitting leave configuration:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const getCategoryLabel = (category: string): string => {
+    const labels: Record<string, string> = {
+      'flexible': 'Flexible',
+      'accrued': 'Accrued',
+      'special': 'Special',
+      'monetization': 'Monetization',
+    };
+    return labels[category] || category;
   };
 
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    form.reset();
+  const getCategoryColor = (category: string): string => {
+    const colors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      'flexible': 'secondary',
+      'accrued': 'default',
+      'special': 'destructive',
+      'monetization': 'outline',
+    };
+    return colors[category] || 'default';
   };
 
   return (
@@ -311,7 +199,8 @@ export function LeaveSettings() {
                       <TableRow>
                         <TableHead>Leave Type</TableHead>
                         <TableHead>Code</TableHead>
-                        <TableHead>Tagline</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Company</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -319,37 +208,23 @@ export function LeaveSettings() {
                       {leaveConfigurations.map((config) => (
                         <TableRow key={config.id}>
                           <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <div 
-                                className="h-10 w-10 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: `#3b82f620` }}
-                              >
-                                <CalendarDays 
-                                  className="h-5 w-5" 
-                                  style={{ color: '#3b82f6' }}
-                                />
-                              </div>
-                              <div>
-                                <div className="font-medium">{config.name}</div>
-                                {config.description && (
-                                  <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">
-                                    {config.description}
-                                  </div>
-                                )}
-                              </div>
+                            <div className="flex flex-col gap-1">
+                              <div className="font-medium">{config.name}</div>
+                              {config.tagline && (
+                                <div className="text-xs text-muted-foreground">{config.tagline}</div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">{config.code}</Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">
-                              {config.tagline ? (
-                                <span className="text-muted-foreground">{config.tagline}</span>
-                              ) : (
-                                <span className="text-muted-foreground">N/A</span>
-                              )}
-                            </div>
+                            <Badge variant={getCategoryColor(config.category) as any}>
+                              {getCategoryLabel(config.category)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{getCompanyName(config.companyId)}</span>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -357,16 +232,17 @@ export function LeaveSettings() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditLeaveType(config)}
-                                title="Edit basic information"
+                                title="Edit leave configuration"
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleManageLeaveType(config)}
+                                title={`${config.employeeIds?.length || 0} employees`}
                               >
-                                Manage
+                                <Users className="h-4 w-4 mr-2" />
+                                {config.employeeIds?.length || 0}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -400,124 +276,19 @@ export function LeaveSettings() {
           </TabsContent>
         </Tabs>
 
-        {/* Leave Type Modal */}
-        <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {modalMode === 'create' ? 'Add Leave Type' : 'Edit Leave Type'}
-              </DialogTitle>
-              <DialogDescription>
-                {modalMode === 'create' 
-                  ? 'Create a new leave type with basic information' 
-                  : 'Update leave type basic information'}
-              </DialogDescription>
-            </DialogHeader>
-
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleModalSubmit)} className="space-y-4">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Leave Type Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Annual Leave" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Leave Code *</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g., annual_leave"
-                            maxLength={100}
-                            disabled={modalMode === 'edit'}
-                            {...field}
-                            onChange={(e) => {
-                              const transformed = e.target.value
-                                .toLowerCase()
-                                .replace(/\s+/g, '_')
-                                .replace(/[^a-z0-9_]/g, '');
-                              field.onChange(transformed);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="tagline"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tagline *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Short tagline..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description *</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Detailed description..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleModalClose}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : modalMode === 'create' ? 'Create' : 'Update'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
         {/* Confirmation Dialog */}
         <ConfirmationDialog
           open={confirmDialog.open}
           onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
-          onConfirm={confirmDialog.action}
           title={confirmDialog.title}
           description={confirmDialog.description}
-          confirmText={confirmDialog.confirmText}
+          confirmText={confirmDialog.confirmText || 'Confirm'}
+          cancelText="Cancel"
           variant={confirmDialog.variant}
-          icon={confirmDialog.variant === 'destructive' ? <AlertTriangle className="h-10 w-10 text-destructive" /> : undefined}
+          onConfirm={() => {
+            confirmDialog.action();
+            setConfirmDialog({ ...confirmDialog, open: false });
+          }}
         />
       </div>
     </PageLayout>

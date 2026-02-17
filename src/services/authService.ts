@@ -16,7 +16,7 @@ import { AUTH_GATEWAY } from "./utils";
 export const apiLogin = async (
   username: string,
   password: string,
-  realm: string = 'test-realm'
+  realm: string = 'techsophy'
 ): Promise<ApiResponse<AuthData>> => {
   try {
     // Construct the Keycloak token endpoint

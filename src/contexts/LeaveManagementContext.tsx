@@ -31,18 +31,7 @@ import {
   apiBulkDeleteLeaveConfigurationsByFilters,
 } from "@/services/leaveConfigurationService";
 
-// Leave Configuration Basic Details Service
-import {
-  apiCreateLeaveConfigurationBasicDetails,
-  apiGetLeaveConfigurationBasicDetailsById,
-  apiUpdateLeaveConfigurationBasicDetails,
-  apiSearchLeaveConfigurationBasicDetails,
-  apiDeleteLeaveConfigurationBasicDetailsById,
-  apiBulkDeleteLeaveConfigurationBasicDetailsByIds,
-  apiBulkUpdateLeaveConfigurationBasicDetails,
-  LeaveConfigurationBasicDetails,
-  LeaveConfigurationBasicDetailsCarrier,
-} from "@/services/leaveConfigurationBasicDetailsService";
+
 
 // Types
 import Pagination from "@/types/pagination";
@@ -99,29 +88,7 @@ interface LeaveManagementContextType {
     request: BulkDeleteByFiltersRequest
   ) => Promise<boolean>;
 
-  // Leave Configuration Basic Details Methods
-  createLeaveConfigurationBasicDetails: (
-    carrier: LeaveConfigurationBasicDetailsCarrier
-  ) => Promise<LeaveConfigurationBasicDetails | null>;
-  getLeaveConfigurationBasicDetailsById: (
-    id: string
-  ) => Promise<LeaveConfigurationBasicDetails | null>;
-  updateLeaveConfigurationBasicDetails: (
-    id: string,
-    payload: Partial<LeaveConfigurationBasicDetailsCarrier>
-  ) => Promise<LeaveConfigurationBasicDetails | null>;
-  searchLeaveConfigurationBasicDetails: (
-    searchRequest: UniversalSearchRequest,
-    page?: number,
-    pageSize?: number
-  ) => Promise<Pagination<LeaveConfigurationBasicDetails> | null>;
-  deleteLeaveConfigurationBasicDetailsById: (id: string) => Promise<boolean>;
-  bulkDeleteLeaveConfigurationBasicDetailsByIds: (
-    ids: string[]
-  ) => Promise<boolean>;
-  bulkUpdateLeaveConfigurationBasicDetails: (
-    request: { ids: string[]; updates: UpdatePayload }
-  ) => Promise<boolean>;
+
 
   // Loading State
   isLoading: boolean;
@@ -344,113 +311,6 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
-  // ==================== LEAVE CONFIGURATION BASIC DETAILS METHODS ====================
-
-  const createLeaveConfigurationBasicDetails = async (
-    carrier: LeaveConfigurationBasicDetailsCarrier
-  ): Promise<LeaveConfigurationBasicDetails | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiCreateLeaveConfigurationBasicDetails(carrier, tenant, accessToken),
-      "Create Leave Configuration",
-      "Leave configuration created successfully"
-    ) as Promise<LeaveConfigurationBasicDetails | null>;
-  };
-
-  const getLeaveConfigurationBasicDetailsById = async (
-    id: string
-  ): Promise<LeaveConfigurationBasicDetails | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiGetLeaveConfigurationBasicDetailsById(id, tenant, accessToken),
-      "Fetch Leave Configuration",
-      ""
-    ) as Promise<LeaveConfigurationBasicDetails | null>;
-  };
-
-  const updateLeaveConfigurationBasicDetails = async (
-    id: string,
-    payload: Partial<LeaveConfigurationBasicDetailsCarrier>
-  ): Promise<LeaveConfigurationBasicDetails | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiUpdateLeaveConfigurationBasicDetails(
-          id,
-          payload,
-          tenant,
-          accessToken
-        ),
-      "Update Leave Configuration",
-      "Leave configuration updated successfully"
-    ) as Promise<LeaveConfigurationBasicDetails | null>;
-  };
-
-  const searchLeaveConfigurationBasicDetails = async (
-    searchRequest: UniversalSearchRequest,
-    page: number = 0,
-    pageSize: number = 12
-  ): Promise<Pagination<LeaveConfigurationBasicDetails> | null> => {
-    return executeApiCall(
-      (tenant, accessToken) =>
-        apiSearchLeaveConfigurationBasicDetails(
-          searchRequest,
-          page,
-          pageSize,
-          tenant,
-          accessToken
-        ),
-      "Search Leave Configurations",
-      ""
-    ) as Promise<Pagination<LeaveConfigurationBasicDetails> | null>;
-  };
-
-  const deleteLeaveConfigurationBasicDetailsById = async (
-    id: string
-  ): Promise<boolean> => {
-    const result = await executeApiCall(
-      (tenant, accessToken) =>
-        apiDeleteLeaveConfigurationBasicDetailsById(id, tenant, accessToken),
-      "Delete Leave Configuration",
-      "Leave configuration deleted successfully",
-      true
-    );
-    return result as boolean;
-  };
-
-  const bulkDeleteLeaveConfigurationBasicDetailsByIds = async (
-    ids: string[]
-  ): Promise<boolean> => {
-    const result = await executeApiCall(
-      (tenant, accessToken) =>
-        apiBulkDeleteLeaveConfigurationBasicDetailsByIds(
-          ids,
-          tenant,
-          accessToken
-        ),
-      "Bulk Delete Leave Configurations",
-      `${ids.length} leave configuration(s) deleted successfully`,
-      true
-    );
-    return result as boolean;
-  };
-
-  const bulkUpdateLeaveConfigurationBasicDetails = async (
-    request: { ids: string[]; updates: UpdatePayload }
-  ): Promise<boolean> => {
-    const result = await executeApiCall(
-      (tenant, accessToken) =>
-        apiBulkUpdateLeaveConfigurationBasicDetails(
-          request,
-          tenant,
-          accessToken
-        ),
-      "Bulk Update Leave Configurations",
-      "Leave configurations updated successfully",
-      true
-    );
-    return result as boolean;
-  };
-
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: LeaveManagementContextType = {
@@ -463,15 +323,6 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     bulkUpdateLeaveConfigurations,
     bulkDeleteLeaveConfigurationsByIds,
     bulkDeleteLeaveConfigurationsByFilters,
-
-    // Leave Configuration Basic Details Methods
-    createLeaveConfigurationBasicDetails,
-    getLeaveConfigurationBasicDetailsById,
-    updateLeaveConfigurationBasicDetails,
-    searchLeaveConfigurationBasicDetails,
-    deleteLeaveConfigurationBasicDetailsById,
-    bulkDeleteLeaveConfigurationBasicDetailsByIds,
-    bulkUpdateLeaveConfigurationBasicDetails,
 
     // Loading State
     isLoading,

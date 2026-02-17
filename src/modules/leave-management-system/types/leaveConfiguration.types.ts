@@ -70,23 +70,37 @@ export interface LeaveProperties {
 }
 
 /**
- * ApplicableCategories - Defines the categories of employees for whom this leave is applicable
+ * ApplicableCategories - Defines categories of applicability for leave configuration
+ * Now simplified to only represent structural applicability
  */
 export interface ApplicableCategories {
-  companyId: string; // company ID for which this leave is applicable
-  gender: string; // male, female, other, all
-  marriedStatus: string; // married, single, all
+  // This interface can be extended in future for other applicability criteria
+  // For now, gender and marriedStatus have been moved to LeaveConfiguration root
 }
 
 /**
  * LeaveConfiguration - Main model for leave type configuration
  * Defines policies, restrictions, and applicability rules for different leave types
+ * Includes basic information previously in LeaveConfigurationBasicDetails
  */
 export interface LeaveConfiguration {
   id: string;
 
+  // Basic Information
+  name: string; // name of the leave type
+  code: string; // unique code for the leave type
+  tagline: string; // short description
+  description: string; // detailed description
+
+  // Company
+  companyId: string; // company ID for which this leave is applicable
+
   // Category
   category: string; // flexible, accrued, special, monetization
+
+  // Applicability - Employee Demographics
+  gender: string; // male, female, other, all
+  marriedStatus: string; // married, single, all
 
   // Leave Properties
   leaveProperties: LeaveProperties; // types and properties of leaves
@@ -126,11 +140,21 @@ export interface LeaveConfiguration {
  * Omits id, createdAt, updatedAt
  */
 export interface LeaveConfigurationCarrier {
-  // Reference to basic details
-  leaveConfigurationBasicDetailsId: string;
+  // Basic Information
+  name: string;
+  code: string;
+  tagline: string;
+  description: string;
+
+  // Company
+  companyId: string;
 
   // Category
   category: string;
+
+  // Applicability - Employee Demographics
+  gender: string; // male, female, other, all
+  marriedStatus: string; // married, single, all
 
   // Leave Properties
   leaveProperties: LeaveProperties;
@@ -154,9 +178,6 @@ export interface LeaveConfigurationCarrier {
   allowRestrictions: boolean;
   restrictions: Restrictions | null;
 
-  // Applicability
-  applicableCategories: ApplicableCategories;
-
   // Employee List
   employeeIds: string[];
 }
@@ -166,8 +187,14 @@ export interface LeaveConfigurationCarrier {
  * All fields are optional except those that make sense to update
  */
 export interface LeaveConfigurationUpdateCarrier {
-  leaveConfigurationBasicDetailsId?: string;
+  name?: string;
+  code?: string;
+  tagline?: string;
+  description?: string;
+  companyId?: string;
   category?: string;
+  gender?: string;
+  marriedStatus?: string;
   leaveProperties?: LeaveProperties;
   allowCreditPolicy?: boolean;
   creditPolicy?: CreditPolicy | null;
@@ -178,7 +205,6 @@ export interface LeaveConfigurationUpdateCarrier {
   calendarConfiguration?: CalendarConfiguration;
   allowRestrictions?: boolean;
   restrictions?: Restrictions | null;
-  applicableCategories?: ApplicableCategories;
   employeeIds?: string[];
 }
 
