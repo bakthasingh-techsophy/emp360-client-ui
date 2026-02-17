@@ -20,7 +20,6 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -37,36 +36,19 @@ import {
 } from "@/components/ui/accordion";
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { MultiDatePicker } from "@/components/common/MultiDatePicker";
+import { CompanyDropdown } from "@/components/context-aware/CompanyDropdown";
 import { ArrowLeft, Check } from "lucide-react";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import {
-  LeaveConfiguration,
   LeaveConfigurationCarrier,
 } from "./types/leaveConfiguration.types";
 
 // Simple form schema focusing on core required fields
 const leaveConfigurationFormSchema = z.object({
-  // Basic Information - All required with validations
-  name: z
-    .string()
-    .min(2, "Leave type name must be at least 2 characters")
-    .max(50, "Leave type name cannot exceed 50 characters"),
-  code: z
-    .string()
-    .min(2, "Leave code must be at least 2 characters")
-    .max(10, "Leave code cannot exceed 10 characters")
-    .regex(
-      /^[A-Z0-9_]+$/,
-      "Code must contain only uppercase letters, numbers, and underscores",
-    ),
-  tagline: z
-    .string()
-    .min(1, "Tagline is required")
-    .max(100, "Tagline cannot exceed 100 characters"),
-  description: z
-    .string()
-    .min(5, "Description must be at least 5 characters")
-    .max(500, "Description cannot exceed 500 characters"),
+  // Reference to basic details
+  leaveConfigurationBasicDetailsId: z.string().min(1, "Basic details reference is required"),
+
+  // Category
   category: z.enum(["flexible", "accrued", "special", "monetization"]),
 
   // Leave Properties
@@ -113,6 +95,7 @@ const leaveConfigurationFormSchema = z.object({
   probationAllowed: z.boolean().default(false),
 
   // Applicability
+  companyId: z.string().min(1, "Company is required"),
   isForAllEmployeeTypes: z.boolean().default(true),
   selectAllEmployeeTypes: z.boolean().default(true),
   gender: z.enum(["male", "female", "other", "all"]).default("all"),
@@ -126,6 +109,7 @@ export function LeaveConfigurationFormPage() {
   const [searchParams] = useSearchParams();
   const mode = (searchParams.get("mode") as "create" | "edit") || "create";
   const configId = searchParams.get("id");
+  const leaveTypeId = searchParams.get("leaveTypeId"); // Get leaveTypeId from URL
 
   const {
     createLeaveConfiguration,
@@ -133,19 +117,13 @@ export function LeaveConfigurationFormPage() {
     getLeaveConfigurationById,
   } = useLeaveManagement();
 
-  const [leaveConfig, setLeaveConfig] = useState<LeaveConfiguration | null>(
-    null,
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
 
   const form = useForm<LeaveConfigFormData>({
     resolver: zodResolver(leaveConfigurationFormSchema),
     defaultValues: {
-      name: "",
-      code: "",
-      tagline: "",
-      description: "",
+      leaveConfigurationBasicDetailsId: leaveTypeId || "", // Pre-fill with leaveTypeId if available
       category: "accrued",
       allowedTypes: ["fullDay"],
       allowCreditPolicy: true,
@@ -174,6 +152,7 @@ export function LeaveConfigurationFormPage() {
       probationAllowed: false,
       isForAllEmployeeTypes: true,
       selectAllEmployeeTypes: true,
+      companyId: "",
       gender: "all",
       marriedStatus: "all",
     },
@@ -187,12 +166,8 @@ export function LeaveConfigurationFormPage() {
         const config = await getLeaveConfigurationById(configId);
         console.log("Loaded config for editing:", config); 
         if (config) {
-          setLeaveConfig(config);
           form.reset({
-            name: config.name,
-            code: config.code,
-            tagline: config.tagline || "",
-            description: config.description || "",
+            leaveConfigurationBasicDetailsId: "", // Would need to be fetched or derived
             category: config.category as any,
             allowedTypes: config.leaveProperties.allowedTypes as any,
             allowCreditPolicy: config.allowCreditPolicy,
@@ -224,6 +199,7 @@ export function LeaveConfigurationFormPage() {
               config.restrictions?.includeHolidaysWeekends || false,
             probationAllowed:
               config.restrictions?.probationRestrictions.allowed || false,
+            companyId: config.applicableCategories.companyId || "",
             gender: config.applicableCategories.gender as any,
             marriedStatus: config.applicableCategories.marriedStatus as any,
           });
@@ -293,12 +269,8 @@ export function LeaveConfigurationFormPage() {
     try {
       if (mode === "create") {
         const carrier: LeaveConfigurationCarrier = {
-          name: data.name,
-          code: data.code,
-          tagline: data.tagline || "",
-          description: data.description || "",
+          leaveConfigurationBasicDetailsId: data.leaveConfigurationBasicDetailsId,
           category: data.category,
-          startDate: new Date().toISOString().split("T")[0], // Auto-set to current date
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
@@ -349,6 +321,7 @@ export function LeaveConfigurationFormPage() {
               }
             : null,
           applicableCategories: {
+            companyId: data.companyId,
             gender: data.gender,
             marriedStatus: data.marriedStatus,
           },
@@ -357,17 +330,18 @@ export function LeaveConfigurationFormPage() {
 
         const newConfig = await createLeaveConfiguration(carrier);
         if (newConfig) {
-          navigate("/leave-settings");
+          // Navigate back to LeaveTypeManagement if we came from there
+          if (leaveTypeId) {
+            navigate(`/leave-type-management?id=${leaveTypeId}`);
+          } else {
+            navigate("/leave-settings");
+          }
         }
       } else {
         // For update, use the update carrier with all fields
         const updates = {
-          name: data.name,
-          code: data.code,
-          tagline: data.tagline,
-          description: data.description,
+          leaveConfigurationBasicDetailsId: data.leaveConfigurationBasicDetailsId,
           category: data.category,
-          startDate: new Date().toISOString().split("T")[0], // Auto-set to current date
           leaveProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
@@ -418,6 +392,7 @@ export function LeaveConfigurationFormPage() {
               }
             : null,
           applicableCategories: {
+            companyId: data.companyId,
             isForAllEmployeeTypes: data.isForAllEmployeeTypes,
             gender: data.gender,
             marriedStatus: data.marriedStatus,
@@ -426,7 +401,12 @@ export function LeaveConfigurationFormPage() {
 
         const updated = await updateLeaveConfiguration(configId!, updates);
         if (updated) {
-          navigate("/leave-settings");
+          // Navigate back to LeaveTypeManagement if we came from there
+          if (leaveTypeId) {
+            navigate(`/leave-type-management?id=${leaveTypeId}`);
+          } else {
+            navigate("/leave-settings");
+          }
         }
       }
     } catch (error) {
@@ -437,7 +417,13 @@ export function LeaveConfigurationFormPage() {
   };
 
   const handleCancel = () => {
-    navigate("/leave-settings");
+    if (leaveTypeId) {
+      // If we came from LeaveTypeManagement, go back there
+      navigate(`/leave-type-management?id=${leaveTypeId}`);
+    } else {
+      // Otherwise go to leave settings
+      navigate("/leave-settings");
+    }
   };
 
   if (loadingConfig) {
@@ -474,7 +460,7 @@ export function LeaveConfigurationFormPage() {
           </h1>
           <p className="text-xs text-muted-foreground">
             {mode === "edit"
-              ? `Update: ${leaveConfig?.name || ""}`
+              ? `Update configuration for ID: ${configId || ""}`
               : "Configure a new leave type and its policies"}
           </p>
         </div>
@@ -486,75 +472,28 @@ export function LeaveConfigurationFormPage() {
           onSubmit={form.handleSubmit(handleSubmit)}
           className="space-y-6 pb-24"
         >
-          {/* Basic Information */}
+          {/* Configuration Reference */}
           <Card className="p-6">
-            <h3 className="text-base font-semibold mb-4">Basic Information</h3>
+            <h3 className="text-base font-semibold mb-4">Configuration Reference</h3>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Leave Type Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Annual Leave" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Leave Code *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., AL"
-                          maxLength={10}
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.value.toUpperCase())
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="tagline"
+                name="leaveConfigurationBasicDetailsId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tagline</FormLabel>
+                    <FormLabel>Leave Configuration Basic Details *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Short tagline..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Detailed description..."
-                        className="min-h-[80px]"
+                      <Input
+                        placeholder="Enter Basic Details ID"
+                        type="number"
                         {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Reference to the Leave Configuration Basic Details (ID)
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -585,6 +524,87 @@ export function LeaveConfigurationFormPage() {
                   </FormItem>
                 )}
               />
+            </div>
+          </Card>
+
+          {/* Applicability */}
+          <Card className="p-6">
+            <h3 className="text-base font-semibold mb-4">Applicability</h3>
+
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="companyId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company *</FormLabel>
+                    <FormControl>
+                      <CompanyDropdown
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Search companies..."
+                        showRefresh={true}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="marriedStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marriage Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="married">Married</SelectItem>
+                          <SelectItem value="single">Single</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </Card>
 
@@ -1369,68 +1389,6 @@ export function LeaveConfigurationFormPage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </Card>
-
-          {/* Applicability */}
-          <Card className="p-6">
-            <h3 className="text-base font-semibold mb-4">Applicability</h3>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="marriedStatus"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marriage Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="married">Married</SelectItem>
-                          <SelectItem value="single">Single</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
           </Card>
 
           {/* Form Action Bar */}

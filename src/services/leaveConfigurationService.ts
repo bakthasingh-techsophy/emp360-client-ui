@@ -43,10 +43,7 @@ export interface BulkUpdateRequest {
  * Bulk delete by filters request body
  */
 export interface BulkDeleteByFiltersRequest {
-  filters: {
-    and?: Record<string, any>;
-    or?: Record<string, any>;
-  };
+  filters: UniversalSearchRequest;
 }
 
 /**
