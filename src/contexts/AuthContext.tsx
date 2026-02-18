@@ -178,8 +178,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set token in state
       setToken(authData.access_token);
 
-      // Persist realm/tenant to localStorage (hardcoded as 'test-realm' for now)
-      setStorageItem(StorageKeys.TENANT, 'test-realm');
+      // Persist realm/tenant to localStorage (hardcoded as 'techsophy' for now)
+      setStorageItem(StorageKeys.TENANT, 'techsophy');
 
       return {
         success: true,

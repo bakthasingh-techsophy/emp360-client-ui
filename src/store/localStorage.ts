@@ -86,12 +86,12 @@ export const clearStorage = (): void => {
 export const resolveAuth = (): { accessToken?: string | null; tenant?: string | null } => {
   try {
     const session = getStorageItem<any>(StorageKeys.SESSION);
-    const tenant = getStorageItem<string>(StorageKeys.TENANT) ?? "test-realm";
+    const tenant = getStorageItem<string>(StorageKeys.TENANT) ?? "techsophy";
     console.log("Resolved tenant from storage:", getStorageItem<string>(StorageKeys.TENANT));
     const accessToken = session?.token ?? null;
     return { accessToken, tenant };
   } catch {
-    return { accessToken: null, tenant: "test-realm" };
+    return { accessToken: null, tenant: "techsophy" };
   }
 };
 

@@ -18,24 +18,31 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Edit2, Trash2, Users, FileX } from 'lucide-react';
+import { ArrowLeft, Plus, FileX, Copy } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useLeaveManagement } from '@/contexts/LeaveManagementContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { LeaveConfiguration } from './types/leaveConfiguration.types';
 import UniversalSearchRequest from '@/types/search';
+import { ManageEmployeesModal } from './components/ManageEmployeesModal';
+import { CopyToModal } from './components/CopyToModal';
 
 export function LeaveSettings() {
   const navigate = useNavigate();
   const { 
     searchLeaveConfigurations,
     deleteLeaveConfigurationById,
+    assignLeaveTypesToEmployees,
+    copyLeaveConfigurationToCompanies,
     isLoading 
   } = useLeaveManagement();
   const { companies } = useCompany();
 
   const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
+  const [copyToOpen, setCopyToOpen] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState<LeaveConfiguration | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -102,6 +109,67 @@ export function LeaveSettings() {
         }
       },
     });
+  };
+
+  const handleManageEmployees = (config: LeaveConfiguration) => {
+    setSelectedConfig(config);
+    setManageEmployeesOpen(true);
+  };
+
+  const handleSaveEmployees = async (employeeIds: string[]) => {
+    if (!selectedConfig) return;
+
+    const response = await assignLeaveTypesToEmployees({
+      leaveConfigurationId: selectedConfig.id,
+      employeeIds: employeeIds,
+    });
+
+    if (response) {
+      console.log("Leave type assigned to employees:", response);
+      loadLeaveConfigurations();
+    }
+  };
+
+  const handleCopyTo = (config: LeaveConfiguration) => {
+    setSelectedConfig(config);
+    setCopyToOpen(true);
+  };
+
+  const handleCopyToAll = async () => {
+    if (!selectedConfig) return;
+    
+    // Get all company IDs except the current one
+    const targetCompanyIds = companies
+      .filter((c) => c.id !== selectedConfig.companyId)
+      .map((c) => c.id);
+
+    if (targetCompanyIds.length === 0) {
+      return;
+    }
+
+    const response = await copyLeaveConfigurationToCompanies({
+      leaveConfigurationId: selectedConfig.id,
+      companyIds: targetCompanyIds,
+    });
+
+    if (response) {
+      console.log("Configuration copied to all companies:", response);
+      loadLeaveConfigurations();
+    }
+  };
+
+  const handleCopyToSelected = async (companyIds: string[]) => {
+    if (!selectedConfig) return;
+
+    const response = await copyLeaveConfigurationToCompanies({
+      leaveConfigurationId: selectedConfig.id,
+      companyIds: companyIds,
+    });
+
+    if (response) {
+      console.log("Configuration copied to selected companies:", response);
+      loadLeaveConfigurations();
+    }
   };
 
   const getCompanyName = (companyId: string): string => {
@@ -229,29 +297,34 @@ export function LeaveSettings() {
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleEditLeaveType(config)}
-                                title="Edit leave configuration"
                               >
-                                <Edit2 className="h-4 w-4" />
+                                Edit
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                title={`${config.employeeIds?.length || 0} employees`}
+                                onClick={() => handleManageEmployees(config)}
                               >
-                                <Users className="h-4 w-4 mr-2" />
-                                {config.employeeIds?.length || 0}
+                                Manage Employees
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyTo(config)}
+                              >
+                                <Copy className="h-4 w-4 mr-1" />
+                                Copy To
+                              </Button>
+                              <Button
+                                variant="destructive"
                                 size="sm"
                                 onClick={() => handleDeleteLeaveType(config)}
                                 disabled={isLoading}
-                                title="Delete leave type"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                Delete
                               </Button>
                             </div>
                           </TableCell>
@@ -290,6 +363,29 @@ export function LeaveSettings() {
             setConfirmDialog({ ...confirmDialog, open: false });
           }}
         />
+
+        {/* Manage Employees Modal */}
+        {selectedConfig && (
+          <ManageEmployeesModal
+            open={manageEmployeesOpen}
+            onOpenChange={setManageEmployeesOpen}
+            selectedEmployeeIds={selectedConfig.employeeIds || []}
+            onSave={handleSaveEmployees}
+            leaveTypeName={selectedConfig.name}
+          />
+        )}
+
+        {/* Copy To Modal */}
+        {selectedConfig && (
+          <CopyToModal
+            open={copyToOpen}
+            onOpenChange={setCopyToOpen}
+            currentCompanyId={selectedConfig.companyId}
+            onCopyToAll={handleCopyToAll}
+            onCopyToSelected={handleCopyToSelected}
+            leaveTypeName={selectedConfig.name}
+          />
+        )}
       </div>
     </PageLayout>
   );

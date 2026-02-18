@@ -10,7 +10,7 @@ import { AUTH_GATEWAY } from "./utils";
  * 
  * @param username - User username (e.g., EMP001)
  * @param password - User password
- * @param realm - Keycloak realm name (default: test-realm, will be made dynamic later)
+ * @param realm - Keycloak realm name (default: techsophy, will be made dynamic later)
  * @returns Promise<ApiResponse<AuthData>> - Contains access_token, refresh_token, etc.
  */
 export const apiLogin = async (

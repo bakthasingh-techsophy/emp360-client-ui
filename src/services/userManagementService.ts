@@ -54,7 +54,7 @@ export type UpdatePayload = Record<string, any>;
  *   email: 'john.doe@company.com',
  *   phone: '+91-9876543210',
  *   status: UserStatus.ACTIVE
- * }, 'test-realm');
+ * }, 'techsophy');
  */
 export const apiOnboardUser = async (
   carrier: UserDetailsCarrier,
@@ -87,7 +87,7 @@ export const apiOnboardUser = async (
  *   firstName: 'Jane',
  *   phone: '+91-9876543220',
  *   status: UserStatus.INACTIVE
- * }, 'test-realm');
+ * }, 'techsophy');
  */
 export const apiUpdateUser = async (
   employeeId: string,

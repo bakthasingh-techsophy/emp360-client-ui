@@ -31,6 +31,31 @@ import {
   apiBulkDeleteLeaveConfigurationsByFilters,
 } from "@/services/leaveConfigurationService";
 
+// Leave Settings Service
+import {
+  apiAssignLeaveTypesToEmployees,
+  apiCopyLeaveConfigurationToCompanies,
+  AssignEmployeesRequest,
+  CopyConfigurationRequest,
+  AssignEmployeesResponse,
+  CopyConfigurationResponse,
+} from "@/services/leaveSettingsService";
+
+// Leave Details Service
+import {
+  apiCreateLeaveDetails,
+  apiGetLeaveDetailsById,
+  apiUpdateLeaveDetails,
+  apiSearchLeaveDetails,
+  apiDeleteLeaveDetailsById,
+  apiBulkDeleteLeaveDetails,
+  apiBulkUpdateLeaveDetails,
+  LeaveDetails,
+  LeaveDetailsCarrier,
+  UpdateLeaveDetailsPayload,
+  BulkUpdateLeaveDetailsRequest,
+} from "@/services/leaveDetailsService";
+
 
 
 // Types
@@ -88,7 +113,33 @@ interface LeaveManagementContextType {
     request: BulkDeleteByFiltersRequest
   ) => Promise<boolean>;
 
+  // Leave Settings Methods
+  assignLeaveTypesToEmployees: (
+    request: AssignEmployeesRequest
+  ) => Promise<AssignEmployeesResponse | null>;
+  copyLeaveConfigurationToCompanies: (
+    request: CopyConfigurationRequest
+  ) => Promise<CopyConfigurationResponse | null>;
 
+  // Leave Details Methods
+  createLeaveDetails: (
+    carrier: LeaveDetailsCarrier
+  ) => Promise<LeaveDetails | null>;
+  getLeaveDetailsById: (employeeId: string) => Promise<LeaveDetails | null>;
+  updateLeaveDetails: (
+    employeeId: string,
+    payload: UpdateLeaveDetailsPayload
+  ) => Promise<LeaveDetails | null>;
+  searchLeaveDetails: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number
+  ) => Promise<Pagination<LeaveDetails> | null>;
+  deleteLeaveDetailsById: (employeeId: string) => Promise<boolean>;
+  bulkDeleteLeaveDetails: (employeeIds: string[]) => Promise<boolean>;
+  bulkUpdateLeaveDetails: (
+    request: BulkUpdateLeaveDetailsRequest
+  ) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -311,6 +362,124 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== LEAVE SETTINGS METHODS ====================
+
+  const assignLeaveTypesToEmployees = async (
+    request: AssignEmployeesRequest
+  ): Promise<AssignEmployeesResponse | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiAssignLeaveTypesToEmployees(request, tenant, accessToken),
+      "Assign Leave Types to Employees",
+      "Leave types assigned to employees successfully"
+    ) as Promise<AssignEmployeesResponse | null>;
+  };
+
+  const copyLeaveConfigurationToCompanies = async (
+    request: CopyConfigurationRequest
+  ): Promise<CopyConfigurationResponse | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiCopyLeaveConfigurationToCompanies(request, tenant, accessToken),
+      "Copy Leave Configuration",
+      "Leave configuration copied to companies successfully"
+    ) as Promise<CopyConfigurationResponse | null>;
+  };
+
+  // ==================== LEAVE DETAILS METHODS ====================
+
+  const createLeaveDetails = async (
+    carrier: LeaveDetailsCarrier
+  ): Promise<LeaveDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiCreateLeaveDetails(carrier, tenant, accessToken),
+      "Create Leave Details",
+      "Leave details created successfully"
+    ) as Promise<LeaveDetails | null>;
+  };
+
+  const getLeaveDetailsById = async (
+    employeeId: string
+  ): Promise<LeaveDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetLeaveDetailsById(employeeId, tenant, accessToken),
+      "Get Leave Details",
+      ""
+    ) as Promise<LeaveDetails | null>;
+  };
+
+  const updateLeaveDetails = async (
+    employeeId: string,
+    payload: UpdateLeaveDetailsPayload
+  ): Promise<LeaveDetails | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiUpdateLeaveDetails(employeeId, payload, tenant, accessToken),
+      "Update Leave Details",
+      "Leave details updated successfully"
+    ) as Promise<LeaveDetails | null>;
+  };
+
+  const searchLeaveDetails = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 10
+  ): Promise<Pagination<LeaveDetails> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiSearchLeaveDetails(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken
+        ),
+      "Search Leave Details",
+      ""
+    ) as Promise<Pagination<LeaveDetails> | null>;
+  };
+
+  const deleteLeaveDetailsById = async (
+    employeeId: string
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) =>
+        apiDeleteLeaveDetailsById(employeeId, tenant, accessToken),
+      "Delete Leave Details",
+      "Leave details deleted successfully",
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkDeleteLeaveDetails = async (
+    employeeIds: string[]
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkDeleteLeaveDetails(employeeIds, tenant, accessToken),
+      "Bulk Delete Leave Details",
+      `${employeeIds.length} leave detail(s) deleted successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
+  const bulkUpdateLeaveDetails = async (
+    request: BulkUpdateLeaveDetailsRequest
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) =>
+        apiBulkUpdateLeaveDetails(request, tenant, accessToken),
+      "Bulk Update Leave Details",
+      `${request.ids.length} leave detail(s) updated successfully`,
+      true
+    );
+    return result as boolean;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: LeaveManagementContextType = {
@@ -323,6 +492,19 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     bulkUpdateLeaveConfigurations,
     bulkDeleteLeaveConfigurationsByIds,
     bulkDeleteLeaveConfigurationsByFilters,
+
+    // Leave Settings Methods
+    assignLeaveTypesToEmployees,
+    copyLeaveConfigurationToCompanies,
+
+    // Leave Details Methods
+    createLeaveDetails,
+    getLeaveDetailsById,
+    updateLeaveDetails,
+    searchLeaveDetails,
+    deleteLeaveDetailsById,
+    bulkDeleteLeaveDetails,
+    bulkUpdateLeaveDetails,
 
     // Loading State
     isLoading,
