@@ -194,7 +194,7 @@ export function AppShell({
   const filteredMenuItems = useMemo(() => {
     if (!menuItems) return [];
     
-    return menuItems.filter((item) => {
+    const filtered = menuItems.filter((item) => {
       // First check explicit permission function
       if (item.permission && !item.permission()) {
         return false;
@@ -204,12 +204,28 @@ export function AppShell({
       const resource = getMenuResource(item.id);
       if (resource) {
         // If menu item requires a resource, user must have access to that resource
-        return auth.hasResourceAccess(resource);
+        const hasAccess = auth.hasResourceAccess(resource);
+        if (!hasAccess) {
+          console.log(`[AppShell] Filtering out menu item - No access to resource:`, {
+            menuId: item.id,
+            label: item.label,
+            requiredResource: resource
+          });
+        }
+        return hasAccess;
       }
       
       // If no resource mapping, allow by default (unless permission check failed above)
       return true;
     });
+    
+    console.log('[AppShell] Filtered menu items:', {
+      totalItems: menuItems.length,
+      filteredCount: filtered.length,
+      items: filtered.map(m => ({ id: m.id, label: m.label }))
+    });
+    
+    return filtered;
   }, [menuItems, auth, auth.token]);
 
   // Filter all menu items for menu picker based on resource access

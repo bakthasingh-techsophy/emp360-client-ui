@@ -1,6 +1,7 @@
 /**
  * Leave Settings Page
  * Manage leave types and configurations
+ * Protected: Requires 'lmss' role in 'leave-management-system' resource
  */
 
 import { useState, useEffect } from 'react';
@@ -22,13 +23,17 @@ import { ArrowLeft, Plus, FileX, Copy } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useLeaveManagement } from '@/contexts/LeaveManagementContext';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { LeaveConfiguration } from './types/leaveConfiguration.types';
 import UniversalSearchRequest from '@/types/search';
 import { ManageEmployeesModal } from './components/ManageEmployeesModal';
 import { CopyToModal } from './components/CopyToModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export function LeaveSettings() {
   const navigate = useNavigate();
+  const auth = useAuth();
   const { 
     searchLeaveConfigurations,
     deleteLeaveConfigurationById,
@@ -37,6 +42,40 @@ export function LeaveSettings() {
     isLoading 
   } = useLeaveManagement();
   const { companies } = useCompany();
+  
+  // Check if user has permission to access settings (requires lmss role)
+  const canAccessSettings = auth.hasResourceRole('leave-management-system', 'lmss');
+  const hasLeaveManagementAccess = auth.hasResourceAccess('leave-management-system');
+  
+  // If user doesn't have settings access, show restricted message
+  if (!hasLeaveManagementAccess || !canAccessSettings) {
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="w-full max-w-md space-y-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="mt-2 space-y-2">
+                <p className="font-semibold">Access Restricted</p>
+                <p className="text-sm">
+                  You don't have permission to access Leave Settings. This page requires 'Settings' role (lmss) in Leave Management System.
+                </p>
+                <div className="pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Required Role: <strong>lmss (Leave Management System - Settings)</strong>
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+            
+            <Button asChild className="w-full" variant="outline">
+              <a href="/leave-holiday">Return to Leave Management</a>
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfiguration[]>([]);
   const [loading, setLoading] = useState(true);

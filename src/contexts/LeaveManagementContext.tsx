@@ -31,6 +31,11 @@ import {
   apiBulkDeleteLeaveConfigurationsByFilters,
 } from "@/services/leaveConfigurationService";
 
+// Self-Service Leave API
+import {
+  apiGetEmployeeLeavesInformation,
+} from "@/services/selfServiceService";
+
 // Leave Settings Service
 import {
   apiAssignLeaveTypesToEmployees,
@@ -64,6 +69,7 @@ import UniversalSearchRequest from "@/types/search";
 import {
   LeaveConfiguration,
   LeaveConfigurationCarrier,
+  EmployeeLeavesInformation,
 } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
 /**
@@ -140,6 +146,9 @@ interface LeaveManagementContextType {
   bulkUpdateLeaveDetails: (
     request: BulkUpdateLeaveDetailsRequest
   ) => Promise<boolean>;
+
+  // Employee Self-Service Leave Methods
+  getEmployeeLeavesInformation: () => Promise<EmployeeLeavesInformation | null>;
 
   // Loading State
   isLoading: boolean;
@@ -480,6 +489,17 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== EMPLOYEE SELF-SERVICE LEAVE METHODS ====================
+
+  const getEmployeeLeavesInformation = async (): Promise<EmployeeLeavesInformation | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetEmployeeLeavesInformation(tenant, accessToken),
+      "Fetch Employee Leave Information",
+      ""
+    ) as Promise<EmployeeLeavesInformation | null>;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: LeaveManagementContextType = {
@@ -505,6 +525,9 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     deleteLeaveDetailsById,
     bulkDeleteLeaveDetails,
     bulkUpdateLeaveDetails,
+
+    // Employee Self-Service Leave Methods
+    getEmployeeLeavesInformation,
 
     // Loading State
     isLoading,

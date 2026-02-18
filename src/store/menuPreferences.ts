@@ -38,13 +38,17 @@ export function getMenuPreferences(): MenuPreferences {
   try {
     const stored = localStorage.getItem(MENU_PREFERENCES_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Validate the structure
+      if (parsed.pinnedMenuIds && Array.isArray(parsed.pinnedMenuIds) && parsed.menuOrder && typeof parsed.menuOrder === 'object') {
+        return parsed;
+      }
     }
   } catch (error) {
     console.error("Failed to load menu preferences:", error);
   }
 
-  // Return defaults if nothing stored
+  // Return defaults if nothing stored or data is corrupted
   const defaultOrder: Record<string, number> = {};
   DEFAULT_PINNED_MENUS.forEach((id, index) => {
     defaultOrder[id] = index;
@@ -141,9 +145,19 @@ export function updateMenuOrder(orderedMenuIds: string[]): void {
 export function getOrderedPinnedMenuIds(): string[] {
   const prefs = getMenuPreferences();
 
+  // Ensure menuOrder exists, if not rebuild it
+  if (!prefs.menuOrder || Object.keys(prefs.menuOrder).length === 0) {
+    const defaultOrder: Record<string, number> = {};
+    prefs.pinnedMenuIds.forEach((id, index) => {
+      defaultOrder[id] = index;
+    });
+    prefs.menuOrder = defaultOrder;
+    saveMenuPreferences(prefs);
+  }
+
   return [...prefs.pinnedMenuIds].sort((a, b) => {
-    const orderA = prefs.menuOrder[a] ?? Number.MAX_SAFE_INTEGER;
-    const orderB = prefs.menuOrder[b] ?? Number.MAX_SAFE_INTEGER;
+    const orderA = prefs.menuOrder?.[a] ?? Number.MAX_SAFE_INTEGER;
+    const orderB = prefs.menuOrder?.[b] ?? Number.MAX_SAFE_INTEGER;
     return orderA - orderB;
   });
 }

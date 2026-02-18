@@ -57,7 +57,18 @@ export function getResourceRoles(token: string, resource: string): string[] {
  */
 export function hasResourceAccess(token: string, resource: string): boolean {
   const resourceAccess = getResourceAccess(token);
-  return !!resourceAccess[resource];
+  const hasAccess = !!resourceAccess[resource];
+  
+  // Debug logging
+  if (!hasAccess) {
+    console.warn(`[hasResourceAccess] Access denied for resource: ${resource}`, {
+      requestedResource: resource,
+      availableResources: Object.keys(resourceAccess),
+      resourceAccess: resourceAccess
+    });
+  }
+  
+  return hasAccess;
 }
 
 /**

@@ -16,6 +16,7 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import { SkillItem, SkillItemCarrier, GeneralDetailsSnapshot, JobDetailsSnapshot } from "@/modules/user-management/types/onboarding.types";
+import { EmployeeLeavesInformation } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/self-service";
 
@@ -216,6 +217,46 @@ export const apiGetJobDetailsSnapshotSelfService = async (
 };
 
 /**
+ * Get Employee Leaves Information
+ * GET /emp-user-management/v1/self-service/leaves-information
+ * 
+ * Employee retrieves combined leave information including balances and configurations 
+ * for all assigned leave types. This API provides a complete view of leave balances 
+ * mapped to their full configurations.
+ * 
+ * EmployeeId is automatically extracted from JWT token.
+ * Requires SSV (Self-Service Viewer) role.
+ * 
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<EmployeeLeavesInformation>>
+ * 
+ * @example
+ * const response = await apiGetEmployeeLeavesInformation('tenant-001', accessToken);
+ * // Returns: {
+ * //   balances: {
+ * //     'AL': { leaveCode: 'AL', balance: 12, usedDays: 8, ... },
+ * //     'SL': { leaveCode: 'SL', balance: 5, usedDays: 2, ... }
+ * //   },
+ * //   configurations: {
+ * //     'AL': { id: '...', name: 'Annual Leave', code: 'AL', ... },
+ * //     'SL': { id: '...', name: 'Sick Leave', code: 'SL', ... }
+ * //   }
+ * // }
+ */
+export const apiGetEmployeeLeavesInformation = async (
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<EmployeeLeavesInformation>> => {
+  return apiRequest<EmployeeLeavesInformation>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/leaves-information`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const selfServiceService = {
@@ -225,4 +266,5 @@ export const selfServiceService = {
   apiSearchSkillsSelfService,
   apiGetGeneralDetailsSnapshotSelfService,
   apiGetJobDetailsSnapshotSelfService,
+  apiGetEmployeeLeavesInformation,
 };

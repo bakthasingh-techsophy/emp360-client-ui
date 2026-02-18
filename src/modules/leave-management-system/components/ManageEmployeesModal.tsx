@@ -56,7 +56,7 @@ export function ManageEmployeesModal({
       }
     };
     fetchEmployees();
-  }, [open, refreshUsers, employees.length]);
+  }, [open, employees.length]);
 
   // Initialize with current employee ids
   useEffect(() => {

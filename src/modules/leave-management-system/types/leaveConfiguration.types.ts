@@ -293,3 +293,78 @@ export interface LeaveConfigurationFormData {
   marriedStatus: MarriageStatus;
   employeeIds: string[];
 }
+
+/**
+ * LeaveBalanceModel - Unified leave balance model that supports 4 types:
+ * 1. ACCRUED: available, consumed, accrued (where accrued = available + consumed)
+ * 2. FLEXIBLE: consumed (consumption-only, no available/accrued, like remote work requests)
+ * 3. SPECIAL: available, consumed, expired
+ * 4. MONETIZABLE: available, encashable, monetizable
+ * 
+ * Type is determined by LeaveConfiguration.category field
+ * Unused properties will be null for the given type
+ */
+export interface LeaveBalanceModel {
+  // ACCRUED type properties
+  available?: number | null; // Available balance days (ACCRUED, SPECIAL, MONETIZABLE)
+  consumed?: number | null; // Consumed balance days (ACCRUED, FLEXIBLE, SPECIAL)
+  accrued?: number | null; // Total accrued = available + consumed (ACCRUED only, calculated)
+  
+  // FLEXIBLE type properties
+  // consumed (shared above)
+  
+  // SPECIAL type properties
+  // available (shared above)
+  // consumed (shared above)
+  expired?: number | null; // Expired balance days (SPECIAL only)
+  
+  // MONETIZABLE type properties
+  encashable?: number | null; // Encashable balance days (MONETIZABLE)
+  monetizable?: number | null; // Monetizable balance days (MONETIZABLE)
+}
+
+/**
+ * LeaveDetails - Employee leave information and balances
+ * Contains employee personal information and leave balance map for all assigned leave types
+ */
+export interface LeaveDetails {
+  id: string; // Usually employeeId for easy retrieval
+  
+  // Employee Information
+  email: string;
+  firstName: string;
+  lastName: string;
+  gender: Gender;
+  maritalStatus: MarriageStatus;
+
+  // Leave Balances
+  assignedLeaveTypes: string[]; // Array of leave codes assigned to the employee
+  balances: Record<string, LeaveBalanceModel>; // Map: leaveCode -> balance details
+
+  // Timestamps
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+/**
+ * LeaveDetailsCarrier - Data transfer object for creating/updating leave details
+ * Used in API requests without the id field
+ */
+export interface LeaveDetailsCarrier {
+  email: string;
+  firstName: string;
+  lastName: string;
+  gender: Gender;
+  maritalStatus: MarriageStatus;
+  assignedLeaveTypes: string[];
+  balances: Record<string, LeaveBalanceModel>;
+}
+
+/**
+ * EmployeeLeavesInformation - Combined employee leave information
+ * Contains both leave balances and configurations for self-service view
+ */
+export interface EmployeeLeavesInformation {
+  balances: Record<string, LeaveBalanceModel>; // Key: leave code, Value: balance details
+  configurations: Record<string, LeaveConfiguration>; // Key: leave code, Value: configuration
+}

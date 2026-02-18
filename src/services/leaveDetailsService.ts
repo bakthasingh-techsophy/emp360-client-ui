@@ -18,46 +18,9 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import { apiRequest } from "./utils";
+import { LeaveDetails, LeaveDetailsCarrier } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/leave-details";
-
-/**
- * Leave Balance Model - Balance details for a specific leave type
- */
-export interface LeaveBalanceModel {
-  leaveCode: string;
-  availableBalance: number;
-  usedBalance: number;
-  totalBalance: number;
-  carryForward: number;
-  lastUpdated: string; // ISO instant
-}
-
-/**
- * Leave Details - Complete employee leave details and balances
- */
-export interface LeaveDetails {
-  id: string; // Employee ID
-  email: string;
-  firstName: string;
-  lastName: string;
-  assignedLeaveTypes: string[]; // List of leave codes assigned to employee
-  balances: Record<string, LeaveBalanceModel>; // Map of leave code to balance details
-  createdAt: string; // ISO instant
-  updatedAt?: string; // ISO instant
-}
-
-/**
- * Leave Details Carrier - DTO for creating leave details
- */
-export interface LeaveDetailsCarrier {
-  email: string;
-  firstName: string;
-  lastName: string;
-  assignedLeaveTypes?: string[];
-  balances?: Record<string, LeaveBalanceModel>;
-  createdAt: string; // ISO instant
-}
 
 /**
  * Update payload - Map of field names to values

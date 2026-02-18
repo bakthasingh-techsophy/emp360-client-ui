@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getStorageItem } from '@/store/localStorage';
 import StorageKeys from '@/constants/storageConstants';
 import { useAuth } from '@/contexts/AuthContext';
+import { ResourceDebugPanel } from '@/components/ResourceDebugPanel';
 
 export function SessionInspector() {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export function SessionInspector() {
           View your current session information
         </p>
       </div>
+
+      <ResourceDebugPanel />
 
       <Card>
         <CardHeader>

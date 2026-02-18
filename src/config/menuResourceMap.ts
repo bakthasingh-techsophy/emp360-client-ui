@@ -21,6 +21,8 @@ export const menuResourceMap: Record<string, string> = {
 
   // Leave Management System
   'leave-holiday': 'leave-management-system',
+  'leave-settings': 'leave-management-system',
+  'leave-configuration-form': 'leave-management-system',
   'holiday-management': 'leave-management-system',
 
   // Payroll & Compensation
