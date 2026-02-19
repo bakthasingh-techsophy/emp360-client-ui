@@ -92,9 +92,6 @@ export interface LeaveConfiguration {
   tagline: string; // short description
   description: string; // detailed description
 
-  // Company
-  companyId: string; // company ID for which this leave is applicable
-
   // Category
   category: string; // flexible, accrued, special, monetization
 
@@ -146,9 +143,6 @@ export interface LeaveConfigurationCarrier {
   tagline: string;
   description: string;
 
-  // Company
-  companyId: string;
-
   // Category
   category: string;
 
@@ -191,7 +185,6 @@ export interface LeaveConfigurationUpdateCarrier {
   code?: string;
   tagline?: string;
   description?: string;
-  companyId?: string;
   category?: string;
   gender?: string;
   marriedStatus?: string;

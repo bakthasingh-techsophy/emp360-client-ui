@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, UserPlus, UserMinus, ChevronsUpDown } from 'lucide-react';
+import { X, UserPlus, UserMinus, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { UserDetails } from '@/modules/user-management/types/onboarding.types';
 import { useUserManagement } from '@/contexts/UserManagementContext';
 import UniversalSearchRequest from '@/types/search';
@@ -42,7 +42,7 @@ export function ManageEmployeesModal({
       if (open && employees.length === 0) {
         setIsLoadingEmployees(true);
         try {
-          // Empty search request to fetch all users
+          // Empty search request to fetch all users from all companies
           const searchRequest: UniversalSearchRequest = {};
           const result = await refreshUsers(searchRequest, 0, 1000); // Fetch up to 1000 employees
           if (result && result.content) {
@@ -56,7 +56,7 @@ export function ManageEmployeesModal({
       }
     };
     fetchEmployees();
-  }, [open, employees.length]);
+  }, [open, refreshUsers, employees.length]);
 
   // Initialize with current employee ids
   useEffect(() => {
@@ -119,6 +119,14 @@ export function ManageEmployeesModal({
             Select employees to involve in {leaveTypeName} leave configuration
           </DialogDescription>
         </DialogHeader>
+
+        {/* Loading Indicator */}
+        {isLoadingEmployees && (
+          <div className="flex items-center justify-center gap-3 py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+            <span className="text-sm font-medium text-muted-foreground">Loading employees...</span>
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           {/* Employee Selector */}

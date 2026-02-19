@@ -19,15 +19,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, FileX, Copy } from 'lucide-react';
+import { ArrowLeft, Plus, FileX } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useLeaveManagement } from '@/contexts/LeaveManagementContext';
-import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeaveConfiguration } from './types/leaveConfiguration.types';
 import UniversalSearchRequest from '@/types/search';
 import { ManageEmployeesModal } from './components/ManageEmployeesModal';
-import { CopyToModal } from './components/CopyToModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -38,10 +36,8 @@ export function LeaveSettings() {
     searchLeaveConfigurations,
     deleteLeaveConfigurationById,
     assignLeaveTypesToEmployees,
-    copyLeaveConfigurationToCompanies,
     isLoading 
   } = useLeaveManagement();
-  const { companies } = useCompany();
   
   // Check if user has permission to access settings (requires lmss role)
   const canAccessSettings = auth.hasResourceRole('leave-management-system', 'lmss');
@@ -80,7 +76,6 @@ export function LeaveSettings() {
   const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
   const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
-  const [copyToOpen, setCopyToOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<LeaveConfiguration | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -167,53 +162,6 @@ export function LeaveSettings() {
       console.log("Leave type assigned to employees:", response);
       loadLeaveConfigurations();
     }
-  };
-
-  const handleCopyTo = (config: LeaveConfiguration) => {
-    setSelectedConfig(config);
-    setCopyToOpen(true);
-  };
-
-  const handleCopyToAll = async () => {
-    if (!selectedConfig) return;
-    
-    // Get all company IDs except the current one
-    const targetCompanyIds = companies
-      .filter((c) => c.id !== selectedConfig.companyId)
-      .map((c) => c.id);
-
-    if (targetCompanyIds.length === 0) {
-      return;
-    }
-
-    const response = await copyLeaveConfigurationToCompanies({
-      leaveConfigurationId: selectedConfig.id,
-      companyIds: targetCompanyIds,
-    });
-
-    if (response) {
-      console.log("Configuration copied to all companies:", response);
-      loadLeaveConfigurations();
-    }
-  };
-
-  const handleCopyToSelected = async (companyIds: string[]) => {
-    if (!selectedConfig) return;
-
-    const response = await copyLeaveConfigurationToCompanies({
-      leaveConfigurationId: selectedConfig.id,
-      companyIds: companyIds,
-    });
-
-    if (response) {
-      console.log("Configuration copied to selected companies:", response);
-      loadLeaveConfigurations();
-    }
-  };
-
-  const getCompanyName = (companyId: string): string => {
-    const company = companies.find(c => c.id === companyId);
-    return company?.name || companyId;
   };
 
   const getCategoryLabel = (category: string): string => {
@@ -307,7 +255,6 @@ export function LeaveSettings() {
                         <TableHead>Leave Type</TableHead>
                         <TableHead>Code</TableHead>
                         <TableHead>Category</TableHead>
-                        <TableHead>Company</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -330,9 +277,6 @@ export function LeaveSettings() {
                               {getCategoryLabel(config.category)}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{getCompanyName(config.companyId)}</span>
-                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
@@ -348,14 +292,6 @@ export function LeaveSettings() {
                                 onClick={() => handleManageEmployees(config)}
                               >
                                 Manage Employees
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleCopyTo(config)}
-                              >
-                                <Copy className="h-4 w-4 mr-1" />
-                                Copy To
                               </Button>
                               <Button
                                 variant="destructive"
@@ -410,18 +346,6 @@ export function LeaveSettings() {
             onOpenChange={setManageEmployeesOpen}
             selectedEmployeeIds={selectedConfig.employeeIds || []}
             onSave={handleSaveEmployees}
-            leaveTypeName={selectedConfig.name}
-          />
-        )}
-
-        {/* Copy To Modal */}
-        {selectedConfig && (
-          <CopyToModal
-            open={copyToOpen}
-            onOpenChange={setCopyToOpen}
-            currentCompanyId={selectedConfig.companyId}
-            onCopyToAll={handleCopyToAll}
-            onCopyToSelected={handleCopyToSelected}
             leaveTypeName={selectedConfig.name}
           />
         )}

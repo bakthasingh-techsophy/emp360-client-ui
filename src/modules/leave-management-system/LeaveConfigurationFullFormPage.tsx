@@ -36,15 +36,12 @@ import {
 } from "@/components/ui/accordion";
 import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { MultiDatePicker } from "@/components/common/MultiDatePicker";
-import { CompanyDropdown } from "@/components/context-aware/CompanyDropdown";
-import { ArrowLeft, Check, Users, Copy } from "lucide-react";
+import { ArrowLeft, Check, Users } from "lucide-react";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
-import { useCompany } from "@/contexts/CompanyContext";
 import {
   LeaveConfigurationCarrier,
 } from "./types/leaveConfiguration.types";
 import { ManageEmployeesModal } from "./components/ManageEmployeesModal";
-import { CopyToModal } from "./components/CopyToModal";
 
 // Simple form schema focusing on core required fields
 const leaveConfigurationFormSchema = z.object({
@@ -67,9 +64,6 @@ const leaveConfigurationFormSchema = z.object({
     .string()
     .min(5, "Description must be at least 5 characters")
     .max(500, "Description cannot exceed 500 characters"),
-
-  // Company
-  companyId: z.string().min(1, "Company is required"),
 
   // Category
   category: z.enum(["flexible", "accrued", "special", "monetization"]),
@@ -137,14 +131,11 @@ export function LeaveConfigurationFormPage() {
     updateLeaveConfiguration,
     getLeaveConfigurationById,
     assignLeaveTypesToEmployees,
-    copyLeaveConfigurationToCompanies,
   } = useLeaveManagement();
-  const { companies } = useCompany();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
-  const [copyToOpen, setCopyToOpen] = useState(false);
   const [employeeIds, setEmployeeIds] = useState<string[]>([]);
 
   const form = useForm<LeaveConfigFormData>({
@@ -154,7 +145,6 @@ export function LeaveConfigurationFormPage() {
       code: "",
       tagline: "",
       description: "",
-      companyId: "",
       category: "accrued",
       allowedTypes: ["fullDay"],
       allowCreditPolicy: true,
@@ -232,7 +222,6 @@ export function LeaveConfigurationFormPage() {
               config.restrictions?.includeHolidaysWeekends || false,
             probationAllowed:
               config.restrictions?.probationRestrictions.allowed || false,
-            companyId: config.companyId || "",
             gender: config.gender as any,
             marriedStatus: config.marriedStatus as any,
           });
@@ -302,46 +291,6 @@ export function LeaveConfigurationFormPage() {
     setManageEmployeesOpen(true);
   };
 
-  const handleCopyTo = () => {
-    setCopyToOpen(true);
-  };
-
-  const handleCopyToAll = async () => {
-    if (!configId) return;
-    
-    // Get all company IDs except the current one
-    const currentCompanyId = form.getValues("companyId");
-    const targetCompanyIds = companies
-      .filter((c) => c.id !== currentCompanyId)
-      .map((c) => c.id);
-
-    if (targetCompanyIds.length === 0) {
-      return;
-    }
-
-    const response = await copyLeaveConfigurationToCompanies({
-      leaveConfigurationId: configId,
-      companyIds: targetCompanyIds,
-    });
-
-    if (response) {
-      console.log("Configuration copied to all companies:", response);
-    }
-  };
-
-  const handleCopyToSelected = async (companyIds: string[]) => {
-    if (!configId) return;
-
-    const response = await copyLeaveConfigurationToCompanies({
-      leaveConfigurationId: configId,
-      companyIds: companyIds,
-    });
-
-    if (response) {
-      console.log("Configuration copied to selected companies:", response);
-    }
-  };
-
   const handleSaveEmployees = async (selectedIds: string[]) => {
     if (!configId) return;
 
@@ -367,7 +316,6 @@ export function LeaveConfigurationFormPage() {
           code: data.code,
           tagline: data.tagline,
           description: data.description,
-          companyId: data.companyId,
           category: data.category,
           gender: data.gender,
           marriedStatus: data.marriedStatus,
@@ -434,7 +382,6 @@ export function LeaveConfigurationFormPage() {
           code: data.code,
           tagline: data.tagline,
           description: data.description,
-          companyId: data.companyId,
           category: data.category,
           gender: data.gender,
           marriedStatus: data.marriedStatus,
@@ -558,16 +505,6 @@ export function LeaveConfigurationFormPage() {
               <Users className="h-4 w-4" />
               Manage Employees ({employeeIds.length})
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyTo}
-              className="gap-2"
-            >
-              <Copy className="h-4 w-4" />
-              Copy To
-            </Button>
           </div>
         )}
       </div>
@@ -668,25 +605,6 @@ export function LeaveConfigurationFormPage() {
             <h3 className="text-base font-semibold mb-4">Configuration Reference</h3>
 
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="companyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company *</FormLabel>
-                    <FormControl>
-                      <CompanyDropdown
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Search companies..."
-                        showRefresh={true}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="category"
@@ -1580,18 +1498,6 @@ export function LeaveConfigurationFormPage() {
           selectedEmployeeIds={employeeIds}
           onSave={handleSaveEmployees}
           leaveTypeName="Leave Configuration"
-        />
-      )}
-
-      {/* Copy To Modal - Only in edit mode */}
-      {mode === "edit" && (
-        <CopyToModal
-          open={copyToOpen}
-          onOpenChange={setCopyToOpen}
-          currentCompanyId={form.getValues("companyId")}
-          onCopyToAll={handleCopyToAll}
-          onCopyToSelected={handleCopyToSelected}
-          leaveTypeName={form.getValues("name") || "Leave Configuration"}
         />
       )}
     </div>
