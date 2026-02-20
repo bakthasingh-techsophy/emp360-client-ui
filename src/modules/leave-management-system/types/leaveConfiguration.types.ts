@@ -62,12 +62,17 @@ export interface CreditPolicy {
 }
 
 /**
- * LeaveProperties - Defines the properties and types allowed for a leave configuration
+ * LMSProperties - Defines the properties and types allowed for an absence configuration
  */
-export interface LeaveProperties {
+export interface LMSProperties {
   allowedTypes: string[]; // fullDay, partialDay, partialTimings
   numberOfDaysPerOneLeave: number; // defines custom value, default to 1
 }
+
+/**
+ * @deprecated Use LMSProperties instead
+ */
+export type LeaveProperties = LMSProperties;
 
 /**
  * ApplicableCategories - Defines categories of applicability for leave configuration
@@ -79,32 +84,27 @@ export interface ApplicableCategories {
 }
 
 /**
- * LeaveConfiguration - Main model for leave type configuration
- * Defines policies, restrictions, and applicability rules for different leave types
- * Includes basic information previously in LeaveConfigurationBasicDetails
+ * LMSConfiguration - Main model for absence type configuration (Leave Management System)
+ * Defines policies, restrictions, and applicability rules for different absence types
  */
-export interface LeaveConfiguration {
+export interface LMSConfiguration {
   id: string;
 
   // Basic Information
-  name: string; // name of the leave type
-  code: string; // unique code for the leave type
-  tagline: string; // short description
-  description: string; // detailed description
+  name: string; // name of the absence type
+  code: string; // unique code for the configuration
+  tagline: string; // short tagline
+  description: string; // detailed description for the absence type
 
   // Category
   category: string; // flexible, accrued, special, monetization
 
-  // Applicability - Employee Demographics
-  gender: string; // male, female, other, all
-  marriedStatus: string; // married, single, all
-
-  // Leave Properties
-  leaveProperties: LeaveProperties; // types and properties of leaves
+  // LMS Properties
+  lmsProperties: LMSProperties; // types and properties of absences
 
   // Credit Configuration
   allowCreditPolicy: boolean;
-  creditPolicy: CreditPolicy | null; // policy for crediting leaves
+  creditPolicy: CreditPolicy | null; // policy for crediting absences
 
   // Monetization Configuration
   allowMonetization: boolean;
@@ -124,6 +124,9 @@ export interface LeaveConfiguration {
   // Applicability
   applicableCategories: ApplicableCategories; // applicable employee categories
 
+  // Company ID
+  companyId: string; // company this configuration belongs to
+
   // Employee List
   employeeIds: string[]; // list of employees covered by this configuration
 
@@ -133,10 +136,15 @@ export interface LeaveConfiguration {
 }
 
 /**
- * LeaveConfigurationCarrier - Used for creating new leave configurations
+ * @deprecated Use LMSConfiguration instead
+ */
+export type LeaveConfiguration = LMSConfiguration;
+
+/**
+ * LMSConfigurationCarrier - Used for creating new LMS configurations
  * Omits id, createdAt, updatedAt
  */
-export interface LeaveConfigurationCarrier {
+export interface LMSConfigurationCarrier {
   // Basic Information
   name: string;
   code: string;
@@ -146,12 +154,8 @@ export interface LeaveConfigurationCarrier {
   // Category
   category: string;
 
-  // Applicability - Employee Demographics
-  gender: string; // male, female, other, all
-  marriedStatus: string; // married, single, all
-
-  // Leave Properties
-  leaveProperties: LeaveProperties;
+  // LMS Properties
+  lmsProperties: LMSProperties;
 
   // Credit Configuration
   allowCreditPolicy: boolean;
@@ -172,23 +176,29 @@ export interface LeaveConfigurationCarrier {
   allowRestrictions: boolean;
   restrictions: Restrictions | null;
 
+  // Company ID
+  companyId: string;
+
   // Employee List
   employeeIds: string[];
 }
 
 /**
- * LeaveConfigurationUpdateCarrier - Used for updating existing leave configurations
+ * @deprecated Use LMSConfigurationCarrier instead
+ */
+export type LeaveConfigurationCarrier = LMSConfigurationCarrier;
+
+/**
+ * LMSConfigurationUpdateCarrier - Used for updating existing LMS configurations
  * All fields are optional except those that make sense to update
  */
-export interface LeaveConfigurationUpdateCarrier {
+export interface LMSConfigurationUpdateCarrier {
   name?: string;
   code?: string;
   tagline?: string;
   description?: string;
   category?: string;
-  gender?: string;
-  marriedStatus?: string;
-  leaveProperties?: LeaveProperties;
+  lmsProperties?: LMSProperties;
   allowCreditPolicy?: boolean;
   creditPolicy?: CreditPolicy | null;
   allowMonetization?: boolean;
@@ -198,8 +208,14 @@ export interface LeaveConfigurationUpdateCarrier {
   calendarConfiguration?: CalendarConfiguration;
   allowRestrictions?: boolean;
   restrictions?: Restrictions | null;
+  companyId?: string;
   employeeIds?: string[];
 }
+
+/**
+ * @deprecated Use LMSConfigurationUpdateCarrier instead
+ */
+export type LeaveConfigurationUpdateCarrier = LMSConfigurationUpdateCarrier;
 
 /**
  * Type guards and validators
@@ -232,7 +248,7 @@ export type EmployeeTypeOption = typeof EmployeeTypeOptions[number];
 /**
  * Form data types for UI
  */
-export interface LeaveConfigurationFormData {
+export interface LMSConfigurationFormData {
   // Basic Information
   name: string;
   code: string;
@@ -241,7 +257,7 @@ export interface LeaveConfigurationFormData {
   category: LeaveCategory;
   startDate: Date | string;
 
-  // Leave Properties
+  // LMS Properties
   allowedTypes: LeaveTypeOption[];
   numberOfDaysPerOneLeave: number;
 
@@ -282,19 +298,23 @@ export interface LeaveConfigurationFormData {
 
   // Applicability
   isForAllEmployeeTypes: boolean;
-  gender: Gender;
-  marriedStatus: MarriageStatus;
+  companyId: string;
   employeeIds: string[];
 }
 
 /**
- * LeaveBalanceModel - Unified leave balance model that supports 4 types:
+ * @deprecated Use LMSConfigurationFormData instead
+ */
+export type LeaveConfigurationFormData = LMSConfigurationFormData;
+
+/**
+ * LeaveBalanceModel - Unified absence balance model that supports 4 types:
  * 1. ACCRUED: available, consumed, accrued (where accrued = available + consumed)
  * 2. FLEXIBLE: consumed (consumption-only, no available/accrued, like remote work requests)
  * 3. SPECIAL: available, consumed, expired
- * 4. MONETIZABLE: available, encashable, monetizable
+ * 4. MONETIZATION: available, encashable, monetizable
  * 
- * Type is determined by LeaveConfiguration.category field
+ * Type is determined by LMSConfiguration.category field
  * Unused properties will be null for the given type
  */
 export interface LeaveBalanceModel {
@@ -354,10 +374,10 @@ export interface LeaveDetailsCarrier {
 }
 
 /**
- * EmployeeLeavesInformation - Combined employee leave information
- * Contains both leave balances and configurations for self-service view
+ * EmployeeLeavesInformation - Combined employee absence information
+ * Contains both absence balances and LMS configurations for self-service view
  */
 export interface EmployeeLeavesInformation {
-  balances: Record<string, LeaveBalanceModel>; // Key: leave code, Value: balance details
-  configurations: Record<string, LeaveConfiguration>; // Key: leave code, Value: configuration
+  balances: Record<string, LeaveBalanceModel>; // Key: absence type code, Value: balance details
+  configurations: Record<string, LMSConfiguration>; // Key: absence type code, Value: configuration
 }

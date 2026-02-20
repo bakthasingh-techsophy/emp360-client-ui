@@ -109,7 +109,7 @@ export const allMenuItems: AppShellMenuItem[] = [
   },
   {
     id: 'apply-leave',
-    to: '/apply-leave',
+    to: '/leave-holiday/apply-leave',
     icon: Calendar,
     label: 'Apply Leave',
     category: 'Leave Management',

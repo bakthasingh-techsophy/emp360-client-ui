@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LeaveConfiguration } from "../types/leaveConfiguration.types";
+import { LMSConfiguration } from "../types/leaveConfiguration.types";
 import { LeaveBalanceModel } from "../types/leaveConfiguration.types";
 import {
   CalendarDays,
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 interface BaseCardProps {
-  config: LeaveConfiguration;
+  config: LMSConfiguration;
   balance: LeaveBalanceModel;
   gradient: string;
   onApplyLeave?: () => void;

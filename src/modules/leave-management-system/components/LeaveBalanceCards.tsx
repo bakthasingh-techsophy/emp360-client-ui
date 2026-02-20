@@ -8,7 +8,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HolidayInfo } from "../types/leave.types";
-import { EmployeeLeavesInformation, LeaveConfiguration } from "../types/leaveConfiguration.types";
+import { EmployeeLeavesInformation, LMSConfiguration } from "../types/leaveConfiguration.types";
 import {
   CalendarDays,
   Calendar,
@@ -219,7 +219,7 @@ export function LeaveBalanceCards({
       {/* Individual Leave Type Cards - Type-Specific Rendering */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {leaveEntries.map(([leaveCode, balance], index) => {
-          const config = configurations[leaveCode] as LeaveConfiguration;
+          const config = configurations[leaveCode] as LMSConfiguration;
           if (!config) return null; // Skip if no configuration found
 
           const gradient = CARD_GRADIENTS[index % CARD_GRADIENTS.length];

@@ -27,6 +27,7 @@ import {
   apiSearchSkillsSelfService,
   apiGetGeneralDetailsSnapshotSelfService,
   apiGetJobDetailsSnapshotSelfService,
+  apiRaiseAbsenceRequest,
 } from "@/services/selfServiceService";
 
 // Types
@@ -36,6 +37,7 @@ import {
   GeneralDetailsSnapshot,
   JobDetailsSnapshot,
 } from "@/modules/user-management/types/onboarding.types";
+import { AbsenceApplication, AbsenceCarrier } from "@/modules/leave-management-system/types/leave.types";
 import UniversalSearchRequest from "@/types/search";
 import Pagination from "@/types/pagination";
 
@@ -66,6 +68,9 @@ interface SelfServiceContextType {
   // Snapshot Methods (Self-Service)
   getGeneralDetailsSelfService: () => Promise<GeneralDetailsSnapshot | null>;
   getJobDetailsSelfService: () => Promise<JobDetailsSnapshot | null>;
+
+  // Absence Methods (Self-Service)
+  raiseAbsenceRequest: (carrier: AbsenceCarrier) => Promise<AbsenceApplication | null>;
 
   // Loading State
   isLoading: boolean;
@@ -245,6 +250,19 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
     ) as Promise<JobDetailsSnapshot | null>;
   };
 
+  // ==================== ABSENCE METHODS (SELF-SERVICE) ====================
+
+  const raiseAbsenceRequest = async (
+    carrier: AbsenceCarrier,
+  ): Promise<AbsenceApplication | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiRaiseAbsenceRequest(carrier, tenant, accessToken),
+      "Raise Absence Request",
+      "Absence request submitted successfully",
+    ) as Promise<AbsenceApplication | null>;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: SelfServiceContextType = {
@@ -257,6 +275,9 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
     // Snapshot Methods
     getGeneralDetailsSelfService,
     getJobDetailsSelfService,
+
+    // Absence Methods
+    raiseAbsenceRequest,
 
     // Loading State
     isLoading,

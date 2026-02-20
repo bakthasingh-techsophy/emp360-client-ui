@@ -16,7 +16,8 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import { SkillItem, SkillItemCarrier, GeneralDetailsSnapshot, JobDetailsSnapshot } from "@/modules/user-management/types/onboarding.types";
-import { EmployeeLeavesInformation } from "@/modules/leave-management-system/types/leaveConfiguration.types";
+import { EmployeeLeavesInformation, AbsenceCarrier } from "@/modules/leave-management-system/types/leaveConfiguration.types";
+import { AbsenceApplication } from "@/modules/leave-management-system/types/leave.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/self-service";
 
@@ -257,6 +258,51 @@ export const apiGetEmployeeLeavesInformation = async (
 };
 
 /**
+ * Self-Service Raise Absence Request
+ * POST /emp-user-management/v1/self-service/leaves/apply
+ * 
+ * Employee applies for leave/absence. Handles absence application with validation including:
+ * - Credit management for comp-off leaves
+ * - Leave balance deduction
+ * - Encashment calculation
+ * - Auto-approval scheduling based on configuration
+ * - Email notifications
+ * 
+ * EmployeeId is automatically extracted from JWT token.
+ * Username and realm are automatically extracted from JWT token.
+ * Requires SSV (Self-Service Viewer) role.
+ * 
+ * @param carrier - AbsenceCarrier with absence application details
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<AbsenceApplication>>
+ * 
+ * @example
+ * const response = await apiRaiseAbsenceRequest({
+ *   fromDate: '2026-03-01T00:00:00.000Z',
+ *   toDate: '2026-03-05T00:00:00.000Z',
+ *   absenceType: 'PL',
+ *   absenceCategory: 'fullDay',
+ *   reason: 'Personal leave for family matters',
+ *   informTo: ['manager@mailinator.com', 'hr@mailinator.com'],
+ *   createdAt: new Date().toISOString()
+ * }, 'tenant-001', accessToken);
+ */
+export const apiRaiseAbsenceRequest = async (
+  carrier: AbsenceCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<AbsenceApplication>> => {
+  return apiRequest<AbsenceApplication>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/leaves/apply`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const selfServiceService = {
@@ -267,4 +313,5 @@ export const selfServiceService = {
   apiGetGeneralDetailsSnapshotSelfService,
   apiGetJobDetailsSnapshotSelfService,
   apiGetEmployeeLeavesInformation,
+  apiRaiseAbsenceRequest,
 };

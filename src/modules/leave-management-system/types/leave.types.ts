@@ -26,10 +26,10 @@ export interface LeaveBalance {
 }
 
 /**
- * Leave Application - Complete leave application model (Backend aligned)
- * Maps to LeaveApplication.java in MongoDB collection
+ * AbsenceApplication - Complete absence application model (Backend aligned)
+ * Maps to AbsenceApplication.java in MongoDB collection
  */
-export interface LeaveApplication {
+export interface AbsenceApplication {
   // Core Identifiers
   id: string;
   
@@ -40,18 +40,18 @@ export interface LeaveApplication {
   email: string;
   reportingTo: string; // Email of the reporting person
   
-  // Leave Details
+  // Absence Details
   fromDate: string; // ISO instant
   toDate: string; // ISO instant
-  leaveType: string; // Code of the leave type (e.g., GL, PL, maternity, WFH)
-  leaveCategory: string; // fullDay / partialDay
+  absenceType: string; // Code of the absence type (e.g., GL, PL, maternity, WFH)
+  absenceCategory: string; // fullDay / partialDay
   reason: string;
   fromTime?: string; // ISO instant
   toTime?: string; // ISO instant
   informTo?: string[]; // List of emails
-  specialRequestReference?: string;
+  creditReference?: string;
   
-  // Leave Calculations
+  // Absence Calculations
   totalDays?: number;
   lopDays?: number;
   lop?: boolean;
@@ -60,7 +60,7 @@ export interface LeaveApplication {
   
   // Approvals
   approvedOn?: string; // ISO instant
-  autoApprovalTimeInMinutes?: string;
+  autoApproveAt?: string; // ISO instant
   
   // Status
   status: string; // pending, approved, rejected, etc.
@@ -71,21 +71,33 @@ export interface LeaveApplication {
 }
 
 /**
- * Leave Application Carrier - DTO for creating/updating leave applications
- * Minimal required fields for backend API without the ID
- * Maps to LeaveApplicationCarrier.java
+ * @deprecated Use AbsenceApplication instead
  */
-export interface LeaveApplicationCarrier {
+export type LeaveApplication = AbsenceApplication;
+
+/**
+ * AbsenceCarrier - DTO for creating/updating absence applications
+ * Minimal required fields for backend API without the ID
+ * Maps to AbsenceCarrier.java
+ */
+export interface AbsenceCarrier {
   fromDate: string; // ISO instant
   toDate: string; // ISO instant
-  leaveType: string; // Required - leave type code
-  leaveCategory: string; // Required - fullDay / partialDay
+  absenceType: string; // Required - absence type code
+  absenceCategory: string; // Required - fullDay / partialDay
   partialDaySelection?: string; // firstHalf / secondHalf for partial day leaves
   reason: string; // Required
-  fromTime?: string; // HH:MM a
-  toTime?: string; // HH:MM a 
+  fromTime?: string; // ISO instant
+  toTime?: string; // ISO instant 
   informTo?: string[]; // List of emails
+  creditReference?: string; // Optional reference
+  createdAt: string; // ISO instant
 }
+
+/**
+ * @deprecated Use AbsenceCarrier instead
+ */
+export type LeaveApplicationCarrier = AbsenceCarrier;
 
 export interface LeaveStats {
   totalLeaves: number;

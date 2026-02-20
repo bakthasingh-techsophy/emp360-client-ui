@@ -23,7 +23,7 @@ import { ArrowLeft, Plus, FileX } from 'lucide-react';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useLeaveManagement } from '@/contexts/LeaveManagementContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { LeaveConfiguration } from './types/leaveConfiguration.types';
+import { LMSConfiguration } from './types/leaveConfiguration.types';
 import UniversalSearchRequest from '@/types/search';
 import { ManageEmployeesModal } from './components/ManageEmployeesModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -73,10 +73,10 @@ export function LeaveSettings() {
     );
   }
 
-  const [leaveConfigurations, setLeaveConfigurations] = useState<LeaveConfiguration[]>([]);
+  const [leaveConfigurations, setLeaveConfigurations] = useState<LMSConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
   const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
-  const [selectedConfig, setSelectedConfig] = useState<LeaveConfiguration | null>(null);
+  const [selectedConfig, setSelectedConfig] = useState<LMSConfiguration | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -113,14 +113,14 @@ export function LeaveSettings() {
   };
 
   const handleAddLeaveType = () => {
-    navigate('/leave-configuration-form?mode=create');
+    navigate('/leave-holiday/leave-configuration-form?mode=create');
   };
 
-  const handleEditLeaveType = (config: LeaveConfiguration) => {
-    navigate(`/leave-configuration-form?mode=edit&id=${config.id}`);
+  const handleEditLeaveType = (config: LMSConfiguration) => {
+    navigate(`/leave-holiday/leave-configuration-form?mode=edit&id=${config.id}`);
   };
 
-  const handleDeleteLeaveType = (config: LeaveConfiguration) => {
+  const handleDeleteLeaveType = (config: LMSConfiguration) => {
     setConfirmDialog({
       open: true,
       title: 'Delete Leave Type',
@@ -145,7 +145,7 @@ export function LeaveSettings() {
     });
   };
 
-  const handleManageEmployees = (config: LeaveConfiguration) => {
+  const handleManageEmployees = (config: LMSConfiguration) => {
     setSelectedConfig(config);
     setManageEmployeesOpen(true);
   };

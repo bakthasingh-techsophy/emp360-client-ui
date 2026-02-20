@@ -39,15 +39,16 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { format, differenceInBusinessDays } from "date-fns";
 import { CalendarIcon, Plus, AlertCircle, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LeaveApplicationCarrier, LeaveBalance } from "./types/leave.types";
+import { AbsenceCarrier, LeaveBalance } from "./types/leave.types";
 import { EmployeeLeavesInformation } from "./types/leaveConfiguration.types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
+import { useSelfService } from "@/contexts/SelfServiceContext";
 import { UsersSelector } from "@/components/context-aware/UsersSelector";
 
 const applyLeaveFormSchema = z.object({
-  leaveTypeId: z.string().min(1, "Leave type is required"),
-  leaveCategory: z.enum(["fullDay", "partialDay", "partialTiming"]),
+  absenceTypeId: z.string().min(1, "Absence type is required"),
+  absenceCategory: z.enum(["fullDay", "partialDay", "partialTiming"]),
   startDate: z.date({
     errorMap: () => ({ message: "Date is required" }),
   }),
@@ -74,6 +75,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { getEmployeeLeavesInformation } = useLeaveManagement();
+  const { raiseAbsenceRequest, isLoading } = useSelfService();
 
   const [numberOfDays, setNumberOfDays] = useState(0);
   const [error, setError] = useState("");
@@ -81,13 +83,13 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
     useState<EmployeeLeavesInformation | null>(null);
   const [untrackedLeave, setUntrackedLeave] = useState(false);
 
-  const defaultLeaveTypeId = searchParams.get("leaveTypeId") || "";
+  const defaultAbsenceTypeId = searchParams.get("absenceTypeId") || "";
 
   const form = useForm<ApplyLeaveFormValues>({
     resolver: zodResolver(applyLeaveFormSchema),
     defaultValues: {
-      leaveTypeId: defaultLeaveTypeId,
-      leaveCategory: "fullDay",
+      absenceTypeId: defaultAbsenceTypeId,
+      absenceCategory: "fullDay",
       startDate: undefined,
       endDate: undefined,
       partialDaySelection: undefined,
@@ -101,8 +103,8 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
   const { watch } = form;
   const startDate = watch("startDate");
   const endDate = watch("endDate");
-  const leaveCategory = watch("leaveCategory");
-  const selectedLeaveType = watch("leaveTypeId");
+  const absenceCategory = watch("absenceCategory");
+  const selectedLeaveType = watch("absenceTypeId");
 
   // Helper function to assign colors to leave types
   const getColorForLeaveType = (leaveTypeCode: string): string => {
@@ -213,24 +215,24 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
     }
 
     // For full day, both dates are required
-    if (leaveCategory === "fullDay" && !endDate) {
-      setError("End date is required for full day leave");
+    if (absenceCategory === "fullDay" && !endDate) {
+      setError("End date is required for full day absence");
       return;
     }
 
     // For partial day, partial day selection is required
-    if (leaveCategory === "partialDay" && !values.partialDaySelection) {
+    if (absenceCategory === "partialDay" && !values.partialDaySelection) {
       setError("Please select first half or second half");
       return;
     }
 
     // For partial timing, both times are required
     if (
-      leaveCategory === "partialTiming" &&
+      absenceCategory === "partialTiming" &&
       (!values.fromTime || !values.toTime)
     ) {
       setError(
-        "Please select both from time and to time for partial timing leave",
+        "Please select both from time and to time for partial timing absence",
       );
       return;
     }
@@ -248,35 +250,38 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
 
     try {
       // For partial day and partial timing, set endDate equal to startDate
-      const applyEndDate = leaveCategory === "fullDay" ? endDate : startDate;
+      const applyEndDate = absenceCategory === "fullDay" ? endDate : startDate;
 
-      const leaveData: LeaveApplicationCarrier = {
-        leaveType: selectedLeaveType,
+      const absenceData: AbsenceCarrier = {
+        absenceType: selectedLeaveType,
         fromDate: startDate.toISOString(),
         toDate: applyEndDate!.toISOString(),
-        leaveCategory:
-          leaveCategory === "partialTiming"
+        absenceCategory:
+          absenceCategory === "partialTiming"
             ? "partialDay"
-            : (leaveCategory as "fullDay" | "partialDay"),
+            : (absenceCategory as "fullDay" | "partialDay"),
         partialDaySelection:
-          leaveCategory === "partialDay"
+          absenceCategory === "partialDay"
             ? (values.partialDaySelection as "firstHalf" | "secondHalf")
             : undefined,
         reason: values.reason.trim(),
         fromTime:
-          leaveCategory === "partialTiming" ? values.fromTime : undefined,
-        toTime: leaveCategory === "partialTiming" ? values.toTime : undefined,
+          absenceCategory === "partialTiming" ? values.fromTime : undefined,
+        toTime: absenceCategory === "partialTiming" ? values.toTime : undefined,
         informTo:
           values.informToUserIds && values.informToUserIds.length > 0
             ? values.informToUserIds
             : undefined,
+        createdAt: new Date().toISOString(),
       };
 
-      // TODO: Call API to submit leave application
-      console.log("Leave application to submit:", leaveData);
-
-      // Navigate back to leave page after successful submission
-      //   navigate("/leave-holiday");
+      // Call API to submit absence application using self-service context
+      const result = await raiseAbsenceRequest(absenceData);
+      
+      if (result) {
+        // Navigate back to leave page after successful submission
+        navigate("/leave-holiday");
+      }
     } catch (err) {
       console.error("Failed to submit leave application:", err);
       setError("Failed to submit leave application. Please try again.");
@@ -319,17 +324,17 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                   {/* Leave Type Selection */}
                   <FormField
                     control={form.control}
-                    name="leaveTypeId"
+                    name="absenceTypeId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Leave Type *</FormLabel>
+                        <FormLabel>Absence Type *</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select leave type" />
+                              <SelectValue placeholder="Select absence type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -370,13 +375,13 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                     </div>
                   )}
 
-                  {/* Leave Category Selection */}
+                  {/* Absence Category Selection */}
                   <FormField
                     control={form.control}
-                    name="leaveCategory"
+                    name="absenceCategory"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Leave Category *</FormLabel>
+                        <FormLabel>Absence Category *</FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -416,8 +421,8 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                       Untracked Leave (apply for forgotten leave)
                     </label>
                   </div>
-                  {/* Date Selection - Conditional based on Leave Category */}
-                  {leaveCategory === "fullDay" && (
+                  {/* Date Selection - Conditional based on Absence Category */}
+                  {absenceCategory === "fullDay" && (
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -508,8 +513,8 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                   )}
 
                   {/* Single Date Selection for Partial Day and Partial Timing */}
-                  {(leaveCategory === "partialDay" ||
-                    leaveCategory === "partialTiming") && (
+                  {(absenceCategory === "partialDay" ||
+                    absenceCategory === "partialTiming") && (
                     <FormField
                       control={form.control}
                       name="startDate"
@@ -555,7 +560,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                   )}
 
                   {/* Number of Days Display - Only for Full Day */}
-                  {numberOfDays > 0 && leaveCategory === "fullDay" && (
+                  {numberOfDays > 0 && absenceCategory === "fullDay" && (
                     <div className="bg-muted p-3 rounded-md">
                       <p className="text-sm font-medium">
                         Duration:{" "}
@@ -568,7 +573,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                   )}
 
                   {/* Partial Day Selection - First Half or Second Half */}
-                  {leaveCategory === "partialDay" && (
+                  {absenceCategory === "partialDay" && (
                     <FormField
                       control={form.control}
                       name="partialDaySelection"
@@ -600,7 +605,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                   )}
 
                   {/* Time Selection for Partial Timing */}
-                  {leaveCategory === "partialTiming" && (
+                  {absenceCategory === "partialTiming" && (
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -711,23 +716,33 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
       {/* Form Action Bar - Bottom Fixed Bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm p-4 z-40">
         <div className="container mx-auto flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => navigate("/leave-holiday")}>
+          <Button variant="outline" onClick={() => navigate("/leave-holiday")} disabled={isLoading}>
             Cancel
           </Button>
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={
+              isLoading ||
               !!error ||
               !selectedLeaveType ||
               !startDate ||
               !endDate ||
               !form.getValues("reason").trim() ||
-              (leaveCategory === "partialDay" &&
+              (absenceCategory === "partialDay" &&
                 (!form.getValues("fromTime") || !form.getValues("toTime")))
             }
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Submit Application
+            {isLoading ? (
+              <>
+                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Submit Application
+              </>
+            )}
           </Button>
         </div>
       </div>

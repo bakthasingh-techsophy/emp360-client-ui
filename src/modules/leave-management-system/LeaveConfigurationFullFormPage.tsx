@@ -38,9 +38,8 @@ import { FormActionBar } from "@/components/common/FormActionBar/FormActionBar";
 import { MultiDatePicker } from "@/components/common/MultiDatePicker";
 import { ArrowLeft, Check, Users } from "lucide-react";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
-import {
-  LeaveConfigurationCarrier,
-} from "./types/leaveConfiguration.types";
+import { useCompany } from "@/contexts/CompanyContext";
+import { LeaveConfigurationCarrier } from "./types/leaveConfiguration.types";
 import { ManageEmployeesModal } from "./components/ManageEmployeesModal";
 
 // Simple form schema focusing on core required fields
@@ -55,7 +54,10 @@ const leaveConfigurationFormSchema = z.object({
     .min(2, "Code must be at least 2 characters")
     .max(20, "Code cannot exceed 10 characters")
     .toLowerCase()
-    .regex(/^[a-z0-9_]+$/, "Code must contain only lowercase letters, numbers, and underscores"),
+    .regex(
+      /^[a-z0-9_]+$/,
+      "Code must contain only lowercase letters, numbers, and underscores",
+    ),
   tagline: z
     .string()
     .min(1, "Tagline is required")
@@ -110,12 +112,6 @@ const leaveConfigurationFormSchema = z.object({
   maxRequestsPerYear: z.number().min(0).default(0),
   includeHolidaysWeekends: z.boolean().default(false),
   probationAllowed: z.boolean().default(false),
-
-  // Applicability
-  isForAllEmployeeTypes: z.boolean().default(true),
-  selectAllEmployeeTypes: z.boolean().default(true),
-  gender: z.enum(["male", "female", "other", "all"]).default("all"),
-  marriedStatus: z.enum(["married", "single", "all"]).default("all"),
 });
 
 type LeaveConfigFormData = z.infer<typeof leaveConfigurationFormSchema>;
@@ -132,6 +128,8 @@ export function LeaveConfigurationFormPage() {
     getLeaveConfigurationById,
     assignLeaveTypesToEmployees,
   } = useLeaveManagement();
+
+  const { activeCompany } = useCompany();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
@@ -171,67 +169,76 @@ export function LeaveConfigurationFormPage() {
       maxRequestsPerYear: 0,
       includeHolidaysWeekends: false,
       probationAllowed: false,
-      isForAllEmployeeTypes: true,
-      selectAllEmployeeTypes: true,
-      gender: "all",
-      marriedStatus: "all",
     },
   });
 
   // Load existing configuration for edit mode
   useEffect(() => {
+    let isMounted = true;
+
     const loadConfiguration = async () => {
       if (mode === "edit" && configId) {
         setLoadingConfig(true);
-        const config = await getLeaveConfigurationById(configId);
-        console.log("Loaded config for editing:", config); 
-        if (config) {
-          form.reset({
-            name: config.name || "",
-            code: config.code || "",
-            tagline: config.tagline || "",
-            description: config.description || "",
-            category: config.category as any,
-            allowedTypes: config.leaveProperties.allowedTypes as any,
-            allowCreditPolicy: config.allowCreditPolicy,
-            creditValue: config.creditPolicy?.value || 0,
-            creditFrequency:
-              (config.creditPolicy?.frequency as any) || "yearly",
-            creditMaxLimit: config.creditPolicy?.maxLimit || 0,
-            creditCustomDates: config.creditPolicy?.customDates || [],
-            allowMonetization: config.allowMonetization,
-            encashableCount: config.monetizationPolicy?.encashableCount || 0,
-            encashableLimit: config.monetizationPolicy?.encashableLimit || 0,
-            allowExpirePolicy: config.allowExpirePolicy,
-            carryForward: config.expirePolicy?.carryForward ?? true,
-            expireFrequency:
-              (config.expirePolicy?.expireFrequency as any) || "yearly",
-            afterCreditExpiryDays:
-              config.expirePolicy?.afterCreditExpiryDays || 0,
-            expireCustomDates: config.expirePolicy?.customDates || [],
-            monthType: config.calendarConfiguration.monthType as any,
-            startDay: config.calendarConfiguration.startDay,
-            yearType: config.calendarConfiguration.yearType as any,
-            startMonth: config.calendarConfiguration.startMonth,
-            allowRestrictions: config.allowRestrictions,
-            approvalRequired: config.restrictions?.approvalRequired || true,
-            maxConsecutiveDays: config.restrictions?.maxConsecutiveDays || 0,
-            minGapBetweenLeaves: config.restrictions?.minGapBetweenLeaves || 0,
-            maxRequestsPerYear: config.restrictions?.maxRequestsPerYear || 0,
-            includeHolidaysWeekends:
-              config.restrictions?.includeHolidaysWeekends || false,
-            probationAllowed:
-              config.restrictions?.probationRestrictions.allowed || false,
-            gender: config.gender as any,
-            marriedStatus: config.marriedStatus as any,
-          });
-          // Load employee IDs separately
-          setEmployeeIds(config.employeeIds || []);
+        try {
+          const config = await getLeaveConfigurationById(configId);
+          if (isMounted && config) {
+            console.log("Loaded config for editing:", config);
+            form.reset({
+              name: config.name || "",
+              code: config.code || "",
+              tagline: config.tagline || "",
+              description: config.description || "",
+              category: config.category as any,
+              allowedTypes: config.lmsProperties.allowedTypes as any,
+              allowCreditPolicy: config.allowCreditPolicy,
+              creditValue: config.creditPolicy?.value || 0,
+              creditFrequency: (config.creditPolicy?.frequency as any) || "yearly",
+              creditMaxLimit: config.creditPolicy?.maxLimit || 0,
+              creditCustomDates: config.creditPolicy?.customDates || [],
+              allowMonetization: config.allowMonetization,
+              encashableCount: config.monetizationPolicy?.encashableCount || 0,
+              encashableLimit: config.monetizationPolicy?.encashableLimit || 0,
+              allowExpirePolicy: config.allowExpirePolicy,
+              carryForward: config.expirePolicy?.carryForward ?? true,
+              expireFrequency:
+                (config.expirePolicy?.expireFrequency as any) || "yearly",
+              afterCreditExpiryDays:
+                config.expirePolicy?.afterCreditExpiryDays || 0,
+              expireCustomDates: config.expirePolicy?.customDates || [],
+              monthType: config.calendarConfiguration.monthType as any,
+              startDay: config.calendarConfiguration.startDay,
+              yearType: config.calendarConfiguration.yearType as any,
+              startMonth: config.calendarConfiguration.startMonth,
+              allowRestrictions: config.allowRestrictions,
+              approvalRequired: config.restrictions?.approvalRequired || true,
+              maxConsecutiveDays: config.restrictions?.maxConsecutiveDays || 0,
+              minGapBetweenLeaves: config.restrictions?.minGapBetweenLeaves || 0,
+              maxRequestsPerYear: config.restrictions?.maxRequestsPerYear || 0,
+              includeHolidaysWeekends:
+                config.restrictions?.includeHolidaysWeekends || false,
+              probationAllowed:
+                config.restrictions?.probationRestrictions.allowed || false,
+            });
+            // Load employee IDs separately
+            setEmployeeIds(config.employeeIds || []);
+            if (isMounted) {
+              setLoadingConfig(false);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load configuration:", error);
+          if (isMounted) {
+            setLoadingConfig(false);
+          }
         }
-        setLoadingConfig(false);
       }
     };
+
     loadConfiguration();
+
+    return () => {
+      isMounted = false;
+    };
   }, [mode, configId]);
 
   // Auto-enable/disable policies based on category
@@ -317,9 +324,7 @@ export function LeaveConfigurationFormPage() {
           tagline: data.tagline,
           description: data.description,
           category: data.category,
-          gender: data.gender,
-          marriedStatus: data.marriedStatus,
-          leaveProperties: {
+          lmsProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
           },
@@ -369,11 +374,12 @@ export function LeaveConfigurationFormPage() {
               }
             : null,
           employeeIds: employeeIds,
+          companyId: activeCompany?.id || "",
         };
 
         const newConfig = await createLeaveConfiguration(carrier);
         if (newConfig) {
-          navigate("/leave-settings");
+          navigate("/leave-holiday/leave-settings");
         }
       } else {
         // For update, use the update carrier with all fields
@@ -383,9 +389,7 @@ export function LeaveConfigurationFormPage() {
           tagline: data.tagline,
           description: data.description,
           category: data.category,
-          gender: data.gender,
-          marriedStatus: data.marriedStatus,
-          leaveProperties: {
+          lmsProperties: {
             allowedTypes: data.allowedTypes,
             numberOfDaysPerOneLeave: 1, // Default value
           },
@@ -435,11 +439,12 @@ export function LeaveConfigurationFormPage() {
               }
             : null,
           employeeIds: employeeIds,
+          companyId: activeCompany?.id || "",
         };
 
         const updated = await updateLeaveConfiguration(configId!, updates);
         if (updated) {
-          navigate("/leave-settings");
+          navigate("/leave-holiday/leave-settings");
         }
       }
     } catch (error) {
@@ -450,7 +455,7 @@ export function LeaveConfigurationFormPage() {
   };
 
   const handleCancel = () => {
-    navigate("/leave-settings");
+    navigate("/leave-holiday/leave-settings");
   };
 
   if (loadingConfig) {
@@ -527,10 +532,7 @@ export function LeaveConfigurationFormPage() {
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., Casual Leave"
-                        {...field}
-                      />
+                      <Input placeholder="e.g., Casual Leave" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -551,13 +553,16 @@ export function LeaveConfigurationFormPage() {
                         onChange={(e) => {
                           const value = e.target.value
                             .toLowerCase()
-                            .replace(/\s+/g, '_')
-                            .replace(/[^a-z0-9_]/g, '');
+                            .replace(/\s+/g, "_")
+                            .replace(/[^a-z0-9_]/g, "");
                           field.onChange(value);
                         }}
                       />
                     </FormControl>
-                    <FormDescription>Max 10 characters, lowercase, alphanumeric and underscores only</FormDescription>
+                    <FormDescription>
+                      Max 10 characters, lowercase, alphanumeric and underscores
+                      only
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -602,7 +607,9 @@ export function LeaveConfigurationFormPage() {
 
           {/* Configuration Reference */}
           <Card className="p-6">
-            <h3 className="text-base font-semibold mb-4">Configuration Reference</h3>
+            <h3 className="text-base font-semibold mb-4">
+              Configuration Reference
+            </h3>
 
             <div className="space-y-4">
               <FormField
@@ -630,68 +637,6 @@ export function LeaveConfigurationFormPage() {
                   </FormItem>
                 )}
               />
-            </div>
-          </Card>
-
-          {/* Applicability */}
-          <Card className="p-6">
-            <h3 className="text-base font-semibold mb-4">Applicability</h3>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="marriedStatus"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marriage Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="married">Married</SelectItem>
-                          <SelectItem value="single">Single</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
           </Card>
 
