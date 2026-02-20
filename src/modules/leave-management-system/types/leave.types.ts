@@ -80,6 +80,7 @@ export interface LeaveApplicationCarrier {
   toDate: string; // ISO instant
   leaveType: string; // Required - leave type code
   leaveCategory: string; // Required - fullDay / partialDay
+  partialDaySelection?: string; // firstHalf / secondHalf for partial day leaves
   reason: string; // Required
   fromTime?: string; // HH:MM a
   toTime?: string; // HH:MM a 

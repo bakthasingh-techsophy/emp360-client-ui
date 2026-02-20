@@ -108,6 +108,13 @@ export const allMenuItems: AppShellMenuItem[] = [
     category: 'Leave Management',
   },
   {
+    id: 'apply-leave',
+    to: '/apply-leave',
+    icon: Calendar,
+    label: 'Apply Leave',
+    category: 'Leave Management',
+  },
+  {
     id: 'holiday-management',
     to: '/holiday-management',
     icon: Calendar,

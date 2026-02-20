@@ -42,6 +42,7 @@ import { OvertimeManagement } from './modules/time-attendance/OvertimeManagement
 import { LeaveHoliday } from './modules/leave-management-system/LeaveHoliday';
 import { LeaveSettings } from './modules/leave-management-system/LeaveSettings';
 import { LeaveConfigurationFormPage } from './modules/leave-management-system/LeaveConfigurationFullFormPage';
+import { ApplyLeavePage } from './modules/leave-management-system/ApplyLeavePage';
 
 // Payroll & Compensation modules
 import { SalaryStructure } from './modules/payroll/SalaryStructure';
@@ -167,6 +168,7 @@ function App() {
                 <Route path="/attendance-management" element={<AttendanceManagement />} />
                 <Route path="/shift-schedule" element={<ShiftSchedule />} />
                 <Route path="/leave-holiday" element={<LeaveHoliday />} />
+                <Route path="/apply-leave" element={<ApplyLeavePage />} />
                 <Route path="/leave-settings" element={<LeaveSettings />} />
                 <Route path="/leave-configuration-form" element={<LeaveConfigurationFormPage />} />
                 <Route path="/holiday-management" element={

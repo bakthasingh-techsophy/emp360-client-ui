@@ -12,7 +12,6 @@ import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LeaveBalanceCards,
-  ApplyLeaveDialog,
   MyLeaveApplications,
   TeamLeaveApplications,
   MyLeaveCredits,
@@ -35,10 +34,6 @@ export function LeaveHoliday() {
     "leave-management-system",
     "lmss",
   );
-  const [applyLeaveOpen, setApplyLeaveOpen] = useState(false);
-  const [selectedLeaveTypeId, setSelectedLeaveTypeId] = useState<
-    string | undefined
-  >();
   const [applications, setApplications] = useState<LeaveApplication[]>(
     mockLeaveApplications,
   );
@@ -171,53 +166,6 @@ export function LeaveHoliday() {
     },
   ];
 
-  // Handle apply leave submission
-  const handleApplyLeave = (data: {
-    leaveTypeId: string;
-    startDate: Date;
-    endDate: Date;
-    numberOfDays: number;
-    reason: string;
-  }) => {
-    const leaveType = computedBalances.find(
-      (b) => b.leaveTypeId === data.leaveTypeId,
-    );
-
-    if (!leaveType) {
-      toast({
-        title: "Error",
-        description: "Invalid leave type selected",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Create new application
-    const newApplication: LeaveApplication = {
-      id: `LA-2026-${String(applications.length + 1).padStart(3, "0")}`,
-      employeeId: "EMP-001",
-      employeeName: "John Doe",
-      leaveTypeId: data.leaveTypeId,
-      leaveTypeName: leaveType.leaveTypeName,
-      leaveTypeCode: leaveType.leaveTypeCode,
-      startDate: data.startDate.toISOString().split("T")[0],
-      endDate: data.endDate.toISOString().split("T")[0],
-      numberOfDays: data.numberOfDays,
-      reason: data.reason,
-      status: "pending",
-      appliedOn: new Date().toISOString(),
-    };
-
-    // Add to applications list
-    setApplications([newApplication, ...applications]);
-    setApplyLeaveOpen(false);
-
-    toast({
-      title: "Leave Application Submitted",
-      description: `Your ${leaveType.leaveTypeName} request for ${data.numberOfDays} day(s) has been submitted for approval.`,
-    });
-  };
-
   // Handle cancel leave
   const handleCancelLeave = (id: string) => {
     setApplications(
@@ -286,10 +234,9 @@ export function LeaveHoliday() {
     });
   };
 
-  // Handle apply leave from card
+  // Handle apply leave from card - navigate to apply leave page with leave type
   const handleApplyLeaveFromCard = (leaveTypeId: string) => {
-    setSelectedLeaveTypeId(leaveTypeId);
-    setApplyLeaveOpen(true);
+    navigate(`/apply-leave?leaveTypeId=${encodeURIComponent(leaveTypeId)}`);
   };
 
   return (
@@ -312,7 +259,7 @@ export function LeaveHoliday() {
                 Settings
               </Button>
             )}
-            <Button onClick={() => setApplyLeaveOpen(true)}>
+            <Button onClick={() => navigate('/apply-leave')}>
               <Plus className="h-4 w-4 mr-2" />
               Apply Leave
             </Button>
@@ -390,19 +337,6 @@ export function LeaveHoliday() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <ApplyLeaveDialog
-        open={applyLeaveOpen}
-        onOpenChange={(open: boolean) => {
-          setApplyLeaveOpen(open);
-          if (!open) {
-            setSelectedLeaveTypeId(undefined);
-          }
-        }}
-        balances={computedBalances}
-        defaultLeaveTypeId={selectedLeaveTypeId}
-        onSubmit={handleApplyLeave}
-      />
     </PageLayout>
   );
 }

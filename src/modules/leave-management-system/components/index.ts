@@ -5,7 +5,6 @@
 
 export { LeaveBalanceCards } from './LeaveBalanceCards';
 export { AccruedCard, FlexibleCard, SpecialCard, MonetizableCard } from './LeaveCardTypes';
-export { ApplyLeaveDialog } from './ApplyLeaveDialog';
 export { MyLeaveApplications } from './MyLeaveApplications';
 export { TeamLeaveApplications } from './TeamLeaveApplications';
 export { TeamLeaveApplicationsTable } from './TeamLeaveApplicationsTable';
