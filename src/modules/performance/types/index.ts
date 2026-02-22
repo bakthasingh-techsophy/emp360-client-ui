@@ -7,18 +7,33 @@
 export type UserRole = "HR" | "REPORTING_MANAGER" | "EMPLOYEE";
 
 // ============= TEMPLATE TYPES =============
-export type ColumnEditableBy = "EMPLOYEE" | "MANAGER" | "HR" | "ALL";
 export type ColumnType = "TEXT" | "NUMBER" | "RATING" | "SELECT" | "CALCULATED";
 
 export interface TemplateColumn {
   id: string;
   name: string;
-  type: ColumnType;
-  editableBy: ColumnEditableBy[];
+  columnType: ColumnType;
+  type: string; // display type or label
   mandatory: boolean;
   ratingRange?: { min: number; max: number };
   options?: string[]; // for SELECT
   calculationFormula?: string; // for CALCULATED columns
+  displayOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * TemplateColumnCarrier - Carrier for creating/updating template columns
+ * Transfer object for template column operations without ID and system fields
+ */
+export interface TemplateColumnCarrier {
+  name: string; // required
+  type: string; // required - TEXT, NUMBER, SELECT, RATING, CALCULATED, etc.
+  mandatory: boolean; // required
+  ratingRange?: { min: number; max: number }; // for RATING type columns
+  options?: string[]; // for SELECT type columns
+  calculationFormula?: string; // for CALCULATED type columns
   displayOrder?: number;
 }
 
@@ -26,7 +41,18 @@ export interface TemplateRow {
   id: string;
   label: string;
   weightage?: number; // used in score calculation
-  isPrefilled?: boolean;
+  displayOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * TemplateRowCarrier - Carrier for creating/updating template rows
+ * Transfer object for template row operations without ID and system fields
+ */
+export interface TemplateRowCarrier {
+  label: string; // required
+  weightage?: number; // used in score calculation
   displayOrder?: number;
 }
 
@@ -34,13 +60,26 @@ export interface PerformanceTemplate {
   id: string;
   title: string;
   description: string;
-  department: string;
-  templateStatus: boolean; // true = open, false = closed
-  columns: TemplateColumn[];
-  rows: TemplateRow[];
+  departmentId: string;
+  columnIds: string[]; // don't add columns again
+  templateStatus: string; //open, hold, closed
+  rowIds: string[]; // don't add rows again
+  columns?: TemplateColumn[]; // optional - populated when full data is loaded/needed
+  rows?: TemplateRow[]; // optional - populated when full data is loaded/needed
   createdBy: string; // HR user ID
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * PerformanceTemplateCarrier - Carrier for creating/updating performance templates
+ * Transfer object for performance template operations without ID and system fields
+ */
+export interface PerformanceTemplateCarrier {
+  title: string; // required
+  description: string; // required
+  department: string; // required - department ID
+  templateStatus?: string; // optional - 'open', 'hold', 'closed'
 }
 
 // ============= REVIEW REQUEST TYPES =============

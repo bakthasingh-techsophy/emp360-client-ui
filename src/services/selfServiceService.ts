@@ -18,6 +18,7 @@ import UniversalSearchRequest from "@/types/search";
 import { SkillItem, SkillItemCarrier, GeneralDetailsSnapshot, JobDetailsSnapshot } from "@/modules/user-management/types/onboarding.types";
 import { EmployeeLeavesInformation } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 import { AbsenceApplication, AbsenceCarrier, Credit, CreditCarrier } from "@/modules/leave-management-system/types/leave.types";
+import { PerformanceTemplate } from "@/modules/performance/types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/self-service";
 
@@ -496,6 +497,35 @@ export const apiCancelCreditRequest = async (
 };
 
 /**
+ * Self-Service Get My Performance Templates
+ * GET /emp-user-management/v1/self-service/performance-templates
+ * 
+ * Employee retrieves all performance templates for their department.
+ * Username and realm are automatically extracted from JWT token.
+ * The department is determined from the user's JobDetails.
+ * Returns all templates where the department ID matches the employee's department.
+ * Requires SSV role.
+ * 
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (username and realm extracted from token)
+ * @returns Promise<ApiResponse<PerformanceTemplate[]>>
+ * 
+ * @example
+ * const response = await apiGetMyPerformanceTemplates('tenant-001', accessToken);
+ */
+export const apiGetMyPerformanceTemplates = async (
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<PerformanceTemplate[]>> => {
+  return apiRequest<PerformanceTemplate[]>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/performance-templates`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const selfServiceService = {
@@ -512,4 +542,5 @@ export const selfServiceService = {
   apiGetCredits,
   apiRequestCredits,
   apiCancelCreditRequest,
+  apiGetMyPerformanceTemplates,
 };

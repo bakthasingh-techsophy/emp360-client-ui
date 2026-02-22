@@ -29,6 +29,8 @@ import {
     PerformanceReviewRequest,
     ReviewCellValue,
     UserRole,
+    TemplateColumn,
+    TemplateRow,
 } from '../types';
 import {
     canEditColumn,
@@ -72,7 +74,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
     const canEdit = canEditRequest(request, currentUserRole, currentUserId);
     const maskValues = shouldMaskCellValues(currentUserRole);
-    const visibleColumns = getVisibleColumns(template.columns, currentUserRole, request.status);
+    const visibleColumns = getVisibleColumns(template.columns || [], currentUserRole, request.status);
 
     // ============= VALUE MANAGEMENT =============
     const updateValue = (rowId: string, columnId: string, value: string | number) => {
@@ -116,15 +118,15 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     };
 
     // ============= RENDER CELL INPUT =============
-    const renderCellInput = (row: typeof template.rows[0], column: typeof template.columns[0]) => {
+    const renderCellInput = (row: TemplateRow, column: TemplateColumn) => {
         const isEditable = canEdit && canEditColumn(column, currentUserRole);
         const value = getValue(row.id, column.id);
         const displayValue = maskValues ? (isEditable ? '' : '***') : value;
 
-        if (column.type === 'CALCULATED') {
+        if (column.columnType === 'CALCULATED') {
             // Calculate average for calculated columns
             const rowValues = Array.from(values.values())
-                .filter((v) => v.rowId === row.id && template.columns.find((c) => c.id === v.columnId)?.type === 'RATING')
+                .filter((v) => v.rowId === row.id && (template.columns || [])?.find((c: TemplateColumn) => c.id === v.columnId)?.columnType === 'RATING')
                 .map((v) => Number(v.value))
                 .filter((v) => !isNaN(v));
             const avg = rowValues.length > 0 ? (rowValues.reduce((a, b) => a + b, 0) / rowValues.length).toFixed(2) : '-';
@@ -143,7 +145,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             );
         }
 
-        switch (column.type) {
+        switch (column.columnType) {
             case 'RATING':
                 return (
                     <TableCell className="text-center">
@@ -266,7 +268,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                                     {visibleColumns.map((col) => (
                                         <TableHead key={col.id} className="text-center whitespace-nowrap">
                                             <div className="font-semibold">{col.name}</div>
-                                            {col.type === 'RATING' && col.ratingRange && (
+                                            {col.columnType === 'RATING' && col.ratingRange && (
                                                 <div className="text-xs text-muted-foreground">
                                                     {col.ratingRange.min}-{col.ratingRange.max}
                                                 </div>
@@ -282,7 +284,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {template.rows.map((row) => (
+                                {(template.rows || []).map((row) => (
                                     <TableRow key={row.id}>
                                         <TableCell className="font-medium">
                                             {row.label}

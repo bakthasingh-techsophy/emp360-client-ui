@@ -33,6 +33,7 @@ import {
   apiGetCredits,
   apiRequestCredits,
   apiCancelCreditRequest,
+  apiGetMyPerformanceTemplates,
 } from "@/services/selfServiceService";
 
 // Types
@@ -43,6 +44,7 @@ import {
   JobDetailsSnapshot,
 } from "@/modules/user-management/types/onboarding.types";
 import { AbsenceApplication, AbsenceCarrier, Credit, CreditCarrier } from "@/modules/leave-management-system/types/leave.types";
+import { PerformanceTemplate } from "@/modules/performance/types";
 import UniversalSearchRequest from "@/types/search";
 import Pagination from "@/types/pagination";
 
@@ -91,6 +93,9 @@ interface SelfServiceContextType {
     pageSize?: number,
   ) => Promise<Pagination<Credit> | null>;
   cancelCredit: (creditId: string) => Promise<boolean>;
+
+  // Performance Template Methods (Self-Service)
+  getMyPerformanceTemplates: () => Promise<PerformanceTemplate[] | null>;
 
   // Loading State
   isLoading: boolean;
@@ -350,6 +355,17 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== PERFORMANCE TEMPLATE METHODS (SELF-SERVICE) ====================
+
+  const getMyPerformanceTemplates = async (): Promise<PerformanceTemplate[] | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetMyPerformanceTemplates(tenant, accessToken),
+      "Get My Performance Templates",
+      "",
+    ) as Promise<PerformanceTemplate[] | null>;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: SelfServiceContextType = {
@@ -372,6 +388,9 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
     requestCredits,
     getCredits,
     cancelCredit,
+
+    // Performance Template Methods
+    getMyPerformanceTemplates,
 
     // Loading State
     isLoading,

@@ -14,6 +14,7 @@ import { HolidayProvider } from "./contexts/HolidayContext";
 import { LeaveManagementProvider } from "./contexts/LeaveManagementContext";
 import { ExpenseManagementProvider } from "./contexts/ExpenseManagementContext";
 import { SelfServiceProvider } from "./contexts/SelfServiceContext";
+import { PerformanceProvider } from "./contexts/PerformanceContext";
 
 // Auth modules
 import { Login } from "./modules/auth/Login";
@@ -62,6 +63,7 @@ import { OnboardingChecklists } from "./modules/recruitment/OnboardingChecklists
 // Performance & Development modules
 import { GoalsOKRs } from "./modules/performance/GoalsOKRs";
 import { PerformanceReviews } from "./modules/performance/PerformanceReviews";
+import { TemplateFormPage } from "./modules/performance/TemplateFormPage";
 import { Feedback360 } from "./modules/performance/Feedback360";
 import { TrainingLearning } from "./modules/performance/TrainingLearning";
 import { SkillsCareer } from "./modules/performance/SkillsCareer";
@@ -141,11 +143,12 @@ function App() {
                     <LeaveManagementProvider>
                       <ExpenseManagementProvider>
                         <SelfServiceProvider>
-                          <BrowserRouter>
-                            <Routes>
-                              {/* Public auth routes */}
-                              <Route path="/auth/login" element={<Login />} />
-                              <Route path="/auth/signup" element={<Signup />} />
+                          <PerformanceProvider>
+                            <BrowserRouter>
+                              <Routes>
+                                {/* Public auth routes */}
+                                <Route path="/auth/login" element={<Login />} />
+                                <Route path="/auth/signup" element={<Signup />} />
                               <Route
                                 path="/auth/forgot"
                                 element={<ForgotPassword />}
@@ -285,6 +288,18 @@ function App() {
                                 <Route
                                   path="/performance-reviews"
                                   element={<PerformanceReviews />}
+                                />
+                                <Route
+                                  path="/performance-reviews/templates"
+                                  element={<TemplateFormPage />}
+                                />
+                                <Route
+                                  path="/performance-reviews/templates/new"
+                                  element={<TemplateFormPage />}
+                                />
+                                <Route
+                                  path="/performance-reviews/templates/:id/edit"
+                                  element={<TemplateFormPage />}
                                 />
                                 <Route
                                   path="/360-feedback"
@@ -517,12 +532,13 @@ function App() {
                             </Routes>
                           </BrowserRouter>
                           <Toaster />
-                        </SelfServiceProvider>
-                      </ExpenseManagementProvider>
-                    </LeaveManagementProvider>
-                  </HolidayProvider>
-                </PolicyProvider>
-              </NotificationProvider>
+                        </PerformanceProvider>
+                      </SelfServiceProvider>
+                    </ExpenseManagementProvider>
+                  </LeaveManagementProvider>
+                </HolidayProvider>
+              </PolicyProvider>
+            </NotificationProvider>
             </UserManagementProvider>
           </CompanyProvider>
         </LayoutProvider>

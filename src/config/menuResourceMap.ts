@@ -39,11 +39,11 @@ export const menuResourceMap: Record<string, string> = {
   'onboarding': 'recruitment',
 
   // Performance & Development
-  'goals-okrs': 'performance',
-  'performance-reviews': 'performance',
-  '360-feedback': 'performance',
-  'training-learning': 'performance',
-  'skills-career': 'performance',
+  'goals-okrs': 'performance-reviews',
+  'performance-reviews': 'performance-reviews',
+  '360-feedback': 'performance-reviews',
+  'training-learning': 'performance-reviews',
+  'skills-career': 'performance-reviews',
 
   // Employee & Manager Self Service
   'my-profile': 'self-service',
