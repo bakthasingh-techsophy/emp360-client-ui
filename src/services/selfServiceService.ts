@@ -16,8 +16,8 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import { SkillItem, SkillItemCarrier, GeneralDetailsSnapshot, JobDetailsSnapshot } from "@/modules/user-management/types/onboarding.types";
-import { EmployeeLeavesInformation, AbsenceCarrier } from "@/modules/leave-management-system/types/leaveConfiguration.types";
-import { AbsenceApplication } from "@/modules/leave-management-system/types/leave.types";
+import { EmployeeLeavesInformation } from "@/modules/leave-management-system/types/leaveConfiguration.types";
+import { AbsenceApplication, AbsenceCarrier, Credit, CreditCarrier } from "@/modules/leave-management-system/types/leave.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/self-service";
 
@@ -303,6 +303,199 @@ export const apiRaiseAbsenceRequest = async (
 };
 
 /**
+ * Self-Service Get Leave Applications
+ * POST /emp-user-management/v1/self-service/leaves/applications
+ * 
+ * Employee retrieves their own absence/leave applications with search and pagination.
+ * EmployeeId is automatically extracted from JWT token.
+ * User can only see their own leave applications.
+ * 
+ * Supports:
+ * - Search by absence type, reason
+ * - Filtering by status, absence type, and other criteria
+ * - Sorting and pagination
+ * 
+ * Requires SSV (Self-Service Viewer) role.
+ * 
+ * @param searchRequest - UniversalSearchRequest with filters and search text
+ * @param page - Page number (0-indexed)
+ * @param pageSize - Number of results per page
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<Pagination<AbsenceApplication>>>
+ * 
+ * @example
+ * const response = await apiGetLeaveApplicationsSelfService({
+ *   searchText: '',
+ *   searchFields: ['absenceType', 'reason'],
+ *   filters: { and: { status: 'APPROVED' } },
+ *   sort: { fromDate: -1 }
+ * }, 0, 20, 'tenant-001', accessToken);
+ */
+export const apiGetLeaveApplicationsSelfService = async (
+  searchRequest: UniversalSearchRequest,
+  page: number = 0,
+  pageSize: number = 20,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Pagination<AbsenceApplication>>> => {
+  return apiRequest<Pagination<AbsenceApplication>>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/leaves/applications?page=${page}&size=${pageSize}`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
+ * Self-Service Cancel Absence Application
+ * DELETE /emp-user-management/v1/self-service/leaves/applications/{applicationId}
+ * 
+ * Employee cancels their own pending absence/leave application.
+ * EmployeeId is automatically extracted from JWT token.
+ * Username and realm are automatically extracted from JWT token.
+ * 
+ * Constraints:
+ * - Only applications with PENDING status can be cancelled
+ * - Employee can only cancel their own applications
+ * - Requires SSV (Self-Service Viewer) role
+ * 
+ * @param applicationId - Absence application ID to cancel
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiCancelAbsenceApplicationSelfService('APP-123', 'tenant-001', accessToken);
+ */
+export const apiCancelAbsenceApplicationSelfService = async (
+  applicationId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/leaves/applications/${applicationId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
+ * Self-Service Get Credits
+ * POST /emp-user-management/v1/self-service/credits
+ * 
+ * Employee retrieves their own credits with search and pagination.
+ * Username and realm are automatically extracted from JWT token.
+ * User can only see their own credits.
+ * 
+ * @param searchRequest - Search request with filters and sort
+ * @param page - Page number (0-indexed)
+ * @param pageSize - Page size (default 20)
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<Pagination<Credit>>>
+ * 
+ * @example
+ * const searchRequest = {
+ *   searchText: "",
+ *   searchFields: ["creditType", "reason"],
+ *   filters: { and: { status: "PENDING" } },
+ *   sort: { createdAt: -1 }
+ * };
+ * const response = await apiGetCredits(searchRequest, 0, 20, 'tenant-001', accessToken);
+ */
+export const apiGetCredits = async (
+  searchRequest: UniversalSearchRequest,
+  page: number = 0,
+  pageSize: number = 20,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Pagination<Credit>>> => {
+  return apiRequest<Pagination<Credit>>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/credits?page=${page}&size=${pageSize}`,
+    tenant,
+    accessToken,
+    body: searchRequest,
+  });
+};
+
+/**
+ * Self-Service Request Credits
+ * POST /emp-user-management/v1/self-service/credits/request
+ * 
+ * Employee requests credits (comp-off, special leave, etc.).
+ * EmployeeId is automatically extracted from JWT token.
+ * Username and realm are automatically extracted from JWT token.
+ * Credits are created with pending status for approval.
+ * 
+ * Requires SSV (Self-Service Viewer) role.
+ * 
+ * @param carrier - CreditCarrier with credit request information
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<Credit>>
+ * 
+ * @example
+ * const response = await apiRequestCredits({
+ *   creditType: 'COMP_OFF',
+ *   credits: 2.0,
+ *   fromDate: '2026-02-21T00:00:00.000Z',
+ *   toDate: '2026-12-31T23:59:59.999Z',
+ *   expiryOn: '2027-02-20T23:59:59.999Z',
+ *   reason: 'Comp-off awarded for weekend work',
+ *   createdAt: new Date().toISOString()
+ * }, 'tenant-001', accessToken);
+ */
+export const apiRequestCredits = async (
+  carrier: CreditCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<Credit>> => {
+  return apiRequest<Credit>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/credits/request`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Self-Service Cancel Credit Request
+ * DELETE /emp-user-management/v1/self-service/credits/{creditId}
+ * 
+ * Employee cancels their own pending credit request.
+ * Only credit requests with pending status can be cancelled.
+ * Username and realm are automatically extracted from JWT token.
+ * Employee can only cancel their own credit requests.
+ * 
+ * Requires SSV (Self-Service Viewer) role.
+ * 
+ * @param creditId - Credit request ID to cancel
+ * @param tenant - Tenant ID
+ * @param accessToken - Access token with JWT (employeeId extracted from token)
+ * @returns Promise<ApiResponse<void>>
+ * 
+ * @example
+ * const response = await apiCancelCreditRequest('CREDIT-123', 'tenant-001', accessToken);
+ */
+export const apiCancelCreditRequest = async (
+  creditId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "DELETE",
+    endpoint: `${BASE_ENDPOINT}/credits/${creditId}`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as default object for easier importing
  */
 export const selfServiceService = {
@@ -314,4 +507,9 @@ export const selfServiceService = {
   apiGetJobDetailsSnapshotSelfService,
   apiGetEmployeeLeavesInformation,
   apiRaiseAbsenceRequest,
+  apiGetLeaveApplicationsSelfService,
+  apiCancelAbsenceApplicationSelfService,
+  apiGetCredits,
+  apiRequestCredits,
+  apiCancelCreditRequest,
 };

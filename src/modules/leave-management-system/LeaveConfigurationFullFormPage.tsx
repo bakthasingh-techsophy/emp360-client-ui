@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Accordion,
   AccordionContent,
@@ -39,7 +40,8 @@ import { MultiDatePicker } from "@/components/common/MultiDatePicker";
 import { ArrowLeft, Check, Users } from "lucide-react";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import { useCompany } from "@/contexts/CompanyContext";
-import { LeaveConfigurationCarrier } from "./types/leaveConfiguration.types";
+import { useUserManagement } from "@/contexts/UserManagementContext";
+import { LMSConfigurationCarrier } from "./types/leaveConfiguration.types";
 import { ManageEmployeesModal } from "./components/ManageEmployeesModal";
 
 // Simple form schema focusing on core required fields
@@ -112,6 +114,11 @@ const leaveConfigurationFormSchema = z.object({
   maxRequestsPerYear: z.number().min(0).default(0),
   includeHolidaysWeekends: z.boolean().default(false),
   probationAllowed: z.boolean().default(false),
+
+  // Applicable Categories
+  gender: z.enum(["male", "female", "other", "all"]).default("all"),
+  marriedStatus: z.enum(["married", "single", "all"]).default("all"),
+  employeeTypeIds: z.array(z.string()).default([]),
 });
 
 type LeaveConfigFormData = z.infer<typeof leaveConfigurationFormSchema>;
@@ -130,11 +137,15 @@ export function LeaveConfigurationFormPage() {
   } = useLeaveManagement();
 
   const { activeCompany } = useCompany();
+  const { refreshEmployeeTypes } = useUserManagement();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [manageEmployeesOpen, setManageEmployeesOpen] = useState(false);
   const [employeeIds, setEmployeeIds] = useState<string[]>([]);
+  const [employeeTypes, setEmployeeTypes] = useState<
+    Array<{ id: string; employeeType: string }>
+  >([]);
 
   const form = useForm<LeaveConfigFormData>({
     resolver: zodResolver(leaveConfigurationFormSchema),
@@ -169,77 +180,90 @@ export function LeaveConfigurationFormPage() {
       maxRequestsPerYear: 0,
       includeHolidaysWeekends: false,
       probationAllowed: false,
+      gender: "all",
+      marriedStatus: "all",
+      employeeTypeIds: [],
     },
   });
 
   // Load existing configuration for edit mode
   useEffect(() => {
-    let isMounted = true;
-
     const loadConfiguration = async () => {
       if (mode === "edit" && configId) {
         setLoadingConfig(true);
-        try {
-          const config = await getLeaveConfigurationById(configId);
-          if (isMounted && config) {
-            console.log("Loaded config for editing:", config);
-            form.reset({
-              name: config.name || "",
-              code: config.code || "",
-              tagline: config.tagline || "",
-              description: config.description || "",
-              category: config.category as any,
-              allowedTypes: config.lmsProperties.allowedTypes as any,
-              allowCreditPolicy: config.allowCreditPolicy,
-              creditValue: config.creditPolicy?.value || 0,
-              creditFrequency: (config.creditPolicy?.frequency as any) || "yearly",
-              creditMaxLimit: config.creditPolicy?.maxLimit || 0,
-              creditCustomDates: config.creditPolicy?.customDates || [],
-              allowMonetization: config.allowMonetization,
-              encashableCount: config.monetizationPolicy?.encashableCount || 0,
-              encashableLimit: config.monetizationPolicy?.encashableLimit || 0,
-              allowExpirePolicy: config.allowExpirePolicy,
-              carryForward: config.expirePolicy?.carryForward ?? true,
-              expireFrequency:
-                (config.expirePolicy?.expireFrequency as any) || "yearly",
-              afterCreditExpiryDays:
-                config.expirePolicy?.afterCreditExpiryDays || 0,
-              expireCustomDates: config.expirePolicy?.customDates || [],
-              monthType: config.calendarConfiguration.monthType as any,
-              startDay: config.calendarConfiguration.startDay,
-              yearType: config.calendarConfiguration.yearType as any,
-              startMonth: config.calendarConfiguration.startMonth,
-              allowRestrictions: config.allowRestrictions,
-              approvalRequired: config.restrictions?.approvalRequired || true,
-              maxConsecutiveDays: config.restrictions?.maxConsecutiveDays || 0,
-              minGapBetweenLeaves: config.restrictions?.minGapBetweenLeaves || 0,
-              maxRequestsPerYear: config.restrictions?.maxRequestsPerYear || 0,
-              includeHolidaysWeekends:
-                config.restrictions?.includeHolidaysWeekends || false,
-              probationAllowed:
-                config.restrictions?.probationRestrictions.allowed || false,
-            });
-            // Load employee IDs separately
-            setEmployeeIds(config.employeeIds || []);
-            if (isMounted) {
-              setLoadingConfig(false);
-            }
-          }
-        } catch (error) {
-          console.error("Failed to load configuration:", error);
-          if (isMounted) {
-            setLoadingConfig(false);
-          }
+        const config = await getLeaveConfigurationById(configId);
+
+        if (config) {
+          const allowedTypes = config.lmsProperties?.allowedTypes || [
+            "fullDay",
+          ];
+
+          form.reset({
+            name: config.name || "",
+            code: config.code || "",
+            tagline: config.tagline || "",
+            description: config.description || "",
+            category: config.category as any,
+            allowedTypes: allowedTypes as any,
+            allowCreditPolicy: config.allowCreditPolicy ?? true,
+            creditValue: config.creditPolicy?.value || 0,
+            creditFrequency:
+              (config.creditPolicy?.frequency as any) || "yearly",
+            creditMaxLimit: config.creditPolicy?.maxLimit || 0,
+            creditCustomDates: config.creditPolicy?.customDates || [],
+            allowMonetization: config.allowMonetization ?? false,
+            encashableCount: config.monetizationPolicy?.encashableCount || 0,
+            encashableLimit: config.monetizationPolicy?.encashableLimit || 0,
+            allowExpirePolicy: config.allowExpirePolicy ?? false,
+            carryForward: config.expirePolicy?.carryForward ?? true,
+            expireFrequency:
+              (config.expirePolicy?.expireFrequency as any) || "yearly",
+            afterCreditExpiryDays:
+              config.expirePolicy?.afterCreditExpiryDays || 0,
+            expireCustomDates: config.expirePolicy?.customDates || [],
+            monthType:
+              (config.calendarConfiguration?.monthType as any) || "standard",
+            startDay: config.calendarConfiguration?.startDay || 1,
+            yearType:
+              (config.calendarConfiguration?.yearType as any) || "standard",
+            startMonth: config.calendarConfiguration?.startMonth || 1,
+            allowRestrictions: config.allowRestrictions ?? true,
+            approvalRequired: config.restrictions?.approvalRequired ?? true,
+            maxConsecutiveDays: config.restrictions?.maxConsecutiveDays || 0,
+            minGapBetweenLeaves: config.restrictions?.minGapBetweenLeaves || 0,
+            maxRequestsPerYear: config.restrictions?.maxRequestsPerYear || 0,
+            includeHolidaysWeekends:
+              config.restrictions?.includeHolidaysWeekends ?? false,
+            probationAllowed:
+              config.restrictions?.probationRestrictions?.allowed ?? false,
+            gender: (config.applicableCategories?.gender as any) || "all",
+            marriedStatus:
+              (config.applicableCategories?.marriedStatus as any) || "all",
+            employeeTypeIds:
+              config.applicableCategories?.employeeTypeIds || [],
+          });
+
+          setEmployeeIds(config.employeeIds || []);
         }
+
+        setLoadingConfig(false);
       }
     };
 
     loadConfiguration();
-
-    return () => {
-      isMounted = false;
-    };
   }, [mode, configId]);
+
+  // Fetch employee types on mount
+  useEffect(() => {
+    const fetchEmployeeTypes = async () => {
+      const result = await refreshEmployeeTypes({}, 0, 100);
+      if (result?.content) {
+        setEmployeeTypes(result.content);
+      }
+    };
+
+    fetchEmployeeTypes();
+  }, []);
 
   // Auto-enable/disable policies based on category
   useEffect(() => {
@@ -318,7 +342,7 @@ export function LeaveConfigurationFormPage() {
 
     try {
       if (mode === "create") {
-        const carrier: LeaveConfigurationCarrier = {
+        const carrier: LMSConfigurationCarrier = {
           name: data.name,
           code: data.code,
           tagline: data.tagline,
@@ -373,6 +397,11 @@ export function LeaveConfigurationFormPage() {
                 },
               }
             : null,
+          applicableCategories: {
+            gender: data.gender,
+            marriedStatus: data.marriedStatus,
+            employeeTypeIds: data.employeeTypeIds,
+          },
           employeeIds: employeeIds,
           companyId: activeCompany?.id || "",
         };
@@ -438,6 +467,11 @@ export function LeaveConfigurationFormPage() {
                 },
               }
             : null,
+          applicableCategories: {
+            gender: data.gender,
+            marriedStatus: data.marriedStatus,
+            employeeTypeIds: data.employeeTypeIds,
+          },
           employeeIds: employeeIds,
           companyId: activeCompany?.id || "",
         };
@@ -1421,6 +1455,208 @@ export function LeaveConfigurationFormPage() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          </Card>
+
+          {/* Applicable Categories */}
+          <Card className="p-6">
+            <h3 className="text-base font-semibold mb-4">
+              Applicable Categories
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Define which employee categories are eligible for this leave type
+            </p>
+
+            <div className="space-y-6">
+              {/* Gender */}
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender Applicability</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="gender-all" />
+                          <label
+                            htmlFor="gender-all"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            All
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="male" id="gender-male" />
+                          <label
+                            htmlFor="gender-male"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            Male
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="female" id="gender-female" />
+                          <label
+                            htmlFor="gender-female"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            Female
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="other" id="gender-other" />
+                          <label
+                            htmlFor="gender-other"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            Other
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Marital Status */}
+              <FormField
+                control={form.control}
+                name="marriedStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marital Status Applicability</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="all"
+                            id="marital-all"
+                          />
+                          <label
+                            htmlFor="marital-all"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            All
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="married"
+                            id="marital-married"
+                          />
+                          <label
+                            htmlFor="marital-married"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            Married
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="single"
+                            id="marital-single"
+                          />
+                          <label
+                            htmlFor="marital-single"
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            Single
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Employee Types */}
+              <FormField
+                control={form.control}
+                name="employeeTypeIds"
+                render={() => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <FormLabel>Employee Types</FormLabel>
+                        <FormDescription>
+                          Select which employee types are eligible for this leave
+                        </FormDescription>
+                      </div>
+                      {employeeTypes.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentIds = form.getValues("employeeTypeIds") || [];
+                            const allIds = employeeTypes.map((type) => type.id);
+                            
+                            // If all are selected, deselect all; otherwise select all
+                            if (currentIds.length === allIds.length) {
+                              form.setValue("employeeTypeIds", []);
+                            } else {
+                              form.setValue("employeeTypeIds", allIds);
+                            }
+                          }}
+                        >
+                          {(form.watch("employeeTypeIds") || []).length === employeeTypes.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-3 p-3 border rounded-md mt-2">
+                      {employeeTypes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No employee types available
+                        </p>
+                      ) : (
+                        employeeTypes.map((type) => (
+                          <FormField
+                            key={type.id}
+                            control={form.control}
+                            name="employeeTypeIds"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(type.id)}
+                                    onCheckedChange={(checked) => {
+                                      const current = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...current, type.id]);
+                                      } else {
+                                        field.onChange(
+                                          current.filter((id) => id !== type.id)
+                                        );
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">
+                                  {type.employeeType}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </Card>
 
           {/* Form Action Bar */}

@@ -1,110 +1,491 @@
 /**
  * My Leave Applications Component
- * Employee's personal leave applications with toolbar and table
+ * Employee's personal leave applications with toolbar and DataTable
+ *
+ * Uses DataTable from @/components/common/DataTable for advanced table features
+ * including pagination, sorting, filtering, and row selection.
  */
 
-import { useState } from 'react';
-import { GenericToolbar } from '@/components/GenericToolbar';
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useSelfService } from "@/contexts/SelfServiceContext";
+import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
+import { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/common/DataTable/DataTable";
+import { DataTableRef } from "@/components/common/DataTable/types";
+import { GenericToolbar } from "@/components/GenericToolbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AbsenceApplication } from "../types/leave.types";
+import UniversalSearchRequest, {
+  Filters,
+  FiltersMap,
+  SortMap,
+} from "@/types/search";
+import { format } from "date-fns";
+import { X } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+  AvailableFilter,
+  ActiveFilter,
+} from "@/components/GenericToolbar/types";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { LeaveApplication } from '../types/leave.types';
-import { format } from 'date-fns';
-import { MoreVertical, Eye, X } from 'lucide-react';
-import { AvailableFilter, ActiveFilter } from '@/components/GenericToolbar/types';
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface MyLeaveApplicationsProps {
-  applications: LeaveApplication[];
-  onCancel: (id: string) => void;
-  onViewDetails: (application: LeaveApplication) => void;
 }
 
-export function MyLeaveApplications({ 
-  applications, 
-  onCancel,
-  onViewDetails 
-}: MyLeaveApplicationsProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+export function MyLeaveApplications({}: MyLeaveApplicationsProps) {
+  const { getLeaveApplicationsSelfService, cancelAbsenceApplication, isLoading } = useSelfService();
+  const { searchLeaveConfigurations } = useLeaveManagement();
+  const tableRef = useRef<DataTableRef>(null);
+
+  // Table state
+  const [applications, setApplications] = useState<AbsenceApplication[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Leave configuration state for mapping absence type codes to names
+  const [absenceTypeMap, setAbsenceTypeMap] = useState<Record<string, string>>(
+    {},
+  );
+
+  // Column visibility state - default columns to show
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    "id",
+    "absenceType",
+    "duration",
+    "timeRange",
+    "status",
+    "lopDays",
+    "createdAt",
+    "approvedOn",
+    "actions",
+  ]);
+
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchLeaveApplications = useCallback(
+    async (page: number, size: number) => {
+      // Convert activeFilters to FiltersMap
+      const filtersMap: FiltersMap = {};
+
+      activeFilters.forEach((filter) => {
+        if (filter.value) {
+          filtersMap[filter.id] = filter.value;
+        }
+      });
+
+      // Build Filters object with 'and' clause (optional)
+      const filters: Filters | undefined =
+        Object.keys(filtersMap).length > 0 ? { and: filtersMap } : undefined;
+
+      // Build SortMap with proper typing
+      const sort: SortMap = {
+        createdAt: -1 as const,
+      };
+
+      // Construct UniversalSearchRequest with proper typing
+      const searchRequest: UniversalSearchRequest = {
+        searchText: searchQuery || undefined,
+        searchFields: ["absenceType", "reason"],
+        ...(filters && { filters }),
+        sort,
+      };
+
+      const result = await getLeaveApplicationsSelfService(
+        searchRequest,
+        page,
+        size,
+      );
+
+      if (result) {
+        setApplications(result.content || []);
+        setTotalPages(result.totalPages || 0);
+        setTotalItems(result.totalElements || 0);
+      }
+    },
+    [searchQuery, activeFilters],
+  );
+
+  // Reset pagination when search/filters change
+  useEffect(() => {
+    setPageIndex(0);
+  }, [searchQuery, activeFilters]);
+
+  // Fetch applications when pagination or search/filters change
+  useEffect(() => {
+    fetchLeaveApplications(pageIndex, pageSize);
+  }, [pageIndex, pageSize, searchQuery, activeFilters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch leave configurations on mount to build absence type map
+  const fetchLeaveConfigurations = async () => {
+    const searchRequest: UniversalSearchRequest = {
+      searchText: undefined,
+      searchFields: [],
+    };
+
+    const result = await searchLeaveConfigurations(searchRequest, 0, 100);
+
+    if (result && result.content) {
+      // Build map from absence type code to configuration name
+      const typeMap: Record<string, string> = {};
+      result.content.forEach((config) => {
+        typeMap[config.code] = config.name;
+      });
+      setAbsenceTypeMap(typeMap);
+    }
+  };
+  useEffect(() => {
+    fetchLeaveConfigurations();
+  }, []);
 
   // Filter fields
   const filterFields: AvailableFilter[] = [
     {
-      id: 'status',
-      label: 'Status',
-      type: 'select',
+      id: "status",
+      label: "Status",
+      type: "select",
       options: [
-        { label: 'All', value: '' },
-        { label: 'Pending', value: 'pending' },
-        { label: 'Approved', value: 'approved' },
-        { label: 'Rejected', value: 'rejected' },
-        { label: 'Cancelled', value: 'cancelled' },
+        { label: "All", value: "" },
+        { label: "Pending", value: "PENDING" },
+        { label: "Approved", value: "APPROVED" },
+        { label: "Rejected", value: "REJECTED" },
+        { label: "Cancelled", value: "CANCELLED" },
       ],
     },
     {
-      id: 'leaveType',
-      label: 'Leave Type',
-      type: 'select',
+      id: "absenceType",
+      label: "Leave Type",
+      type: "select",
       options: [
-        { label: 'All', value: '' },
-        { label: 'Annual Leave', value: 'Annual Leave' },
-        { label: 'Sick Leave', value: 'Sick Leave' },
-        { label: 'Casual Leave', value: 'Casual Leave' },
-        { label: 'Compensatory Off', value: 'Compensatory Off' },
+        { label: "All", value: "" },
+        { label: "Annual Leave", value: "AL" },
+        { label: "Sick Leave", value: "SL" },
+        { label: "Casual Leave", value: "CL" },
+        { label: "Compensatory Off", value: "CO" },
       ],
     },
   ];
 
-  // Convert activeFilters to record
-  const filters = activeFilters.reduce((acc, filter) => {
-    acc[filter.id] = filter.value;
-    return acc;
-  }, {} as Record<string, unknown>);
-
-  // Apply filters
-  const filteredApplications = applications.filter(application => {
-    if (searchQuery && 
-        !application.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !application.leaveTypeName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !application.reason.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (filters.status && application.status !== filters.status) {
-      return false;
-    }
-    if (filters.leaveType && application.leaveTypeName !== filters.leaveType) {
-      return false;
-    }
-    return true;
-  });
-
   const getStatusBadge = (status: string) => {
+    const statusLower = status.toLowerCase();
     return (
-      <Badge variant={status === 'approved' ? 'default' : status === 'rejected' ? 'destructive' : 'secondary'}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge
+        variant={
+          statusLower === "approved"
+            ? "default"
+            : statusLower === "rejected"
+              ? "destructive"
+              : "secondary"
+        }
+      >
+        {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
       </Badge>
     );
   };
 
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy');
+    return format(new Date(dateString), "MMM dd, yyyy");
   };
 
   const handleExport = () => {
-    console.log('Export applications');
+    console.log("Export applications");
+  };
+  const handleCancelLeave = async (id: string) => {
+    // Call the cancel API from context
+    const success = await cancelAbsenceApplication(id);
+    if (success) {
+      // Refresh the list after successful cancellation
+      await fetchLeaveApplications(pageIndex, pageSize);
+    }
+  };
+
+  // Define all available columns with labels for column configuration
+  const allColumnsConfig = [
+    { id: "id", label: "Leave ID" },
+    { id: "absenceType", label: "Leave Type" },
+    { id: "duration", label: "Duration" },
+    { id: "timeRange", label: "Time Range" },
+    { id: "status", label: "Status" },
+    { id: "lopDays", label: "LOP Days" },
+    { id: "createdAt", label: "Applied On" },
+    { id: "approvedOn", label: "Approved On" },
+    { id: "fromDate", label: "Start Date" },
+    { id: "toDate", label: "End Date" },
+    { id: "actions", label: "Actions" },
+  ];
+
+  // Define table columns using ColumnDef from @tanstack/react-table
+  const columns: ColumnDef<AbsenceApplication>[] = useMemo(
+    () => [
+      {
+        id: "id",
+        header: () => <div className="text-center">Leave ID</div>,
+        accessorKey: "id",
+        cell: ({ row }) => (
+          <div className="text-center">
+            <span className="font-semibold whitespace-nowrap">
+              {row.original.id}
+            </span>
+          </div>
+        ),
+        size: 140,
+      },
+      {
+        id: "absenceType",
+        header: () => <div className="text-center">Leave Type</div>,
+        accessorKey: "absenceType",
+        cell: ({ row }) => {
+          const code = row.original.absenceType;
+          const name = absenceTypeMap[code] || code;
+          const shouldShowTooltip = name.length > 20;
+          return (
+            <div className="flex flex-col gap-1 items-center justify-center">
+              {shouldShowTooltip ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="font-medium truncate max-w-xs cursor-help">
+                        {name}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <span className="font-medium">{name}</span>
+              )}
+            </div>
+          );
+        },
+        size: 180,
+      },
+      {
+        id: "duration",
+        header: () => <div className="text-center">Duration</div>,
+        cell: ({ row }) => {
+          const fromDate = formatDate(row.original.fromDate);
+          const toDate = formatDate(row.original.toDate);
+          const totalDays = row.original.totalDays || 0;
+          const dateRangeText = `${fromDate} to ${toDate}`;
+          return (
+            <div className="flex flex-col items-center justify-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 cursor-help">
+                      <span className="text-sm truncate max-w-xs">
+                        {fromDate}
+                      </span>
+                      <span className="text-xs text-muted-foreground">to</span>
+                      <span className="text-sm truncate max-w-xs">{toDate}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{dateRangeText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="text-xs text-muted-foreground">
+                ({totalDays} {totalDays === 1 ? "day" : "days"})
+              </span>
+            </div>
+          );
+        },
+        enableSorting: false,
+        size: 280,
+      },
+      {
+        id: "timeRange",
+        header: () => <div className="text-center">Time Range</div>,
+        accessorKey: "timeRange",
+        cell: ({ row }) => {
+          const timeRange = row.original.timeRange;
+          if (!timeRange)
+            return (
+              <div className="text-center">
+                <span className="text-muted-foreground">-</span>
+              </div>
+            );
+
+          const rangeDisplay =
+            timeRange === "fullDay"
+              ? "Full Day"
+              : timeRange === "firstHalf"
+                ? "First Half"
+                : timeRange === "secondHalf"
+                  ? "Second Half"
+                  : timeRange;
+
+          return (
+            <div className="flex justify-center">
+              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                {rangeDisplay}
+              </Badge>
+            </div>
+          );
+        },
+        size: 150,
+      },
+      {
+        id: "status",
+        header: () => <div className="text-center">Status</div>,
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <div className="text-center whitespace-nowrap">
+            {getStatusBadge(row.original.status)}
+          </div>
+        ),
+        size: 140,
+      },
+      {
+        id: "lopDays",
+        header: () => <div className="text-center">LOP Days</div>,
+        accessorKey: "lopDays",
+        cell: ({ row }) => {
+          const lopDays = row.original.lopDays;
+          return (
+            <div className="text-center">
+              <span className="font-semibold whitespace-nowrap">
+                {lopDays || 0}
+              </span>
+            </div>
+          );
+        },
+        size: 120,
+      },
+      {
+        id: "createdAt",
+        header: () => <div className="text-center">Applied On</div>,
+        accessorKey: "createdAt",
+        cell: ({ row }) => (
+          <div className="text-center">
+            <span className="whitespace-nowrap">
+              {format(new Date(row.original.createdAt), "MMM dd, yyyy")}
+            </span>
+          </div>
+        ),
+        size: 150,
+      },
+      {
+        id: "approvedOn",
+        header: () => <div className="text-center">Approved On</div>,
+        accessorKey: "approvedOn",
+        cell: ({ row }) => {
+          const approvedOn = row.original.approvedOn;
+          return (
+            <div className="text-center">
+              {approvedOn ? (
+                <span className="whitespace-nowrap">
+                  {format(new Date(approvedOn), "MMM dd, yyyy")}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </div>
+          );
+        },
+        size: 150,
+      },
+      {
+        id: "fromDate",
+        header: () => <div className="text-center">Start Date</div>,
+        accessorKey: "fromDate",
+        cell: ({ row }) => (
+          <div className="text-center">
+            <span className="whitespace-nowrap">
+              {formatDate(row.original.fromDate)}
+            </span>
+          </div>
+        ),
+        size: 140,
+        enableHiding: true,
+      },
+      {
+        id: "toDate",
+        header: () => <div className="text-center">End Date</div>,
+        accessorKey: "toDate",
+        cell: ({ row }) => (
+          <div className="text-center">
+            <span className="whitespace-nowrap">
+              {formatDate(row.original.toDate)}
+            </span>
+          </div>
+        ),
+        size: 140,
+        enableHiding: true,
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-center">Actions</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center gap-2">
+            {row.original.status.toUpperCase() === "PENDING" && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleCancelLeave(row.original.id)}
+                className="text-xs"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
+            )}
+          </div>
+        ),
+        size: 120,
+      },
+    ],
+    [absenceTypeMap],
+  );
+
+  // Filter columns based on visibleColumns configuration
+  const filteredColumns = useMemo(
+    () =>
+      columns.filter((column: any) => {
+        // Always include actions column
+        if (column.id === "actions") {
+          return true;
+        }
+        // For other columns, check if they're in visibleColumns
+        if (column.id) {
+          return visibleColumns.includes(column.id);
+        }
+        return true;
+      }),
+    [columns, visibleColumns],
+  );
+
+  // Build columnVisibility object for DataTable initial state
+  // This maps column IDs to their visibility state
+  const initialColumnVisibilityState = useMemo(() => {
+    const visibility: Record<string, boolean> = {};
+    allColumnsConfig.forEach((col) => {
+      // Set to false if not in visibleColumns, true otherwise
+      visibility[col.id] = visibleColumns.includes(col.id);
+    });
+    return visibility;
+  }, [visibleColumns]);
+
+  const handleExportAll = () => {
+    handleExport();
+  };
+
+  const handlePageChange = (newPageIndex: number) => {
+    setPageIndex(newPageIndex);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPageIndex(0); // Reset to first page when page size changes
   };
 
   return (
@@ -117,80 +498,48 @@ export function MyLeaveApplications({
         activeFilters={activeFilters}
         onFiltersChange={setActiveFilters}
         showExport={true}
-        onExportAll={handleExport}
+        onExportAll={handleExportAll}
+        showConfigureView={true}
+        allColumns={allColumnsConfig}
+        visibleColumns={visibleColumns}
+        onVisibleColumnsChange={setVisibleColumns}
       />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Leave ID</TableHead>
-              <TableHead>Leave Type</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
-              <TableHead>Days</TableHead>
-              <TableHead>Applied On</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredApplications.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No leave applications found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredApplications.map((application) => (
-                <TableRow key={application.id}>
-                  <TableCell className="font-medium">{application.id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{application.leaveTypeName}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {application.leaveTypeCode}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatDate(application.startDate)}</TableCell>
-                  <TableCell>{formatDate(application.endDate)}</TableCell>
-                  <TableCell>
-                    <span className="font-semibold">{application.numberOfDays}</span>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(application.appliedOn), 'MMM dd, yyyy')}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(application.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onViewDetails(application)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        {application.status === 'pending' && (
-                          <DropdownMenuItem 
-                            onClick={() => onCancel(application.id)}
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Cancel Request
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable<AbsenceApplication>
+        ref={tableRef}
+        columns={filteredColumns}
+        data={applications}
+        loading={isLoading}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalPages,
+          totalItems,
+          canNextPage: pageIndex < totalPages - 1,
+          onPageChange: handlePageChange,
+          onPageSizeChange: handlePageSizeChange,
+        }}
+        paginationVariant="default"
+        fixedPagination={true}
+        serverSidePagination={true}
+        enableColumnVisibility={true}
+        initialColumnVisibility={initialColumnVisibilityState}
+        emptyState={{
+          title: "No leave applications found",
+          description:
+            "You have no leave applications yet. Apply for leave to get started.",
+          action: {
+            label: "Apply Leave",
+            onClick: () => {
+              // Navigate to apply leave page
+              console.log("Navigate to apply leave");
+            },
+          },
+        }}
+        loadingState={{
+          message: "Loading your leave applications...",
+        }}
+      />
     </div>
   );
 }

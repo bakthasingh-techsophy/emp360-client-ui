@@ -19,8 +19,8 @@ import { ApiResponse } from "@/types/responses";
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import {
-  LeaveConfiguration,
-  LeaveConfigurationCarrier,
+  LMSConfiguration,
+  LMSConfigurationCarrier,
 } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 import { apiRequest } from "./utils";
 
@@ -50,17 +50,17 @@ export interface BulkDeleteByFiltersRequest {
  * Create Leave Configuration
  * POST /emp-user-management/v1/leave-configurations
  * 
- * @param carrier - LeaveConfigurationCarrier with configuration information
+ * @param carrier - LMSConfigurationCarrier with configuration information
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<LeaveConfiguration>>
+ * @returns Promise<ApiResponse<LMSConfiguration>>
  */
 export const apiCreateLeaveConfiguration = async (
-  carrier: LeaveConfigurationCarrier,
+  carrier: LMSConfigurationCarrier,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<LeaveConfiguration>> => {
-  return apiRequest<LeaveConfiguration>({
+): Promise<ApiResponse<LMSConfiguration>> => {
+  return apiRequest<LMSConfiguration>({
     method: "POST",
     endpoint: BASE_ENDPOINT,
     tenant,
@@ -76,14 +76,14 @@ export const apiCreateLeaveConfiguration = async (
  * @param id - Leave Configuration ID
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<LeaveConfiguration>>
+ * @returns Promise<ApiResponse<LMSConfiguration>>
  */
 export const apiGetLeaveConfigurationById = async (
   id: string,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<LeaveConfiguration>> => {
-  return apiRequest<LeaveConfiguration>({
+): Promise<ApiResponse<LMSConfiguration>> => {
+  return apiRequest<LMSConfiguration>({
     method: "GET",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -102,15 +102,15 @@ export const apiGetLeaveConfigurationById = async (
  * @param payload - Map of fields to update (supports dot notation for nested fields)
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<LeaveConfiguration>>
+ * @returns Promise<ApiResponse<LMSConfiguration>>
  */
 export const apiUpdateLeaveConfiguration = async (
   id: string,
   payload: UpdatePayload,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<LeaveConfiguration>> => {
-  return apiRequest<LeaveConfiguration>({
+): Promise<ApiResponse<LMSConfiguration>> => {
+  return apiRequest<LMSConfiguration>({
     method: "PATCH",
     endpoint: `${BASE_ENDPOINT}/${id}`,
     tenant,
@@ -128,7 +128,7 @@ export const apiUpdateLeaveConfiguration = async (
  * @param pageSize - Number of items per page
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
- * @returns Promise<ApiResponse<Pagination<LeaveConfiguration>>>
+ * @returns Promise<ApiResponse<Pagination<LMSConfiguration>>>
  */
 export const apiSearchLeaveConfigurations = async (
   searchRequest: UniversalSearchRequest,
@@ -136,8 +136,8 @@ export const apiSearchLeaveConfigurations = async (
   pageSize: number,
   tenant: string,
   accessToken?: string
-): Promise<ApiResponse<Pagination<LeaveConfiguration>>> => {
-  return apiRequest<Pagination<LeaveConfiguration>>({
+): Promise<ApiResponse<Pagination<LMSConfiguration>>> => {
+  return apiRequest<Pagination<LMSConfiguration>>({
     method: "POST",
     endpoint: `${BASE_ENDPOINT}/search?page=${page}&size=${pageSize}`,
     tenant,

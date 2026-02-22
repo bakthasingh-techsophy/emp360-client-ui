@@ -15,6 +15,7 @@ import {
   Sparkles,
   TrendingUp,
   CheckCircle2,
+  TrendingDown,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -28,6 +29,7 @@ interface LeaveBalanceCardsProps {
   employeeLeavesInfo: EmployeeLeavesInformation | null;
   holidays?: HolidayInfo[];
   onApplyLeave?: (leaveTypeId: string) => void;
+  onRequestCredits?: (creditType: string) => void;
   isLoading?: boolean;
 }
 
@@ -46,6 +48,7 @@ export function LeaveBalanceCards({
   employeeLeavesInfo,
   holidays = [],
   onApplyLeave,
+  onRequestCredits,
   isLoading = false,
 }: LeaveBalanceCardsProps) {
   // Show loading skeleton
@@ -74,8 +77,8 @@ export function LeaveBalanceCards({
     return orderA - orderB;
   });
 
-  // Calculate totals intelligently based on card types
-  let totalEncashable = 0;
+  // Calculate totals for consumption and monetizable
+  let totalConsumed = 0;
   let totalMonetizable = 0;
 
   leaveEntries.forEach(([leaveCode, balance]) => {
@@ -83,8 +86,13 @@ export function LeaveBalanceCards({
     if (!config) return;
 
     const category = config.category?.toLowerCase();
+    
+    // Get consumption for accrued, flexible, and special types
+    if (category === "accrued" || category === "flexible" || category === "special") {
+      totalConsumed += balance.consumed ?? 0;
+    }
+    
     if (category === "monetization" || category === "monetizable") {
-      totalEncashable += balance.encashable ?? 0;
       totalMonetizable += balance.monetizable ?? 0;
     }
   });
@@ -126,21 +134,21 @@ export function LeaveBalanceCards({
           </CardContent>
         </Card>
 
-        {/* Encashable */}
+        {/* Consumed - Total */}
         <Card className="overflow-hidden">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Encashable
+                  Consumed
                 </p>
-                <p className="text-3xl font-bold tracking-tight text-orange-600">
-                  {totalEncashable}
+                <p className="text-3xl font-bold tracking-tight text-red-600">
+                  {totalConsumed}
                 </p>
-                <p className="text-xs text-muted-foreground">can be encashed</p>
+                <p className="text-xs text-muted-foreground">days used</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
+              <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <TrendingDown className="h-6 w-6 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -249,13 +257,14 @@ export function LeaveBalanceCards({
                 />
               );
             case "special":
+              const handleRequestSpecialCredits = () => onRequestCredits?.(leaveCode);
               return (
                 <SpecialCard
                   key={leaveCode}
                   config={config}
                   balance={balance}
                   gradient={gradient}
-                  onApplyLeave={handleApplyLeave}
+                  onApplyLeave={handleRequestSpecialCredits}
                 />
               );
             case "monetization":

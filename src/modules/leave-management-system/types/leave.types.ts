@@ -111,6 +111,58 @@ export interface LeaveStats {
 }
 
 /**
+ * Credit - Model for managing employee credits (e.g., comp-off, special leave credits)
+ * Tracks credit allocation, consumption, and expiry for employees
+ */
+export interface Credit {
+  // Core Identifiers
+  id: string;
+
+  // Employee Information
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  reportingTo: string; // Email of reporting manager
+
+  // Credit Details
+  creditType: string; // Type of credit (e.g., "COMP_OFF", "SPECIAL_LEAVE")
+  credits: number; // Total credits allocated
+  available?: number; // Current available credits
+  consumed?: number; // Total credits consumed
+  expiredCount?: number; // Total credits expired
+  expired?: boolean;
+
+  // Dates and Status
+  fromDate: string; // Credit valid from date (ISO instant)
+  toDate: string; // Credit valid until date (ISO instant)
+  expiryOn: string; // Expiry date of the credit (ISO instant)
+
+  // Approval and Tracking
+  status: string; // Status of the credit (PENDING, APPROVED, REJECTED, etc.)
+  reason: string; // Reason for credit allocation
+  actionTookOn?: string; // ISO instant
+
+  // Metadata
+  companyId: string; // Company this credit belongs to
+  createdAt: string; // ISO instant
+  updatedAt?: string; // ISO instant
+}
+
+/**
+ * CreditCarrier - DTO for creating/updating credit requests
+ * Minimal required fields for backend API
+ */
+export interface CreditCarrier {
+  creditType: string; // Type of credit
+  fromDate: string; // ISO instant
+  toDate: string; // ISO instant
+  reason: string; // Reason for credit request
+  informTo?: string[]; // List of emails to inform
+  createdAt: string; // ISO instant
+}
+
+/**
  * HolidayInfo - Simple holiday information for display
  * Note: For full Holiday CRUD operations, use Holiday from holiday-management/types
  */

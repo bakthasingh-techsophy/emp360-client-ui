@@ -4,12 +4,13 @@
  */
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageLayout } from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useLeavePermissions } from "./hooks";
 import {
   LeaveBalanceCards,
   MyLeaveApplications,
@@ -17,8 +18,7 @@ import {
   MyLeaveCredits,
   TeamLeaveCredits,
 } from "./components";
-import { mockLeaveApplications, mockHolidays } from "./data/mockLeaveData";
-import { AbsenceApplication } from "./types/leave.types";
+import { mockHolidays } from "./data/mockLeaveData";
 import { EmployeeLeavesInformation } from "./types/leaveConfiguration.types";
 import { Plus, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -26,23 +26,43 @@ import { useToast } from "@/hooks/use-toast";
 export function LeaveHoliday() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const auth = useAuth();
-  const { getEmployeeLeavesInformation } = useLeaveManagement();
+  const [searchParams] = useSearchParams();
+  const { getEmployeeLeavesInformation, approveRejectAbsenceApplication, approveRejectCreditRequest } = useLeaveManagement();
+  
+  // Get leave management permissions
+  const permissions = useLeavePermissions();
 
-  // Check if user has role-based access
-  const canAccessSettings = auth.hasResourceRole(
-    "leave-management-system",
-    "lmss",
-  );
-  const [applications, setApplications] = useState<AbsenceApplication[]>(
-    mockLeaveApplications,
-  );
+  // Get tab from URL params, default to 'balances'
+  const mainTab = (searchParams.get('mainTab') || 'balances') as string;
+  const applicationsTab = (searchParams.get('applicationsTab') || 'my-applications') as string;
+
+  // Initialize URL params on first load if not present
+  useEffect(() => {
+    // If no search params, set initial defaults
+    if (!searchParams.get('mainTab')) {
+      navigate(`?mainTab=balances&applicationsTab=my-applications`, { replace: true });
+    }
+  }, []);  // Only run once on mount
+
+  // Check if user has access to leave management features
+  // Redirect if user doesn't have any leave management role
+  useEffect(() => {
+    if (!permissions.hasLmsRole && !permissions.isLead) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "You do not have permission to access leave management.",
+      });
+      navigate("/");
+    }
+  }, [permissions.hasLmsRole, permissions.isLead]);
   const [employeeLeavesInfo, setEmployeeLeavesInfo] =
     useState<EmployeeLeavesInformation | null>(null);
   const [isLoadingEmployeeInfo, setIsLoadingEmployeeInfo] = useState(true);
   const [employeeInfoError, setEmployeeInfoError] = useState<string | null>(null);
+  const [actionRefreshVersion, setActionRefreshVersion] = useState(0);
 
-  // Fetch employee leaves information on mount
+  // Fetch employee leaves information only when balances tab is active
   const fetchEmployeeLeavesInfo = async () => {
     try {
       setIsLoadingEmployeeInfo(true);
@@ -60,82 +80,108 @@ export function LeaveHoliday() {
     }
   };
 
+  // Only fetch when balances tab becomes active
   useEffect(() => {
-    fetchEmployeeLeavesInfo();
-  }, []);
-
-
-  // Handle cancel leave
-  const handleCancelLeave = (id: string) => {
-    setApplications(
-      applications.map((app) =>
-        app.id === id
-          ? {
-              ...app,
-              status: "cancelled" as const,
-              cancelledOn: new Date().toISOString(),
-              cancellationReason: "Cancelled by employee",
-            }
-          : app,
-      ),
-    );
-
-    toast({
-      title: "Leave Cancelled",
-      description: "Your leave application has been cancelled successfully.",
-    });
-  };
+    if (mainTab === 'balances') {
+      fetchEmployeeLeavesInfo();
+    }
+  }, [mainTab]);
 
   // Handle team approve/reject
-  const handleTeamApprove = (_id: string) => {
-    toast({
-      title: "Leave Approved",
-      description: "The leave application has been approved successfully.",
-    });
+  /**
+   * Approve team member's leave application
+   * API: PUT /emp-user-management/v1/leave-management/absences/{id}?status=approve
+   */
+  const handleTeamApprove = async (id: string) => {
+    console.log("[ACTION] Approving team leave application:", id);
+    const result = await approveRejectAbsenceApplication(id, "approve");
+    if (result) {
+      toast({
+        title: "Success",
+        description: "The leave application has been approved.",
+      });
+      setActionRefreshVersion((v) => v + 1);
+    }
   };
 
-  const handleTeamReject = (_id: string) => {
-    toast({
-      title: "Leave Rejected",
-      description: "The leave application has been rejected.",
-      variant: "destructive",
-    });
+  /**
+   * Reject team member's leave application
+   * API: PUT /emp-user-management/v1/leave-management/absences/{id}?status=reject
+   */
+  const handleTeamReject = async (id: string) => {
+    console.log("[ACTION] Rejecting team leave application:", id);
+    const result = await approveRejectAbsenceApplication(id, "reject");
+    if (result) {
+      toast({
+        title: "Success",
+        description: "The leave application has been rejected.",
+      });
+      setActionRefreshVersion((v) => v + 1);
+    }
   };
 
-  // Handle view details (placeholder)
-  const handleViewDetails = (_item: unknown) => {
-    toast({
-      title: "View Details",
-      description: "Details dialog will open here",
-    });
+
+  // Handle credit approval/rejection
+  /**
+   * Approve team member's credit request
+   * API: PUT /emp-user-management/v1/leave-management/credits/{id}?status=approve
+   */
+  const handleApproveCredit = async (id: string) => {
+    console.log("[ACTION] Approving team credit request:", id);
+    const result = await approveRejectCreditRequest(id, "approve");
+    if (result) {
+      toast({
+        title: "Success",
+        description: "The credit request has been approved.",
+      });
+      setActionRefreshVersion((v) => v + 1);
+    }
   };
 
-  // Handle credit actions (placeholders)
-  const handleCancelCredit = (_id: string) => {
-    toast({
-      title: "Credit Cancelled",
-      description: "Your credit request has been cancelled.",
-    });
+  /**
+   * Reject team member's credit request
+   * API: PUT /emp-user-management/v1/leave-management/credits/{id}?status=reject
+   */
+  const handleRejectCredit = async (id: string) => {
+    console.log("[ACTION] Rejecting team credit request:", id);
+    const result = await approveRejectCreditRequest(id, "reject");
+    if (result) {
+      toast({
+        title: "Success",
+        description: "The credit request has been rejected.",
+      });
+      setActionRefreshVersion((v) => v + 1);
+    }
   };
 
-  const handleApproveCredit = (_id: string) => {
-    toast({
-      title: "Credit Approved",
-      description: "The credit request has been approved.",
-    });
-  };
-
-  const handleRejectCredit = (_id: string) => {
-    toast({
-      title: "Credit Rejected",
-      description: "The credit request has been rejected.",
-      variant: "destructive",
-    });
-  };
-
-  // Handle apply leave from card - navigate to apply leave page with leave type
+  // Handle apply leave from card - navigate to apply leave page with leave type and return tab info
   const handleApplyLeaveFromCard = (leaveTypeId: string) => {
-    navigate(`/leave-holiday/apply-leave?leaveTypeId=${encodeURIComponent(leaveTypeId)}`);
+    navigate(`/leave-holiday/apply-leave?leaveTypeId=${encodeURIComponent(leaveTypeId)}&mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(applicationsTab)}`);
+  };
+
+  // Handle request credits from card - navigate to request credits page with credit type and return tab info
+  const handleRequestCreditsFromCard = (creditType: string) => {
+    navigate(`/leave-holiday/request-credits?creditType=${encodeURIComponent(creditType)}&mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(applicationsTab)}`);
+  };
+
+  // Handle general apply leave button
+  const handleApplyLeave = () => {
+    navigate(`/leave-holiday/apply-leave?mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(applicationsTab)}`);
+  };
+
+  // Handle request credits button
+  const handleRequestCredits = () => {
+    navigate(`/leave-holiday/request-credits?mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(applicationsTab)}`);
+  };
+
+  // Handle main tab change - use replace to avoid creating excessive history entries
+  const handleMainTabChange = (value: string) => {
+    navigate(`?mainTab=${encodeURIComponent(value)}&applicationsTab=${encodeURIComponent(applicationsTab)}`, { replace: true });
+  };
+
+  // Handle applications tab change - use replace to avoid creating excessive history entries
+  const handleApplicationsTabChange = (value: string) => {
+    navigate(`?mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(value)}`, { replace: true });
   };
 
   return (
@@ -149,7 +195,7 @@ export function LeaveHoliday() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {canAccessSettings && (
+            {permissions.canAccessSettings && (
               <Button
                 variant="outline"
                 onClick={() => navigate("/leave-holiday/leave-settings")}
@@ -158,14 +204,22 @@ export function LeaveHoliday() {
                 Settings
               </Button>
             )}
-            <Button onClick={() => navigate('/leave-holiday/apply-leave')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Apply Leave
-            </Button>
+            {permissions.canRequestCredits && (
+              <Button variant="outline" onClick={handleRequestCredits}>
+                <Plus className="h-4 w-4 mr-2" />
+                Request Credits
+              </Button>
+            )}
+            {permissions.canSubmitApplications && (
+              <Button onClick={handleApplyLeave}>
+                <Plus className="h-4 w-4 mr-2" />
+                Apply Leave
+              </Button>
+            )}
           </div>
         </div>
 
-        <Tabs defaultValue="balances" className="space-y-4">
+        <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="balances">Leave Balances</TabsTrigger>
             <TabsTrigger value="applications">Leave Applications</TabsTrigger>
@@ -183,55 +237,64 @@ export function LeaveHoliday() {
                 employeeLeavesInfo={employeeLeavesInfo}
                 holidays={mockHolidays}
                 onApplyLeave={handleApplyLeaveFromCard}
+                onRequestCredits={handleRequestCreditsFromCard}
                 isLoading={isLoadingEmployeeInfo}
               />
             )}
           </TabsContent>
 
           <TabsContent value="applications">
-            <Tabs defaultValue="my-applications">
+            <Tabs value={applicationsTab} onValueChange={handleApplicationsTabChange}>
               <TabsList>
-                <TabsTrigger value="my-applications">
-                  My Applications
-                </TabsTrigger>
-                <TabsTrigger value="team-applications">
-                  Team Applications
-                </TabsTrigger>
-                <TabsTrigger value="my-credits">My Credits</TabsTrigger>
-                <TabsTrigger value="team-credits">Team Credits</TabsTrigger>
+                {permissions.canViewMyApplications && (
+                  <TabsTrigger value="my-applications">
+                    My Applications
+                  </TabsTrigger>
+                )}
+                {permissions.canViewTeamApplications && (
+                  <TabsTrigger value="team-applications">
+                    Team Applications
+                  </TabsTrigger>
+                )}
+                {permissions.canViewMyCredits && (
+                  <TabsTrigger value="my-credits">My Credits</TabsTrigger>
+                )}
+                {permissions.canViewTeamCredits && (
+                  <TabsTrigger value="team-credits">Team Credits</TabsTrigger>
+                )}
               </TabsList>
 
-              <TabsContent value="my-applications" className="mt-4">
-                <MyLeaveApplications
-                  applications={applications}
-                  onCancel={handleCancelLeave}
-                  onViewDetails={handleViewDetails}
-                />
-              </TabsContent>
+              {permissions.canViewMyApplications && (
+                <TabsContent value="my-applications" className="mt-4">
+                  <MyLeaveApplications />
+                </TabsContent>
+              )}
 
-              <TabsContent value="team-applications" className="mt-4">
-                <TeamLeaveApplications
-                  applications={[]}
-                  onApprove={handleTeamApprove}
-                  onReject={handleTeamReject}
-                  onViewDetails={handleViewDetails}
-                />
-              </TabsContent>
+              {permissions.canViewTeamApplications && (
+                <TabsContent value="team-applications" className="mt-4">
+                  <TeamLeaveApplications
+                    onApprove={handleTeamApprove}
+                    onReject={handleTeamReject}
+                    refreshDependency={actionRefreshVersion}
+                  />
+                </TabsContent>
+              )}
 
-              <TabsContent value="my-credits" className="mt-4">
-                <MyLeaveCredits
-                  onViewDetails={handleViewDetails}
-                  onCancel={handleCancelCredit}
-                />
-              </TabsContent>
+              {permissions.canViewMyCredits && (
+                <TabsContent value="my-credits" className="mt-4">
+                  <MyLeaveCredits />
+                </TabsContent>
+              )}
 
-              <TabsContent value="team-credits" className="mt-4">
-                <TeamLeaveCredits
-                  onViewDetails={handleViewDetails}
-                  onApprove={handleApproveCredit}
-                  onReject={handleRejectCredit}
-                />
-              </TabsContent>
+              {permissions.canViewTeamCredits && (
+                <TabsContent value="team-credits" className="mt-4">
+                  <TeamLeaveCredits
+                    onApprove={handleApproveCredit}
+                    onReject={handleRejectCredit}
+                    refreshDependency={actionRefreshVersion}
+                  />
+                </TabsContent>
+              )}
             </Tabs>
           </TabsContent>
         </Tabs>

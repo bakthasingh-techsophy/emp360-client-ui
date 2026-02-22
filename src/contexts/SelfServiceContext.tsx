@@ -28,6 +28,11 @@ import {
   apiGetGeneralDetailsSnapshotSelfService,
   apiGetJobDetailsSnapshotSelfService,
   apiRaiseAbsenceRequest,
+  apiGetLeaveApplicationsSelfService,
+  apiCancelAbsenceApplicationSelfService,
+  apiGetCredits,
+  apiRequestCredits,
+  apiCancelCreditRequest,
 } from "@/services/selfServiceService";
 
 // Types
@@ -37,7 +42,7 @@ import {
   GeneralDetailsSnapshot,
   JobDetailsSnapshot,
 } from "@/modules/user-management/types/onboarding.types";
-import { AbsenceApplication, AbsenceCarrier } from "@/modules/leave-management-system/types/leave.types";
+import { AbsenceApplication, AbsenceCarrier, Credit, CreditCarrier } from "@/modules/leave-management-system/types/leave.types";
 import UniversalSearchRequest from "@/types/search";
 import Pagination from "@/types/pagination";
 
@@ -71,6 +76,21 @@ interface SelfServiceContextType {
 
   // Absence Methods (Self-Service)
   raiseAbsenceRequest: (carrier: AbsenceCarrier) => Promise<AbsenceApplication | null>;
+  getLeaveApplicationsSelfService: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number,
+  ) => Promise<Pagination<AbsenceApplication> | null>;
+  cancelAbsenceApplication: (applicationId: string) => Promise<boolean>;
+
+  // Credit Methods (Self-Service)
+  requestCredits: (carrier: CreditCarrier) => Promise<Credit | null>;
+  getCredits: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number,
+  ) => Promise<Pagination<Credit> | null>;
+  cancelCredit: (creditId: string) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -263,6 +283,73 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
     ) as Promise<AbsenceApplication | null>;
   };
 
+  const getLeaveApplicationsSelfService = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20,
+  ): Promise<Pagination<AbsenceApplication> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetLeaveApplicationsSelfService(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken,
+        ),
+      "Load Leave Applications",
+      "",
+    ) as Promise<Pagination<AbsenceApplication> | null>;
+  };
+
+  const cancelAbsenceApplication = async (applicationId: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) =>
+        apiCancelAbsenceApplicationSelfService(applicationId, tenant, accessToken),
+      "Cancel Leave Application",
+      "Leave application cancelled successfully",
+      true,
+    );
+    return result as boolean;
+  };
+
+  // ==================== CREDIT METHODS (SELF-SERVICE) ====================
+
+  const requestCredits = async (
+    carrier: CreditCarrier,
+  ): Promise<Credit | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiRequestCredits(carrier, tenant, accessToken),
+      "Request Credits",
+      "Credit request submitted successfully",
+    ) as Promise<Credit | null>;
+  };
+
+  const getCredits = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20,
+  ): Promise<Pagination<Credit> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetCredits(searchRequest, page, pageSize, tenant, accessToken),
+      "Get Credits",
+      "",
+    ) as Promise<Pagination<Credit> | null>;
+  };
+
+  const cancelCredit = async (creditId: string): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) =>
+        apiCancelCreditRequest(creditId, tenant, accessToken),
+      "Cancel Credit Request",
+      "Credit request cancelled successfully",
+      true,
+    );
+    return result as boolean;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: SelfServiceContextType = {
@@ -278,6 +365,13 @@ export function SelfServiceProvider({ children }: { children: ReactNode }) {
 
     // Absence Methods
     raiseAbsenceRequest,
+    getLeaveApplicationsSelfService,
+    cancelAbsenceApplication,
+
+    // Credit Methods
+    requestCredits,
+    getCredits,
+    cancelCredit,
 
     // Loading State
     isLoading,

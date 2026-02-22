@@ -11,12 +11,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CompanyDropdown } from '@/components/context-aware/CompanyDropdown';
 import { useCompany } from '@/contexts/CompanyContext';
 import { X } from 'lucide-react';
-import { LeaveConfiguration } from '../types/leaveConfiguration.types';
+import { LMSConfiguration } from '../types/leaveConfiguration.types';
 
 interface CopyConfigurationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sourceConfiguration: LeaveConfiguration;
+  sourceConfiguration: LMSConfiguration;
   onCopyToAllCompanies: () => void;
   onCopyToSelectedCompanies: (companyIds: string[]) => void;
   leaveTypeName?: string;

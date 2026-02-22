@@ -44,6 +44,7 @@ import { LeaveHoliday } from "./modules/leave-management-system/LeaveHoliday";
 import { LeaveSettings } from "./modules/leave-management-system/LeaveSettings";
 import { LeaveConfigurationFormPage } from "./modules/leave-management-system/LeaveConfigurationFullFormPage";
 import { ApplyLeavePage } from "./modules/leave-management-system/ApplyLeavePage";
+import { RequestCreditsPage } from "./modules/leave-management-system/RequestCreditsPage";
 
 // Payroll & Compensation modules
 import { SalaryStructure } from "./modules/payroll/SalaryStructure";
@@ -218,6 +219,10 @@ function App() {
                                 <Route
                                   path="/leave-holiday/apply-leave"
                                   element={<ApplyLeavePage />}
+                                />
+                                <Route
+                                  path="/leave-holiday/request-credits"
+                                  element={<RequestCreditsPage />}
                                 />
                                 <Route
                                   path="/holiday-management"

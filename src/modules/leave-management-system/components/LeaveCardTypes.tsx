@@ -11,7 +11,6 @@ import { LMSConfiguration } from "../types/leaveConfiguration.types";
 import { LeaveBalanceModel } from "../types/leaveConfiguration.types";
 import {
   CalendarDays,
-  TrendingUp,
   CheckCircle2,
   AlertCircle,
   Zap,
@@ -50,7 +49,10 @@ export function AccruedCard({
           <div className="h-12 w-12 mx-auto rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center shadow-md">
             <CalendarDays className="h-6 w-6 text-foreground" />
           </div>
-          <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5">
+          <Badge
+            variant="secondary"
+            className="font-semibold text-xs px-2 py-0.5"
+          >
             {config.code}
           </Badge>
         </div>
@@ -92,7 +94,10 @@ export function AccruedCard({
             className="h-1.5"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{Math.round(consumed * 10) / 10} of {Math.round(accrued * 10) / 10} used</span>
+            <span>
+              {Math.round(consumed * 10) / 10} of{" "}
+              {Math.round(accrued * 10) / 10} used
+            </span>
             <span className="font-medium text-foreground">
               {accrued > 0 ? Math.round((consumed / accrued) * 100) : 0}%
             </span>
@@ -103,11 +108,15 @@ export function AccruedCard({
         <div className="space-y-2 pt-1 border-t">
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Accrued</span>
-            <span className="font-semibold">{Math.round(accrued * 10) / 10} days</span>
+            <span className="font-semibold">
+              {Math.round(accrued * 10) / 10} days
+            </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Consumed</span>
-            <span className="font-semibold">{Math.round(consumed * 10) / 10} days</span>
+            <span className="font-semibold">
+              {Math.round(consumed * 10) / 10} days
+            </span>
           </div>
         </div>
 
@@ -117,7 +126,6 @@ export function AccruedCard({
           variant="default"
           size="sm"
           onClick={onApplyLeave}
-          disabled={available === 0}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Apply {config.name}
@@ -150,7 +158,10 @@ export function FlexibleCard({
           <div className="h-12 w-12 mx-auto rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center shadow-md">
             <Zap className="h-6 w-6 text-amber-600" />
           </div>
-          <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5">
+          <Badge
+            variant="secondary"
+            className="font-semibold text-xs px-2 py-0.5"
+          >
             {config.code}
           </Badge>
         </div>
@@ -243,7 +254,10 @@ export function SpecialCard({
           <div className="h-12 w-12 mx-auto rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center shadow-md">
             <CheckCircle2 className="h-6 w-6 text-purple-600" />
           </div>
-          <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5">
+          <Badge
+            variant="secondary"
+            className="font-semibold text-xs px-2 py-0.5"
+          >
             {config.code}
           </Badge>
         </div>
@@ -312,14 +326,18 @@ export function SpecialCard({
               <span className="w-2 h-2 rounded-full bg-purple-500" />
               Available
             </span>
-            <span className="font-semibold">{Math.round(available * 10) / 10}</span>
+            <span className="font-semibold">
+              {Math.round(available * 10) / 10}
+            </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-yellow-500" />
               Consumed
             </span>
-            <span className="font-semibold">{Math.round(consumed * 10) / 10}</span>
+            <span className="font-semibold">
+              {Math.round(consumed * 10) / 10}
+            </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground flex items-center gap-1">
@@ -332,16 +350,15 @@ export function SpecialCard({
           </div>
         </div>
 
-        {/* Apply Leave Button */}
+        {/* Request Credits Button */}
         <Button
           className="w-full mt-2"
           variant="default"
           size="sm"
           onClick={onApplyLeave}
-          disabled={available === 0}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Apply {config.name}
+          Request {config.name}
         </Button>
       </CardContent>
     </Card>
@@ -350,8 +367,8 @@ export function SpecialCard({
 
 /**
  * MonetizableCard - For MONETIZABLE type leaves
- * Shows: available, encashable, monetizable
- * Layout: Highlights encashment and monetization options
+ * Shows: available, consumed, monetizable (same structure as AccruedCard)
+ * Layout: Same as accrued + extra monetizable metric
  */
 export function MonetizableCard({
   config,
@@ -359,21 +376,24 @@ export function MonetizableCard({
   gradient,
   onApplyLeave,
 }: BaseCardProps) {
-  const totalAvailable = balance.available ?? 0;
-  const encashable = balance.encashable ?? 0;
+  const available = balance.available ?? 0;
+  const consumed = balance.consumed ?? 0;
   const monetizable = balance.monetizable ?? 0;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col border-emerald-200">
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col">
       {/* Gradient header */}
       <div
         className={`relative h-28 bg-gradient-to-br ${gradient} flex items-center justify-center border-b flex-shrink-0`}
       >
         <div className="text-center space-y-2">
           <div className="h-12 w-12 mx-auto rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center shadow-md">
-            <TrendingUp className="h-6 w-6 text-emerald-600" />
+            <CalendarDays className="h-6 w-6 text-foreground" />
           </div>
-          <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5">
+          <Badge
+            variant="secondary"
+            className="font-semibold text-xs px-2 py-0.5"
+          >
             {config.code}
           </Badge>
         </div>
@@ -392,10 +412,9 @@ export function MonetizableCard({
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="text-2xl font-bold text-emerald-600">
-              {Math.round(totalAvailable * 10) / 10}
+            <div className="text-2xl font-bold text-green-600">
+              {Math.round((available + monetizable) * 10) / 10}
             </div>
-            <div className="text-xs text-muted-foreground">total</div>
           </div>
         </div>
       </CardHeader>
@@ -408,44 +427,35 @@ export function MonetizableCard({
           </p>
         )}
 
-        {/* Available Indicator */}
+        {/* Progress Bar - consumption */}
         <div className="space-y-1.5">
           <Progress
-            value={
-              totalAvailable > 0
-                ? ((encashable + monetizable) / totalAvailable) * 100
-                : 0
-            }
+            value={(available + monetizable) > 0 ? (consumed / (available + monetizable)) * 100 : 0}
             className="h-1.5"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>
-              {Math.round((encashable + monetizable) * 10) / 10} of{" "}
-              {Math.round(totalAvailable * 10) / 10} convertible
+              {Math.round(consumed * 10) / 10} of{" "}
+              {Math.round((available + monetizable) * 10) / 10} used
             </span>
             <span className="font-medium text-foreground">
-              {totalAvailable > 0
-                ? Math.round(
-                    (((encashable + monetizable) / totalAvailable) * 100)
-                  )
-                : 0}
-              %
+              {(available + monetizable) > 0 ? Math.round((consumed / (available + monetizable)) * 100) : 0}%
             </span>
           </div>
         </div>
 
-        {/* Balance breakdown - Encashment & Monetization */}
+        {/* Balance breakdown */}
         <div className="space-y-2 pt-1 border-t">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Encashable</span>
-            <span className="font-semibold text-emerald-600">
-              {Math.round(encashable * 10) / 10} days
-            </span>
-          </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Monetizable</span>
             <span className="font-semibold text-blue-600">
               {Math.round(monetizable * 10) / 10} days
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Consumed</span>
+            <span className="font-semibold">
+              {Math.round(consumed * 10) / 10} days
             </span>
           </div>
         </div>
@@ -456,7 +466,6 @@ export function MonetizableCard({
           variant="default"
           size="sm"
           onClick={onApplyLeave}
-          disabled={totalAvailable === 0}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Apply {config.name}

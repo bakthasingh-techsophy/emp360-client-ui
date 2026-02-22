@@ -55,22 +55,29 @@ import {
   apiDeleteLeaveDetailsById,
   apiBulkDeleteLeaveDetails,
   apiBulkUpdateLeaveDetails,
-  LeaveDetails,
-  LeaveDetailsCarrier,
   UpdateLeaveDetailsPayload,
   BulkUpdateLeaveDetailsRequest,
 } from "@/services/leaveDetailsService";
 
-
+// Leave Management Service
+import {
+  apiGetTeamAbsenceApplications,
+  apiGetTeamCreditRequests,
+  apiApproveRejectAbsenceApplication,
+  apiApproveRejectCreditRequest,
+} from "@/services/leaveManagementService";
 
 // Types
 import Pagination from "@/types/pagination";
 import UniversalSearchRequest from "@/types/search";
 import {
-  LeaveConfiguration,
-  LeaveConfigurationCarrier,
+  LMSConfiguration,
+  LMSConfigurationCarrier,
   EmployeeLeavesInformation,
+  LeaveDetails,
+  LeaveDetailsCarrier,
 } from "@/modules/leave-management-system/types/leaveConfiguration.types";
+import { AbsenceApplication, Credit } from "@/modules/leave-management-system/types/leave.types";
 
 /**
  * Generic update payload type
@@ -98,18 +105,18 @@ export interface BulkDeleteByFiltersRequest {
 interface LeaveManagementContextType {
   // Leave Configuration Methods
   createLeaveConfiguration: (
-    carrier: LeaveConfigurationCarrier
-  ) => Promise<LeaveConfiguration | null>;
-  getLeaveConfigurationById: (id: string) => Promise<LeaveConfiguration | null>;
+    carrier: LMSConfigurationCarrier
+  ) => Promise<LMSConfiguration | null>;
+  getLeaveConfigurationById: (id: string) => Promise<LMSConfiguration | null>;
   updateLeaveConfiguration: (
     id: string,
-    payload: UpdatePayload
-  ) => Promise<LeaveConfiguration | null>;
+    payload: Record<string, any>
+  ) => Promise<LMSConfiguration | null>;
   searchLeaveConfigurations: (
     searchRequest: UniversalSearchRequest,
-    page?: number,
-    pageSize?: number
-  ) => Promise<Pagination<LeaveConfiguration> | null>;
+    page: number,
+    pageSize: number
+  ) => Promise<Pagination<LMSConfiguration> | null>;
   deleteLeaveConfigurationById: (id: string) => Promise<boolean>;
   bulkUpdateLeaveConfigurations: (
     request: BulkUpdateRequest
@@ -149,6 +156,26 @@ interface LeaveManagementContextType {
 
   // Employee Self-Service Leave Methods
   getEmployeeLeavesInformation: () => Promise<EmployeeLeavesInformation | null>;
+
+  // Team Leave Management Methods (for managers/leads)
+  getTeamAbsenceApplications: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number,
+  ) => Promise<Pagination<AbsenceApplication> | null>;
+  getTeamCreditRequests: (
+    searchRequest: UniversalSearchRequest,
+    page?: number,
+    pageSize?: number,
+  ) => Promise<Pagination<Credit> | null>;
+  approveRejectAbsenceApplication: (
+    applicationId: string,
+    status: "approve" | "reject"
+  ) => Promise<AbsenceApplication | null>;
+  approveRejectCreditRequest: (
+    creditId: string,
+    status: "approve" | "reject"
+  ) => Promise<Credit | null>;
 
   // Loading State
   isLoading: boolean;
@@ -263,44 +290,44 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
   // ==================== LEAVE CONFIGURATION METHODS ====================
 
   const createLeaveConfiguration = async (
-    carrier: LeaveConfigurationCarrier
-  ): Promise<LeaveConfiguration | null> => {
+    carrier: LMSConfigurationCarrier
+  ): Promise<LMSConfiguration | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
         apiCreateLeaveConfiguration(carrier, tenant, accessToken),
       "Create Leave Configuration",
       "Leave configuration created successfully"
-    ) as Promise<LeaveConfiguration | null>;
+    ) as Promise<LMSConfiguration | null>;
   };
 
   const getLeaveConfigurationById = async (
     id: string
-  ): Promise<LeaveConfiguration | null> => {
+  ): Promise<LMSConfiguration | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
         apiGetLeaveConfigurationById(id, tenant, accessToken),
       "Fetch Leave Configuration",
       ""
-    ) as Promise<LeaveConfiguration | null>;
+    ) as Promise<LMSConfiguration | null>;
   };
 
   const updateLeaveConfiguration = async (
     id: string,
     payload: UpdatePayload
-  ): Promise<LeaveConfiguration | null> => {
+  ): Promise<LMSConfiguration | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
         apiUpdateLeaveConfiguration(id, payload, tenant, accessToken),
       "Update Leave Configuration",
       "Leave configuration updated successfully"
-    ) as Promise<LeaveConfiguration | null>;
+    ) as Promise<LMSConfiguration | null>;
   };
 
   const searchLeaveConfigurations = async (
     searchRequest: UniversalSearchRequest,
     page: number = 0,
     pageSize: number = 12
-  ): Promise<Pagination<LeaveConfiguration> | null> => {
+  ): Promise<Pagination<LMSConfiguration> | null> => {
     return executeApiCall(
       (tenant, accessToken) =>
         apiSearchLeaveConfigurations(
@@ -312,7 +339,7 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
         ),
       "Search Leave Configurations",
       ""
-    ) as Promise<Pagination<LeaveConfiguration> | null>;
+    ) as Promise<Pagination<LMSConfiguration> | null>;
   };
 
   const deleteLeaveConfigurationById = async (
@@ -500,6 +527,80 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
     ) as Promise<EmployeeLeavesInformation | null>;
   };
 
+  // ==================== TEAM LEAVE MANAGEMENT METHODS ====================
+
+  const getTeamAbsenceApplications = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20,
+  ): Promise<Pagination<AbsenceApplication> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetTeamAbsenceApplications(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken,
+        ),
+      "Fetch Team Absence Applications",
+      "",
+    ) as Promise<Pagination<AbsenceApplication> | null>;
+  };
+
+  const getTeamCreditRequests = async (
+    searchRequest: UniversalSearchRequest,
+    page: number = 0,
+    pageSize: number = 20,
+  ): Promise<Pagination<Credit> | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiGetTeamCreditRequests(
+          searchRequest,
+          page,
+          pageSize,
+          tenant,
+          accessToken,
+        ),
+      "Fetch Team Credit Requests",
+      "",
+    ) as Promise<Pagination<Credit> | null>;
+  };
+
+  const approveRejectAbsenceApplication = async (
+    applicationId: string,
+    status: "approve" | "reject"
+  ): Promise<AbsenceApplication | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiApproveRejectAbsenceApplication(
+          applicationId,
+          status,
+          tenant,
+          accessToken,
+        ),
+      `${status.charAt(0).toUpperCase() + status.slice(1)} Absence Application`,
+      "", // Empty - let handlers manage toast based on success/failure
+    ) as Promise<AbsenceApplication | null>;
+  };
+
+  const approveRejectCreditRequest = async (
+    creditId: string,
+    status: "approve" | "reject"
+  ): Promise<Credit | null> => {
+    return executeApiCall(
+      (tenant, accessToken) =>
+        apiApproveRejectCreditRequest(
+          creditId,
+          status,
+          tenant,
+          accessToken,
+        ),
+      `${status.charAt(0).toUpperCase() + status.slice(1)} Credit Request`,
+      "", // Empty - let handlers manage toast based on success/failure
+    ) as Promise<Credit | null>;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: LeaveManagementContextType = {
@@ -528,6 +629,12 @@ export function LeaveManagementProvider({ children }: { children: ReactNode }) {
 
     // Employee Self-Service Leave Methods
     getEmployeeLeavesInformation,
+
+    // Team Leave Management Methods
+    getTeamAbsenceApplications,
+    getTeamCreditRequests,
+    approveRejectAbsenceApplication,
+    approveRejectCreditRequest,
 
     // Loading State
     isLoading,

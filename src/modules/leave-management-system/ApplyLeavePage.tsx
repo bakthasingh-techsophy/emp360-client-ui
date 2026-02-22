@@ -36,7 +36,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { TimePicker } from "@/components/ui/time-picker";
-import { format, differenceInBusinessDays } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { CalendarIcon, Plus, AlertCircle, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AbsenceCarrier, LeaveBalance } from "./types/leave.types";
@@ -105,6 +105,8 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
   const endDate = watch("endDate");
   const absenceCategory = watch("absenceCategory");
   const selectedLeaveType = watch("absenceTypeId");
+  const fromTime = watch("fromTime");
+  const toTime = watch("toTime");
 
   // Helper function to assign colors to leave types
   const getColorForLeaveType = (leaveTypeCode: string): string => {
@@ -135,6 +137,14 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
 
     return Object.entries(info.balances).map(([leaveTypeKey, balance]) => {
       const config = info.configurations[leaveTypeKey];
+      
+      // For monetizable type leaves, include both available and monetizable
+      // For other types, just use available
+      const category = config?.category?.toLowerCase();
+      const isMonetizable = category === "monetization" || category === "monetizable";
+      const totalAvailable = isMonetizable
+        ? (balance.available ?? 0) + (balance.monetizable ?? 0)
+        : (balance.available ?? 0);
 
       return {
         leaveTypeId: leaveTypeKey,
@@ -143,10 +153,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
           config?.code?.toUpperCase() ||
           leaveTypeKey.substring(0, 2).toUpperCase(),
         color: getColorForLeaveType(config?.code || leaveTypeKey),
-        totalAllotted:
-          (balance.available ?? 0) +
-          (balance.encashable ?? 0) +
-          (balance.monetizable ?? 0),
+        totalAllotted: totalAvailable,
         used: 0,
         pending: 0,
         available: balance.available ?? 0,
@@ -166,21 +173,17 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
 
   // Fetch leave information on component mount
   const fetchData = async () => {
-    try {
-      const leaveInfo = await getEmployeeLeavesInformation();
-      setEmployeeLeavesInfo(leaveInfo);
-    } catch (error) {
-      console.error("Failed to fetch leave information:", error);
-    }
+    const leaveInfo = await getEmployeeLeavesInformation();
+    setEmployeeLeavesInfo(leaveInfo);
   };
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Calculate number of days when dates change
+  // Calculate number of days when dates change (all calendar days including weekends)
   useEffect(() => {
     if (startDate && endDate) {
-      const days = differenceInBusinessDays(endDate, startDate) + 1;
+      const days = differenceInCalendarDays(endDate, startDate) + 1;
       setNumberOfDays(days > 0 ? days : 0);
       setError("");
     } else {
@@ -190,23 +193,23 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
 
   // Validate against available balance (skip validation for flexible requests with 0 available)
   useEffect(() => {
-    if (selectedLeaveType && numberOfDays > 0) {
-      const balance = computedBalances.find(
-        (b: LeaveBalance) => b.leaveTypeId === selectedLeaveType,
-      );
-      if (
-        balance &&
-        balance.available > 0 &&
-        numberOfDays > balance.available
-      ) {
-        setError(
-          `You only have ${balance.available} days available for ${balance.leaveTypeName}`,
-        );
-      } else {
-        setError("");
-      }
+    // Validate that required fields are filled
+    if (selectedLeaveType && startDate && endDate && numberOfDays > 0) {
+      // Leave balance validation is removed since LOP (Loss of Pay) is allowed
+      // Employees can apply for leave beyond their available balance
+      setError("");
     }
   }, [selectedLeaveType, numberOfDays, computedBalances]);
+
+  // Navigate back to main page with preserved tab state
+  const handleGoBack = () => {
+    const mainTab = searchParams.get("mainTab") || "balances";
+    const applicationsTab =
+      searchParams.get("applicationsTab") || "my-applications";
+    navigate(
+      `/leave-holiday?mainTab=${encodeURIComponent(mainTab)}&applicationsTab=${encodeURIComponent(applicationsTab)}`,
+    );
+  };
 
   const onSubmit = async (values: ApplyLeaveFormValues) => {
     if (!selectedLeaveType || !startDate) {
@@ -238,59 +241,51 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
     }
 
     // Validate balance only for non-flexible leaves (those with available balance > 0)
-    const balance = computedBalances.find(
-      (b: LeaveBalance) => b.leaveTypeId === selectedLeaveType,
-    );
-    if (balance && balance.available > 0 && numberOfDays > balance.available) {
-      setError(
-        `Insufficient leave balance. You have ${balance.available} days available.`,
-      );
-      return;
-    }
+    // Note: Balance validation removed - LOP (Loss of Pay) is allowed for all leaves
+    // Employees can apply for leave even if it exceeds their available balance
 
-    try {
-      // For partial day and partial timing, set endDate equal to startDate
-      const applyEndDate = absenceCategory === "fullDay" ? endDate : startDate;
+    // For partial day and partial timing, set endDate equal to startDate
+    const applyEndDate = absenceCategory === "fullDay" ? endDate : startDate;
 
-      const absenceData: AbsenceCarrier = {
-        absenceType: selectedLeaveType,
-        fromDate: startDate.toISOString(),
-        toDate: applyEndDate!.toISOString(),
-        absenceCategory:
-          absenceCategory === "partialTiming"
-            ? "partialDay"
-            : (absenceCategory as "fullDay" | "partialDay"),
-        partialDaySelection:
-          absenceCategory === "partialDay"
-            ? (values.partialDaySelection as "firstHalf" | "secondHalf")
-            : undefined,
-        reason: values.reason.trim(),
-        fromTime:
-          absenceCategory === "partialTiming" ? values.fromTime : undefined,
-        toTime: absenceCategory === "partialTiming" ? values.toTime : undefined,
-        informTo:
-          values.informToUserIds && values.informToUserIds.length > 0
-            ? values.informToUserIds
-            : undefined,
-        createdAt: new Date().toISOString(),
-      };
+    const absenceData: AbsenceCarrier = {
+      absenceType: selectedLeaveType,
+      fromDate: startDate.toISOString(),
+      toDate: applyEndDate!.toISOString(),
+      absenceCategory:
+        absenceCategory === "partialTiming"
+          ? "partialDay"
+          : (absenceCategory as "fullDay" | "partialDay"),
+      partialDaySelection:
+        absenceCategory === "partialDay"
+          ? (values.partialDaySelection as "firstHalf" | "secondHalf")
+          : undefined,
+      reason: values.reason.trim(),
+      fromTime:
+        absenceCategory === "partialTiming" ? values.fromTime : undefined,
+      toTime: absenceCategory === "partialTiming" ? values.toTime : undefined,
+      informTo:
+        values.informToUserIds && values.informToUserIds.length > 0
+          ? values.informToUserIds
+          : undefined,
+      createdAt: new Date().toISOString(),
+    };
 
-      // Call API to submit absence application using self-service context
-      const result = await raiseAbsenceRequest(absenceData);
-      
-      if (result) {
-        // Navigate back to leave page after successful submission
-        navigate("/leave-holiday");
-      }
-    } catch (err) {
-      console.error("Failed to submit leave application:", err);
-      setError("Failed to submit leave application. Please try again.");
-    }
+    // Submit absence application - context handles success/error notifications
+    await raiseAbsenceRequest(absenceData);
+
+    // Navigate back to previous page after API call completes
+    // (context will show success/error toast as needed)
+    handleGoBack();
   };
 
   const selectedBalance = computedBalances.find(
     (b: LeaveBalance) => b.leaveTypeId === selectedLeaveType,
   );
+
+  // Check if selected leave type is flexible
+  const isFlexibleLeave = selectedLeaveType && employeeLeavesInfo?.configurations
+    ? (employeeLeavesInfo.configurations[selectedLeaveType]?.category?.toLowerCase() === "flexible")
+    : false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,11 +295,7 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
           <Card>
             {/* Header */}
             <div className="flex items-center gap-4 p-6 border-b">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => navigate("/leave-holiday")}
-              >
+              <Button variant="outline" size="icon" onClick={handleGoBack}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
@@ -338,19 +329,27 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {computedBalances.map((balance: LeaveBalance) => (
-                              <SelectItem
-                                key={balance.leaveTypeId}
-                                value={balance.leaveTypeId}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>{balance.leaveTypeName}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    ({balance.available} days available)
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
+                            {computedBalances.map((balance: LeaveBalance) => {
+                              const isFlexible = employeeLeavesInfo?.configurations
+                                ? (employeeLeavesInfo.configurations[balance.leaveTypeId]?.category?.toLowerCase() === "flexible")
+                                : false;
+                              
+                              return (
+                                <SelectItem
+                                  key={balance.leaveTypeId}
+                                  value={balance.leaveTypeId}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span>{balance.leaveTypeName}</span>
+                                    {!isFlexible && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({balance.totalAllotted} days available)
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -358,20 +357,22 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                     )}
                   />
 
-                  {selectedBalance && (
-                    <div className="bg-muted p-4 rounded-lg">
-                      <p className="text-sm">
-                        Available:{" "}
-                        <span className="font-semibold text-green-600">
-                          {selectedBalance.available}
-                        </span>{" "}
-                        days
-                        {selectedBalance.pending > 0 && (
-                          <span className="text-amber-600 ml-2">
-                            ({selectedBalance.pending} pending)
-                          </span>
-                        )}
-                      </p>
+                  {selectedBalance && !isFlexibleLeave && (
+                    <div className="space-y-2">
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-sm">
+                          Available:{" "}
+                          <span className="font-semibold text-green-600">
+                            {selectedBalance.totalAllotted}
+                          </span>{" "}
+                          days
+                          {selectedBalance.pending > 0 && (
+                            <span className="text-amber-600 ml-2">
+                              ({selectedBalance.pending} pending)
+                            </span>
+                          )}
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -559,18 +560,37 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
                     />
                   )}
 
-                  {/* Number of Days Display - Only for Full Day */}
-                  {numberOfDays > 0 && absenceCategory === "fullDay" && (
+                  {/* Number of Days Display - For All Absence Types */}
+                  {startDate && (
                     <div className="bg-muted p-3 rounded-md">
                       <p className="text-sm font-medium">
                         Duration:{" "}
                         <span className="text-lg font-bold text-primary">
-                          {numberOfDays}
-                        </span>{" "}
-                        business day{numberOfDays !== 1 ? "s" : ""}
+                          {absenceCategory === "fullDay" && endDate
+                            ? `${numberOfDays} day${numberOfDays !== 1 ? "s" : ""}`
+                            : absenceCategory === "partialDay"
+                              ? "0.5 days (Half Day)"
+                              : absenceCategory === "partialTiming" && fromTime && toTime
+                                ? `${fromTime} - ${toTime}`
+                                : "Select details"}
+                        </span>
                       </p>
                     </div>
                   )}
+
+                  {/* LOP Information - Show when exceeding available balance (not for flexible leaves) */}
+                  {!isFlexibleLeave &&
+                    selectedBalance &&
+                    numberOfDays > selectedBalance.totalAllotted &&
+                    selectedBalance.totalAllotted > 0 && (
+                      <Alert className="border-amber-200 bg-amber-50">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800">
+                          You are applying for <span className="font-semibold">{numberOfDays} days</span> but only have <span className="font-semibold">{selectedBalance.totalAllotted} days</span> available. 
+                          The remaining <span className="font-semibold">{numberOfDays - selectedBalance.totalAllotted} day(s)</span> will be deducted as <span className="font-semibold">Loss of Pay (LOP)</span>.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                   {/* Partial Day Selection - First Half or Second Half */}
                   {absenceCategory === "partialDay" && (
@@ -716,14 +736,13 @@ export function ApplyLeavePage({}: ApplyLeavePageProps) {
       {/* Form Action Bar - Bottom Fixed Bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm p-4 z-40">
         <div className="container mx-auto flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => navigate("/leave-holiday")} disabled={isLoading}>
+          <Button variant="outline" onClick={handleGoBack} disabled={isLoading}>
             Cancel
           </Button>
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={
               isLoading ||
-              !!error ||
               !selectedLeaveType ||
               !startDate ||
               !endDate ||

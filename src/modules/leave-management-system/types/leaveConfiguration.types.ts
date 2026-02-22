@@ -70,17 +70,13 @@ export interface LMSProperties {
 }
 
 /**
- * @deprecated Use LMSProperties instead
- */
-export type LeaveProperties = LMSProperties;
-
-/**
  * ApplicableCategories - Defines categories of applicability for leave configuration
- * Now simplified to only represent structural applicability
+ * Specifies which employee categories are eligible for this leave type
  */
 export interface ApplicableCategories {
-  // This interface can be extended in future for other applicability criteria
-  // For now, gender and marriedStatus have been moved to LeaveConfiguration root
+  gender: string; // male, female, other, all
+  marriedStatus: string; // married, single, all
+  employeeTypeIds: string[]; // list of employee type IDs
 }
 
 /**
@@ -136,11 +132,6 @@ export interface LMSConfiguration {
 }
 
 /**
- * @deprecated Use LMSConfiguration instead
- */
-export type LeaveConfiguration = LMSConfiguration;
-
-/**
  * LMSConfigurationCarrier - Used for creating new LMS configurations
  * Omits id, createdAt, updatedAt
  */
@@ -176,17 +167,15 @@ export interface LMSConfigurationCarrier {
   allowRestrictions: boolean;
   restrictions: Restrictions | null;
 
+  // Applicability
+  applicableCategories: ApplicableCategories;
+
   // Company ID
   companyId: string;
 
   // Employee List
   employeeIds: string[];
 }
-
-/**
- * @deprecated Use LMSConfigurationCarrier instead
- */
-export type LeaveConfigurationCarrier = LMSConfigurationCarrier;
 
 /**
  * LMSConfigurationUpdateCarrier - Used for updating existing LMS configurations
@@ -208,14 +197,10 @@ export interface LMSConfigurationUpdateCarrier {
   calendarConfiguration?: CalendarConfiguration;
   allowRestrictions?: boolean;
   restrictions?: Restrictions | null;
+  applicableCategories?: ApplicableCategories;
   companyId?: string;
   employeeIds?: string[];
 }
-
-/**
- * @deprecated Use LMSConfigurationUpdateCarrier instead
- */
-export type LeaveConfigurationUpdateCarrier = LMSConfigurationUpdateCarrier;
 
 /**
  * Type guards and validators
@@ -301,11 +286,6 @@ export interface LMSConfigurationFormData {
   companyId: string;
   employeeIds: string[];
 }
-
-/**
- * @deprecated Use LMSConfigurationFormData instead
- */
-export type LeaveConfigurationFormData = LMSConfigurationFormData;
 
 /**
  * LeaveBalanceModel - Unified absence balance model that supports 4 types:
