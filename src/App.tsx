@@ -15,6 +15,7 @@ import { LeaveManagementProvider } from "./contexts/LeaveManagementContext";
 import { ExpenseManagementProvider } from "./contexts/ExpenseManagementContext";
 import { SelfServiceProvider } from "./contexts/SelfServiceContext";
 import { PerformanceProvider } from "./contexts/PerformanceContext";
+import { RoleManagementProvider } from "./contexts/RoleManagementContext";
 
 // Auth modules
 import { Login } from "./modules/auth/Login";
@@ -120,6 +121,7 @@ import { EmployeeOnboarding } from "./modules/user-management/EmployeeOnboarding
 import { CompanyManagement } from "./modules/administration/CompanyManagement";
 import { CompanyForm } from "./modules/administration/CompanyForm";
 import { RolePermissions } from "./modules/user-management/RolePermissions";
+import { RoleManagement } from "./modules/role-management/RoleManagement";
 import { AuditLogs } from "./modules/user-management/AuditLogs";
 import { Integrations } from "./modules/user-management/Integrations";
 import { SystemSettings } from "./modules/user-management/SystemSettings";
@@ -144,7 +146,8 @@ function App() {
                       <ExpenseManagementProvider>
                         <SelfServiceProvider>
                           <PerformanceProvider>
-                            <BrowserRouter>
+                            <RoleManagementProvider>
+                              <BrowserRouter>
                               <Routes>
                                 {/* Public auth routes */}
                                 <Route path="/auth/login" element={<Login />} />
@@ -489,6 +492,10 @@ function App() {
                                   element={<RolePermissions />}
                                 />
                                 <Route
+                                  path="/role-management"
+                                  element={<RoleManagement />}
+                                />
+                                <Route
                                   path="/audit-logs"
                                   element={<AuditLogs />}
                                 />
@@ -532,18 +539,19 @@ function App() {
                             </Routes>
                           </BrowserRouter>
                           <Toaster />
-                        </PerformanceProvider>
-                      </SelfServiceProvider>
-                    </ExpenseManagementProvider>
-                  </LeaveManagementProvider>
-                </HolidayProvider>
-              </PolicyProvider>
-            </NotificationProvider>
-            </UserManagementProvider>
-          </CompanyProvider>
-        </LayoutProvider>
-      </AuthProvider>
-    </ThemeProvider>
+                        </RoleManagementProvider>
+                      </PerformanceProvider>
+                    </SelfServiceProvider>
+                  </ExpenseManagementProvider>
+                </LeaveManagementProvider>
+              </HolidayProvider>
+            </PolicyProvider>
+          </NotificationProvider>
+          </UserManagementProvider>
+        </CompanyProvider>
+      </LayoutProvider>
+    </AuthProvider>
+  </ThemeProvider>
   );
 }
 
