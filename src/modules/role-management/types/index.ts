@@ -1,89 +1,62 @@
 /**
  * Role Management Types
- * Defines types for Keycloak client and role management
- * Matches backend models: ClientRoleInfo, RealmClientsAndRoles, CreateClientCarrier, CreateRoleCarrier, UserClientRolesCarrier, UserClientRolesInfo
+ * Defines types for the new role management system: Resources, Roles Lists, and Roles Config
  */
 
+// ============= RESOURCE TYPES =============
+
 /**
- * Keycloak Client with Roles
- * Corresponds to backend: ClientRoleInfo
+ * Resource Model
+ * Represents a top-level resource that has roles assigned to it
  */
-export interface KeycloakClient {
+export interface Resource {
   id: string;
-  clientId: string;
-  name: string | null;
+  name: string;
   description: string | null;
-  enabled: boolean;
-  roles: string[]; // List of role names (not objects)
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
- * Realm Clients and Roles Response
- * Corresponds to backend: RealmClientsAndRoles
+ * Resource Carrier
+ * Used for creating or updating resources
  */
-export interface ClientsAndRolesResponse {
-  realm: string;
-  clientCount: number;
-  clients: KeycloakClient[];
-}
-
-/**
- * Create Client Request
- * Corresponds to backend: CreateClientCarrier
- */
-export interface CreateClientRequest {
-  clientId: string;
+export interface ResourceCarrier {
+  id: string;
   name: string;
   description?: string;
-  confidential?: boolean;
+}
+
+// ============= ROLE MODEL TYPES =============
+
+/**
+ * RoleModel / RolesList Item
+ * Represents a role associated with a resource
+ */
+export interface RoleModel {
+  id: string; // Role identifier (e.g., "ADMIN", "USER")
+  resourceId: string; // Reference to the Resource this role belongs to
+  roleName: string; // Human-readable role name
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
- * Create Role Request
- * Corresponds to backend: CreateRoleCarrier
+ * RoleModel Carrier
+ * Used for creating or updating roles
+ * Maps to backend RoleModelCarrier
  */
-export interface CreateRoleRequest {
-  clientId: string;
-  roleName: string;
-  description?: string;
+export interface RoleModelCarrier {
+  id: string; // Role identifier/key (e.g., "ADMIN", "USER")
+  resourceId: string; // Reference to the Resource this role belongs to
+  roleName: string; // Human-readable role name
+  description?: string; // Optional description
 }
+
+// ============= UPDATE PAYLOAD TYPE =============
 
 /**
- * Delete Client Request
+ * Update payload - Map of field names to values
  */
-export interface DeleteClientRequest {
-  clientId: string;
-}
-
-/**
- * Delete Role Request
- */
-export interface DeleteRoleRequest {
-  clientId: string;
-  roleName: string;
-}
-
-/**
- * User Client Roles Carrier
- * Corresponds to backend: UserClientRolesCarrier
- * Used for assigning and removing roles
- */
-export interface UserClientRolesRequest {
-  userId: string;
-  clientId: string;
-  roleNames: string[];
-}
-
-/**
- * User Client Roles Info
- * Corresponds to backend: UserClientRolesInfo
- */
-export interface UserClientRolesInfo {
-  userId: string;
-  clientId: string;
-  assignedRoles: string[];
-}
-
-// Legacy types for backward compatibility
-export type RoleAssignment = UserClientRolesRequest;
-export type UserWithRoles = UserClientRolesInfo;
+export type UpdatePayload = Record<string, any>;
