@@ -206,18 +206,18 @@ export const RoleManagement: React.FC = () => {
   // ──────────────────────────────────────────────────────
 
   /**
-   * Transform ID input: Instagram username style
-   * - Only alphanumeric and underscores
-   * - Spaces convert to underscores (like Instagram)
+   * Transform ID input: slug style
+   * - Only alphanumeric and hyphens
+   * - Spaces convert to hyphens
    * - Removes all other special characters
    * - Converts to lowercase
-   * Examples: "My App" → "my_app", "Hello-World 123!" → "hello_world_123"
+   * Examples: "My App" → "my-app", "Hello_World 123!" → "hello-world-123"
    */
   const transformIdInput = (value: string): string => {
     return value
-      .replace(/\s+/g, "-")              // Replace spaces with underscores first
-      .replace(/[^a-zA-Z0-9-]/g, "")     // Remove all non-alphanumeric and non-underscore chars
-      .toLowerCase();                     // Convert to lowercase
+      .replace(/\s+/g, "-")           // Replace spaces with hyphens
+      .replace(/[^a-zA-Z0-9-]/g, "") // Remove all non-alphanumeric and non-hyphen chars
+      .toLowerCase();                  // Convert to lowercase
   };
 
   /**
@@ -225,7 +225,7 @@ export const RoleManagement: React.FC = () => {
    */
   const isValidId = (id: string): boolean => {
     if (!id.trim()) return false;
-    return /^[a-zA-Z0-9_]+$/.test(id) && id.length <= 100;
+    return /^[a-zA-Z0-9-]+$/.test(id) && id.length <= 100;
   };
 
   /**
@@ -785,7 +785,7 @@ export const RoleManagement: React.FC = () => {
               <p className="text-xs text-muted-foreground">
                 {isEditingResource
                   ? "Resource ID cannot be changed."
-                  : "Alphanumeric with underscores only (auto-formatted). No spaces allowed."}
+                  : "Alphanumeric with hyphens only (spaces auto-convert to hyphens)."}
               </p>
             </div>
             <div className="space-y-2">
@@ -884,7 +884,7 @@ export const RoleManagement: React.FC = () => {
               <p className="text-xs text-muted-foreground">
                 {isEditingRole
                   ? "Role ID cannot be changed."
-                  : "Alphanumeric with underscores (spaces auto-convert to underscores)."}
+                  : "Alphanumeric with hyphens (spaces auto-convert to hyphens)."}
               </p>
             </div>
             <div className="space-y-2">
