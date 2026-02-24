@@ -27,6 +27,7 @@ import { OnboardingTabsNavigation } from "./components/onboarding/OnboardingTabs
 import { PromotionHistoryFormComponent } from "./components/onboarding/PromotionHistoryForm";
 import { SkillsSetFormComponent, skillsSetSchema } from "./components/onboarding/SkillsSetForm";
 import { UserDetailsFormComponent, userDetailsSchema } from "./components/onboarding/UserDetailsForm";
+import { LeaveDetailsTab } from "./components/LeaveDetailsTab";
 // import { ProfileSummaryFormComponent } from "./components/onboarding/ProfileSummaryForm";
 // import { AssetsFormComponent, assetsSchema } from "./components/onboarding/AssetsForm";
 import {
@@ -682,17 +683,17 @@ export function EmployeeOnboarding() {
 
           {/* Leave Details Tab */}
           <TabsContent value="leave-details" className="mt-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <Card className="p-6">
                 <div className="space-y-4 mb-6">
                   <h2 className="text-lg font-semibold">Leave Details</h2>
                   <p className="text-sm text-muted-foreground">
-                    Leave balance, accruals, and leave history for the employee.
+                    View and manage employee leave balances and credits.
                   </p>
                 </div>
-                <div className="text-center py-12 text-muted-foreground">
-                  Leave details coming soon...
-                </div>
+                <LeaveDetailsTab
+                  employeeId={employeeId || undefined}
+                />
               </Card>
             </div>
           </TabsContent>

@@ -26,6 +26,7 @@ import {
   JobDetailsSnapshot 
 } from "@/modules/user-management/types/onboarding.types";
 import { EmployeeType, Department, Designation, WorkLocation } from "@/modules/user-management/types/settings.types";
+import { LeaveDetails } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
 
@@ -693,4 +694,33 @@ export const userManagementService = {
   apiDeleteWorkLocationViaUsers,
   apiGetGeneralDetailsSnapshot,
   apiGetJobDetailsSnapshot,
+};
+
+/**
+ * Get Leave Details for Employee
+ * GET /emp-user-management/v1/users/{employeeId}/leave-details
+ * 
+ * Retrieves leave balances and assigned leave types for a specific employee.
+ * Works for any employee (admin can view/edit employee leave details).
+ * 
+ * @param employeeId - The employee ID to fetch leave details for
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token for authorization
+ * @returns Promise<ApiResponse<LeaveDetails>>
+ * 
+ * @example
+ * const response = await apiGetLeaveDetails('EMP-001', 'techsophy', token);
+ * // Returns: { id, email, firstName, lastName, assignedLeaveTypes, balances, ... }
+ */
+export const apiGetLeaveDetails = async (
+  employeeId: string,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<LeaveDetails>> => {
+  return apiRequest<LeaveDetails>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/${employeeId}/leave-details`,
+    tenant,
+    accessToken,
+  });
 };

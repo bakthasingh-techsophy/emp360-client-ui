@@ -47,6 +47,7 @@ import {
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
   apiBulkReactivateUsers,
+  apiGetLeaveDetails,
   type DeactivationCarrier,
   type ReactivationCarrier,
   apiUpdateEmployeeTypeViaUsers,
@@ -456,6 +457,10 @@ interface UserManagementContextType {
     pageSize?: number,
   ) => Promise<Pagination<WorkLocation> | null>;
   deleteWorkLocation: (id: string) => Promise<boolean>;
+
+  // Leave Details Methods (Admin can view/edit employee leave details)
+  getLeaveDetails: (employeeId: string) => Promise<any | null>;
+  bulkUpdateLeaveCredits: (employeeId: string, updates: Record<string, number>) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -1629,6 +1634,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== LEAVE DETAILS ====================
+
+  const getLeaveDetails = async (employeeId: string): Promise<any | null> => {
+    return executeApiCall(
+      (tenant, token) => apiGetLeaveDetails(employeeId, tenant, token),
+      "Fetch Leave Details",
+      "", // Empty string for no success toast
+    );
+  };
+
+  const bulkUpdateLeaveCredits = async (
+    _employeeId: string,
+    _updates: Record<string, number>,
+  ): Promise<boolean> => {
+    // Placeholder - leave credit APIs not available yet
+    console.warn(
+      "Leave credit update not yet implemented. Awaiting backend API.",
+    );
+    // TODO: Replace with actual apiUpdateLeaveCredits when available
+    return true;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: UserManagementContextType = {
@@ -1746,6 +1773,10 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     updateWorkLocation,
     refreshWorkLocations,
     deleteWorkLocation,
+
+    // Leave Details
+    getLeaveDetails,
+    bulkUpdateLeaveCredits,
 
     // Loading State
     isLoading,
