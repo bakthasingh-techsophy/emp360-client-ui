@@ -15,8 +15,8 @@ interface LayoutContextType {
   setSelectedCompanyScope: (scope: string | null | undefined) => void;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
-  hideCompanySelector: boolean;
-  setHideCompanySelector: (hide: boolean) => void;
+  allowedCompanySelectorPaths: string[]; // Paths where company selector should be visible
+  setAllowedCompanySelectorPaths: (paths: string[]) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -28,10 +28,10 @@ export const LayoutProvider = ({ children }: { children: ReactNode }) => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
-  const [hideCompanySelector, setHideCompanySelector] = useState(false);
+  const [allowedCompanySelectorPaths, setAllowedCompanySelectorPaths] = useState<string[]>([]);
 
   return (
-    <LayoutContext.Provider value={{ activePage, setActivePage, selectedCompanyScope, setSelectedCompanyScope, sidebarCollapsed, setSidebarCollapsed, hideCompanySelector, setHideCompanySelector }}>
+    <LayoutContext.Provider value={{ activePage, setActivePage, selectedCompanyScope, setSelectedCompanyScope, sidebarCollapsed, setSidebarCollapsed, allowedCompanySelectorPaths, setAllowedCompanySelectorPaths }}>
       {children}
     </LayoutContext.Provider>
   );

@@ -13,8 +13,8 @@ import {
   Copy,
   Check,
   Trash2,
-  AlertTriangle,
-} from "lucide-react";
+  AlertTriangle,  UserX,
+  Gift,} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -75,11 +75,15 @@ type Props = {
     canCreate: boolean;
     canEdit: boolean;
     canDelete: boolean;
+    canDeactivate: boolean;
+    canEnable: boolean;
     canAccessSettings: boolean;
     hasAllPermissions: boolean;
     hasAnyAccess: boolean;
     roles: string[];
   };
+  onCreditDeductLeaves?: (employeeIds: string[], isBulk: boolean) => void;
+  onDeactivate?: (employeeIds: string[], isBulk: boolean) => void;
 };
 
 export function UsersTable({
@@ -90,6 +94,8 @@ export function UsersTable({
   onSelectionChange,
   refreshTrigger = 0,
   permissions,
+  onCreditDeductLeaves,
+  onDeactivate,
 }: Props) {
   const navigate = useNavigate();
   const { refreshUserDetailsSnapshots, deleteUser, isLoading } =
@@ -113,6 +119,10 @@ export function UsersTable({
   const [userToDelete, setUserToDelete] = useState<UserDetailsSnapshot | null>(
     null,
   );
+
+  // Confirmation dialog state for deactivation
+  const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState(false);
+  const [userToDeactivate, setUserToDeactivate] = useState<UserDetailsSnapshot | null>(null);
 
   // Ref to track previous dependency values to detect actual changes
   const prevDepsRef = useRef<{
@@ -175,6 +185,23 @@ export function UsersTable({
     setDeleteConfirmOpen(true);
   }, []);
 
+  const handleDeactivateUser = useCallback((user: UserDetailsSnapshot) => {
+    if (onDeactivate) {
+      onDeactivate([user.id], false); // Single user, not bulk
+    } else {
+      setUserToDeactivate(user);
+      setDeactivateConfirmOpen(true);
+    }
+  }, [onDeactivate]);
+
+  const handleCreditDeductLeaves = useCallback((user: UserDetailsSnapshot) => {
+    if (onCreditDeductLeaves) {
+      onCreditDeductLeaves([user.id], false); // Single user, not bulk
+    } else {
+      console.log('Credit/Deduct leaves for user:', user.id);
+    }
+  }, [onCreditDeductLeaves]);
+
   const fetchData = async () => {
     try {
       // Build universal search request from filters and search query
@@ -218,6 +245,16 @@ export function UsersTable({
     }
     setUserToDelete(null);
   }, [userToDelete]);
+
+  const confirmDeactivateUser = useCallback(async () => {
+    if (!userToDeactivate) return;
+
+    console.log('Confirming deactivation for user:', userToDeactivate.id);
+    // TODO: Implement actual deactivation API call
+    // For now, refresh the table
+    fetchData();
+    setUserToDeactivate(null);
+  }, [userToDeactivate]);
 
   // Fetch data from API when filters or search change
   useEffect(() => {
@@ -626,6 +663,27 @@ export function UsersTable({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {/* Deactivate action - shown if user has deactivate permission */}
+                    {permissions.canDeactivate && (
+                      <DropdownMenuItem
+                        onClick={() => handleDeactivateUser(user)}
+                      >
+                        <UserX className="mr-2 h-4 w-4" />
+                        Deactivate
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* Credit/Deduct Leaves action - shown if user has edit permission */}
+                    {permissions.canEdit && (
+                      <DropdownMenuItem
+                        onClick={() => handleCreditDeductLeaves(user)}
+                      >
+                        <Gift className="mr-2 h-4 w-4" />
+                        Credit/Deduct Leaves
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* Delete action */}
                     <DropdownMenuItem
                       onClick={() => handleDeleteUser(user)}
                       className="text-destructive"
@@ -648,6 +706,8 @@ export function UsersTable({
       handleViewUser,
       handleEditUser,
       handleDeleteUser,
+      handleDeactivateUser,
+      handleCreditDeductLeaves,
       permissions,
       selectionMode,
     ],
@@ -685,7 +745,7 @@ export function UsersTable({
       getRowId: (user: UserDetailsSnapshot) => user.id,
       enableSelectAll: true,
     }),
-    [selectionMode, onSelectionChange],
+    [selectionMode],
   );
 
   return (
@@ -752,6 +812,34 @@ export function UsersTable({
         variant="destructive"
         confirmText="Delete"
         icon={<AlertTriangle className="h-10 w-10 text-destructive" />}
+      />
+
+      {/* Deactivate Confirmation Dialog */}
+      <ConfirmationDialog
+        open={deactivateConfirmOpen}
+        onOpenChange={setDeactivateConfirmOpen}
+        onConfirm={confirmDeactivateUser}
+        title="Deactivate User"
+        description={
+          userToDeactivate ? (
+            <div className="space-y-2">
+              <p>
+                Are you sure you want to deactivate{" "}
+                <strong>
+                  {userToDeactivate.firstName} {userToDeactivate.lastName}
+                </strong>{" "}
+                ({userToDeactivate.id})?
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Deactivated users will not be able to access the system until reactivated.
+              </p>
+            </div>
+          ) : (
+            "Are you sure you want to deactivate this user?"
+          )
+        }
+        variant="default"
+        confirmText="Deactivate"
       />
     </>
   );

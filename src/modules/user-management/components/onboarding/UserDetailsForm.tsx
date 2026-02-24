@@ -129,8 +129,9 @@ export function UserDetailsFormComponent({
               setValue("status", value as UserStatus);
               trigger("status");
             }}
+            disabled={mode === 'edit'}
           >
-            <SelectTrigger>
+            <SelectTrigger disabled={mode === 'edit'}>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>

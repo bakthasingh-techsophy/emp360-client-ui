@@ -23,8 +23,6 @@ import { Alert, AlertDescription } from './ui/alert';
 import { User, LogOut, Settings, Code, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ThemeToggle';
-import { CompanySelector } from './CompanySelector';
-import { useLayoutContext } from '@/contexts/LayoutContext';
 
 /**
  * Main Header Component
@@ -42,7 +40,6 @@ export function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showSwitchUser, setShowSwitchUser] = useState(false);
-  const { hideCompanySelector } = useLayoutContext();
 
   const handleSwitchUser = () => {
     setShowSwitchUser(true);
@@ -53,9 +50,9 @@ export function Header() {
       {/* Main Header - Responsive toolbar */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6 gap-4">
-          {/* Left Section: Company Selector - Always visible unless explicitly hidden */}
+          {/* Left Section: Company Selector - Hidden for now */}
           <div className="flex flex-1 items-center gap-2 min-w-0">
-            {!hideCompanySelector && <CompanySelector />}
+            {/* Company selector hidden - reserved for future use */}
           </div>
 
           {/* Right Section: Actions & User Menu */}

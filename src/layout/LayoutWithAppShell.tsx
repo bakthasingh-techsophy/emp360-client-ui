@@ -37,7 +37,7 @@
  * This layout file is the ONLY place you need to wire up your app-specific logic.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppShell, AppShellMenuItem } from '@/components/AppShell';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LoadingBar } from '@/components/LoadingBar';
@@ -49,6 +49,7 @@ import {
   getOrderedPinnedMenuIds,
 } from '@/store/menuPreferences';
 import { Header } from '@/components/Header';
+import { useLayoutContext } from '@/contexts/LayoutContext';
 
 /**
  * Main application layout component using AppShell
@@ -62,6 +63,13 @@ import { Header } from '@/components/Header';
  */
 export function LayoutWithAppShell() {
   const navigate = useNavigate();
+  const { setAllowedCompanySelectorPaths } = useLayoutContext();
+
+  // ==================== COMPANY SELECTOR PATHS ====================
+  // Set the paths where the company selector should be visible
+  useEffect(() => {
+    setAllowedCompanySelectorPaths(['/user-management']);
+  }, [setAllowedCompanySelectorPaths]);
 
   // ==================== MENU CONFIGURATION ====================
   // Get all available menu items from your config

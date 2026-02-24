@@ -5,20 +5,60 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, UserX, Trash2, Gift, UserCheck, Settings } from 'lucide-react';
+import { UserPlus, UserX, Trash2, Gift, UserCheck, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/PageLayout';
 import { GenericToolbar } from '@/components/GenericToolbar/GenericToolbar';
 import { AvailableFilter, ActiveFilter, BulkAction } from '@/components/GenericToolbar/types';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { useUserManagement } from '@/contexts/UserManagementContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { UsersTable } from './UsersTable';
-import UniversalSearchRequest from '@/types/search';
 import { useUserManagementPermissions } from '@/lib/permissions';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
+import { format } from 'date-fns';
+
+// Type definitions for carriers
+interface CreditDeductLeavesPayload {
+  employeeIds: string[];
+  leaveType: string;
+  count: number;
+  action: 'credit' | 'deduct';
+}
+
+interface DeactivationCarrier {
+  employeeIds: string[];
+  lastWorkingDay: string; // ISO UTC string
+  deactivationType: 'termination' | 'resignation';
+  comments: string;
+}
 
 export function UserManagement() {
   const navigate = useNavigate();
-  const { bulkDeleteUsers, bulkDeactivateUsers, bulkEnableUsers } = useUserManagement();
+  const { bulkDeleteUsers, bulkEnableUsers } = useUserManagement();
+  const { companies } = useCompany();
   const permissions = useUserManagementPermissions();
 
   // State management
@@ -27,7 +67,7 @@ export function UserManagement() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+  ``
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -36,10 +76,96 @@ export function UserManagement() {
     onConfirm: () => void;
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
+  // Credit/Deduct Leaves Dialog state
+  const [creditDeductDialogOpen, setCreditDeductDialogOpen] = useState(false);
+  const [creditDeductFormData, setCreditDeductFormData] = useState({
+    leaveType: '',
+    count: '',
+    actionType: 'credit' as 'credit' | 'deduct',
+  });
+  const [creditDeductTargetIds, setCreditDeductTargetIds] = useState<string[]>([]);
+  const [creditDeductIsBulk, setCreditDeductIsBulk] = useState(false);
+
+  // Deactivation Dialog state
+  const [deactivationDialogOpen, setDeactivationDialogOpen] = useState(false);
+  const [deactivationFormData, setDeactivationFormData] = useState({
+    lastWorkingDay: new Date(),
+    deactivationType: '' as 'termination' | 'resignation' | '',
+    comments: '',
+  });
+  const [deactivationTargetIds, setDeactivationTargetIds] = useState<string[]>([]);
+  const [deactivationIsBulk, setDeactivationIsBulk] = useState(false);
   // Action handlers
   const handleSettings = useCallback(() => {
     navigate('/user-management/settings');
   }, [navigate]);
+
+  // Credit/Deduct Leaves handlers
+  const handleOpenCreditDeductDialog = useCallback((employeeIds: string[], isBulk: boolean = false) => {
+    setCreditDeductTargetIds(employeeIds);
+    setCreditDeductIsBulk(isBulk);
+    setCreditDeductFormData({ leaveType: '', count: '', actionType: 'credit' });
+    setCreditDeductDialogOpen(true);
+  }, []);
+
+  const handleSubmitCreditDeduct = useCallback(async () => {
+    if (!creditDeductFormData.leaveType || !creditDeductFormData.count) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    const payload: CreditDeductLeavesPayload = {
+      employeeIds: creditDeductTargetIds,
+      leaveType: creditDeductFormData.leaveType,
+      count: parseFloat(creditDeductFormData.count),
+      action: creditDeductFormData.actionType,
+    };
+
+    console.log('Credit/Deduct Leaves Payload:', payload);
+    // TODO: Replace with actual API call
+    // const response = await creditDeductLeavesAPI(payload);
+
+    setCreditDeductDialogOpen(false);
+    setRefreshTrigger(prev => prev + 1);
+  }, [creditDeductFormData, creditDeductTargetIds]);
+
+  // Deactivation handlers
+  const handleOpenDeactivationDialog = useCallback((employeeIds: string[], isBulk: boolean = false) => {
+    setDeactivationTargetIds(employeeIds);
+    setDeactivationIsBulk(isBulk);
+    setDeactivationFormData({
+      lastWorkingDay: new Date(),
+      deactivationType: '',
+      comments: '',
+    });
+    setDeactivationDialogOpen(true);
+  }, []);
+
+  const handleSubmitDeactivation = useCallback(async () => {
+    if (!deactivationFormData.deactivationType) {
+      alert('Please select deactivation type');
+      return;
+    }
+
+    const payload: DeactivationCarrier = {
+      employeeIds: deactivationTargetIds,
+      lastWorkingDay: deactivationFormData.lastWorkingDay.toISOString(),
+      deactivationType: deactivationFormData.deactivationType as 'termination' | 'resignation',
+      comments: deactivationFormData.comments,
+    };
+
+    console.log('Deactivation Payload:', payload);
+    // TODO: Replace with actual API call
+    // const response = await deactivateUsersAPI(payload);
+
+    setDeactivationDialogOpen(false);
+    setRefreshTrigger(prev => prev + 1);
+  }, [deactivationFormData, deactivationTargetIds]);
+
+  const handleRemoveDeactivationEmployeeId = useCallback((idToRemove: string) => {
+    setDeactivationTargetIds(prev => prev.filter(id => id !== idToRemove));
+  }, []);
   // If user has no access at all, show restricted message
   if (!permissions.hasAnyAccess) {
     return (
@@ -152,6 +278,14 @@ export function UserManagement() {
         { value: 'ACTIVE', label: 'Active' },
         { value: 'INACTIVE', label: 'Inactive' },
       ],
+    },
+    {
+      id: 'companyId',
+      label: 'Company',
+      type: 'multiselect',
+      options: companies.map((company: any) => ({ value: company.id, label: company.name })),
+      defaultOperator: 'in',
+      operators: [{ value: 'in', label: 'In' }],
     },
     {
       id: 'department',
@@ -324,42 +458,14 @@ export function UserManagement() {
 
   const handleBulkCreditLeaves = useCallback(() => {
     if (selectedIds.length > 0) {
-      console.log('Bulk credit leaves for users:', selectedIds);
-      // TODO: Implement bulk credit leaves dialog and functionality
-      handleClearSelection();
+      handleOpenCreditDeductDialog(selectedIds, true);
     }
-  }, [selectedIds, handleClearSelection]);
+  }, [selectedIds, handleOpenCreditDeductDialog]);
 
   const handleBulkDeactivate = useCallback(() => {
     if (selectedIds.length === 0) return;
-    
-    setConfirmDialog({
-      open: true,
-      title: 'Deactivate Selected Users',
-      description: (
-        <div className="space-y-2">
-          <p>
-            Are you sure you want to deactivate <strong>{selectedIds.length}</strong> selected user(s)?
-          </p>
-          <p className="text-muted-foreground text-xs">
-            Deactivated users will not be able to access the system until reactivated.
-          </p>
-        </div>
-      ),
-      variant: 'default',
-      onConfirm: async () => {
-        // Build UniversalSearchRequest with idsList
-        const searchRequest:UniversalSearchRequest = {
-          idsList: selectedIds,
-        };
-        const success = await bulkDeactivateUsers(searchRequest);
-        if (success) {
-          handleClearSelection();
-          setRefreshTrigger(prev => prev + 1);
-        }
-      },
-    });
-  }, [selectedIds]);
+    handleOpenDeactivationDialog(selectedIds, true);
+  }, [selectedIds, handleOpenDeactivationDialog]);
 
   const handleBulkEnable = useCallback(() => {
     if (selectedIds.length === 0) return;
@@ -435,11 +541,11 @@ export function UserManagement() {
       });
     }
     
-    // Credit leaves - only if user has edit permission
+    // Credit/Deduct leaves - only if user has edit permission
     if (permissions.canEdit) {
       actions.push({
         id: 'credit-leaves',
-        label: 'Credit Leaves',
+        label: 'Credit/Deduct Leaves',
         icon: <Gift className="h-4 w-4" />,
         type: 'button',
         variant: 'outline',
@@ -514,6 +620,8 @@ export function UserManagement() {
         onSelectionChange={handleSelectionChange}
         refreshTrigger={refreshTrigger}
         permissions={permissions}
+        onCreditDeductLeaves={handleOpenCreditDeductDialog}
+        onDeactivate={handleOpenDeactivationDialog}
       />
     </PageLayout>
 
@@ -527,6 +635,354 @@ export function UserManagement() {
       variant={confirmDialog.variant}
       confirmText={confirmDialog.variant === 'destructive' ? 'Delete' : 'Confirm'}
     />
+
+    {/* Credit/Deduct Leaves Dialog */}
+    <CreditDeductLeavesDialog
+      open={creditDeductDialogOpen}
+      onOpenChange={setCreditDeductDialogOpen}
+      formData={creditDeductFormData}
+      onFormDataChange={setCreditDeductFormData}
+      targetIds={creditDeductTargetIds}
+      isBulk={creditDeductIsBulk}
+      onSubmit={handleSubmitCreditDeduct}
+    />
+
+    {/* Deactivation Dialog */}
+    <DeactivationDialog
+      open={deactivationDialogOpen}
+      onOpenChange={setDeactivationDialogOpen}
+      formData={deactivationFormData}
+      onFormDataChange={setDeactivationFormData}
+      targetIds={deactivationTargetIds}
+      isBulk={deactivationIsBulk}
+      onSubmit={handleSubmitDeactivation}
+      onRemoveEmployeeId={handleRemoveDeactivationEmployeeId}
+    />
   </>
+  );
+}
+
+// Credit/Deduct Leaves Dialog Component
+interface CreditDeductLeavesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formData: {
+    leaveType: string;
+    count: string;
+    actionType: 'credit' | 'deduct';
+  };
+  onFormDataChange: (data: any) => void;
+  targetIds: string[];
+  isBulk: boolean;
+  onSubmit: () => void;
+}
+
+function CreditDeductLeavesDialog({
+  open,
+  onOpenChange,
+  formData,
+  onFormDataChange,
+  targetIds,
+  isBulk,
+  onSubmit,
+}: CreditDeductLeavesDialogProps) {
+  const isValid = formData.leaveType && formData.count;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col" hideClose>
+        {/* Fixed Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Credit/Deduct Leaves</DialogTitle>
+              <DialogDescription className="mt-1">
+                {isBulk
+                  ? `Manage leaves for ${targetIds.length} selected employee(s)`
+                  : 'Manage leaves for the selected employee'}
+              </DialogDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="h-8 w-8 rounded-full shrink-0 -mt-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="space-y-4">
+            {/* Employee IDs - Bulk Mode */}
+            {isBulk && (
+              <div className="bg-muted/30 dark:bg-muted/10 rounded-lg p-4">
+                <Label className="text-xs font-semibold">Selected Employees</Label>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {targetIds.map((id) => (
+                    <div
+                      key={id}
+                      className="flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-sm font-medium"
+                    >
+                      {id}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leave Type */}
+            <div className="space-y-2">
+              <Label htmlFor="leave-type">Leave Type *</Label>
+              <Select
+                value={formData.leaveType}
+                onValueChange={(value) =>
+                  onFormDataChange({ ...formData, leaveType: value })
+                }
+              >
+                <SelectTrigger id="leave-type">
+                  <SelectValue placeholder="Select leave type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sick">Sick Leave</SelectItem>
+                  <SelectItem value="casual">Casual Leave</SelectItem>
+                  <SelectItem value="earned">Earned Leave</SelectItem>
+                  <SelectItem value="privilege">Privilege Leave</SelectItem>
+                  <SelectItem value="maternity">Maternity Leave</SelectItem>
+                  <SelectItem value="paternity">Paternity Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Count */}
+            <div className="space-y-2">
+              <Label htmlFor="leave-count">Count (decimals up to 1) *</Label>
+              <Input
+                id="leave-count"
+                type="number"
+                placeholder="e.g., 2.5"
+                value={formData.count}
+                onChange={(e) =>
+                  onFormDataChange({ ...formData, count: e.target.value })
+                }
+                step="0.5"
+                min="0"
+              />
+              <p className="text-xs text-muted-foreground">
+                Accepted format: 0.5, 1, 1.5, 2, etc.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Footer with Actions */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 bg-muted/20">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700"
+            disabled={!isValid}
+            onClick={() => {
+              onFormDataChange({ ...formData, actionType: 'credit' });
+              onSubmit();
+            }}
+          >
+            <Gift className="mr-2 h-4 w-4" />
+            Credit Leaves
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!isValid}
+            onClick={() => {
+              onFormDataChange({ ...formData, actionType: 'deduct' });
+              onSubmit();
+            }}
+          >
+            <Gift className="mr-2 h-4 w-4" />
+            Deduct Leaves
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Deactivation Dialog Component
+interface DeactivationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formData: {
+    lastWorkingDay: Date;
+    deactivationType: 'termination' | 'resignation' | '';
+    comments: string;
+  };
+  onFormDataChange: (data: any) => void;
+  targetIds: string[];
+  isBulk: boolean;
+  onSubmit: () => void;
+  onRemoveEmployeeId?: (id: string) => void;
+}
+
+function DeactivationDialog({
+  open,
+  onOpenChange,
+  formData,
+  onFormDataChange,
+  targetIds,
+  isBulk,
+  onSubmit,
+  onRemoveEmployeeId,
+}: DeactivationDialogProps) {
+  const isValid = formData.deactivationType;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col" hideClose>
+        {/* Fixed Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Deactivate User(s)</DialogTitle>
+              <DialogDescription className="mt-1">
+                {isBulk
+                  ? `Deactivate ${targetIds.length} selected employee(s)`
+                  : 'Deactivate the selected employee'}
+              </DialogDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              className="h-8 w-8 rounded-full shrink-0 -mt-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="space-y-4">
+            {/* Employee IDs - Bulk Mode with removable chips */}
+            {isBulk && (
+              <div className="bg-muted/30 dark:bg-muted/10 rounded-lg p-4">
+                <Label className="text-xs font-semibold">Selected Employees</Label>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {targetIds.map((id) => (
+                    <div
+                      key={id}
+                      className="flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-sm"
+                    >
+                      <span className="font-medium">{id}</span>
+                      <button
+                        onClick={() => onRemoveEmployeeId?.(id)}
+                        className="ml-0.5 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
+                        title={`Remove ${id}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {targetIds.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic mt-2">No employees selected</p>
+                )}
+              </div>
+            )}
+
+            {/* Last Working Day */}
+            <div className="space-y-2">
+              <Label htmlFor="last-working-day">Last Working Day *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {format(formData.lastWorkingDay, 'PPP')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.lastWorkingDay}
+                    onSelect={(date) =>
+                      onFormDataChange({
+                        ...formData,
+                        lastWorkingDay: date || new Date(),
+                      })
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                You can select past dates to backdate deactivations
+              </p>
+            </div>
+
+            {/* Deactivation Type */}
+            <div className="space-y-2">
+              <Label htmlFor="deactivation-type">Deactivation Type *</Label>
+              <Select
+                value={formData.deactivationType}
+                onValueChange={(value) =>
+                  onFormDataChange({
+                    ...formData,
+                    deactivationType: value as 'termination' | 'resignation' | '',
+                  })
+                }
+              >
+                <SelectTrigger id="deactivation-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="termination">Termination</SelectItem>
+                  <SelectItem value="resignation">Resignation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Comments */}
+            <div className="space-y-2">
+              <Label htmlFor="comments">Comments (Optional)</Label>
+              <Textarea
+                id="comments"
+                placeholder="Add any additional comments..."
+                value={formData.comments}
+                onChange={(e) =>
+                  onFormDataChange({ ...formData, comments: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed Footer with Actions */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 bg-muted/20">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!isValid || targetIds.length === 0}
+            onClick={onSubmit}
+          >
+            <UserX className="mr-2 h-4 w-4" />
+            Deactivate
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
