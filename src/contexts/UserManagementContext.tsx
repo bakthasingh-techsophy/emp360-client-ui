@@ -46,7 +46,9 @@ import {
   apiDeleteSkill,
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
-  apiBulkEnableUsers,
+  apiBulkReactivateUsers,
+  type DeactivationCarrier,
+  type ReactivationCarrier,
   apiUpdateEmployeeTypeViaUsers,
   apiDeleteEmployeeTypeViaUsers,
   apiUpdateDepartmentViaUsers,
@@ -248,10 +250,8 @@ interface UserManagementContextType {
     filters: UniversalSearchRequest,
   ) => Promise<boolean>;
   bulkDeleteUsers: (searchRequest: UniversalSearchRequest) => Promise<boolean>;
-  bulkDeactivateUsers: (
-    searchRequest: UniversalSearchRequest,
-  ) => Promise<boolean>;
-  bulkEnableUsers: (searchRequest: UniversalSearchRequest) => Promise<boolean>;
+  bulkDeactivateUsers: (carrier: DeactivationCarrier) => Promise<boolean>;
+  bulkReactivateUsers: (carrier: ReactivationCarrier) => Promise<boolean>;
 
   // Employee Aggregate Methods
   createEmployeeAggregate: (payload: any) => Promise<any | null>;
@@ -750,26 +750,26 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
   };
 
   const bulkDeactivateUsers = async (
-    searchRequest: UniversalSearchRequest,
+    carrier: DeactivationCarrier,
   ): Promise<boolean> => {
     const result = await executeApiCall(
       (tenant, accessToken) =>
-        apiBulkDeactivateUsers(searchRequest, tenant, accessToken),
+        apiBulkDeactivateUsers(carrier, tenant, accessToken),
       "Bulk Deactivate Users",
-      `Users matching criteria deactivated successfully`,
+      `Users deactivated successfully`,
       true,
     );
     return result as boolean;
   };
 
-  const bulkEnableUsers = async (
-    searchRequest: UniversalSearchRequest,
+  const bulkReactivateUsers = async (
+    carrier: ReactivationCarrier,
   ): Promise<boolean> => {
     const result = await executeApiCall(
       (tenant, accessToken) =>
-        apiBulkEnableUsers(searchRequest, tenant, accessToken),
-      "Bulk Enable Users",
-      `Users matching criteria enabled successfully`,
+        apiBulkReactivateUsers(carrier, tenant, accessToken),
+      "Reactivate Users",
+      `Users reactivated successfully`,
       true,
     );
     return result as boolean;
@@ -1647,7 +1647,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     bulkDeleteUserDetailsByFilters,
     bulkDeleteUsers,
     bulkDeactivateUsers,
-    bulkEnableUsers,
+    bulkReactivateUsers,
 
     // Employee Aggregate
     createEmployeeAggregate,

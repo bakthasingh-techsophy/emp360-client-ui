@@ -16,6 +16,7 @@ import { ExpenseManagementProvider } from "./contexts/ExpenseManagementContext";
 import { SelfServiceProvider } from "./contexts/SelfServiceContext";
 import { PerformanceProvider } from "./contexts/PerformanceContext";
 import { RoleManagementProvider } from "./contexts/RoleManagementContext";
+import { ExcelSheetProvider } from "./contexts/ExcelSheetContext";
 
 // Auth modules
 import { Login } from "./modules/auth/Login";
@@ -146,6 +147,7 @@ function App() {
                       <ExpenseManagementProvider>
                         <SelfServiceProvider>
                           <PerformanceProvider>
+                          <ExcelSheetProvider>
                             <RoleManagementProvider>
                               <BrowserRouter>
                               <Routes>
@@ -540,6 +542,7 @@ function App() {
                           </BrowserRouter>
                           <Toaster />
                         </RoleManagementProvider>
+                          </ExcelSheetProvider>
                       </PerformanceProvider>
                     </SelfServiceProvider>
                   </ExpenseManagementProvider>

@@ -127,6 +127,7 @@ export interface ToolbarConfig {
   showExport?: boolean;
   onExportAll?: (sendEmail: boolean, email?: string) => void;
   onExportResults?: (sendEmail: boolean, email?: string) => void;
+  isExporting?: boolean;
   
   showSort?: boolean;
   sortableFields?: SortableField[];

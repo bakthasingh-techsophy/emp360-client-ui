@@ -39,7 +39,7 @@ export interface DecodedToken {
  * User Management Permission Roles
  */
 export enum UserManagementRole {
-  ALL = 'uma',              // All permissions (view + create + edit + delete + deactivate + enable + settings)
+  ALL = 'uma',              // All permissions (view + create + edit + delete + deactivate + enable + settings + bulk_export + bulk_import)
   VIEW = 'umv',             // View only
   EDIT = 'ume',             // Edit permission
   DELETE = 'umd',           // Delete permission
@@ -47,6 +47,8 @@ export enum UserManagementRole {
   DEACTIVATE = 'umde',      // Deactivate users permission
   ENABLE = 'umen',          // Enable users permission
   SETTINGS = 'ums',         // Settings permission
+  BULK_EXPORT = 'umbe',     // Bulk export users to Excel
+  BULK_IMPORT = 'umbi',     // Bulk import users from CSV/XLSX
 }
 
 /**
@@ -207,6 +209,26 @@ export class UserManagementPermissions {
       hasResourceRole(this.RESOURCE_NAME, UserManagementRole.SETTINGS)
     );
   }
+
+  /**
+   * Check if user can bulk export users to Excel
+   */
+  static canBulkExport(): boolean {
+    return (
+      this.hasAllPermissions() ||
+      hasResourceRole(this.RESOURCE_NAME, UserManagementRole.BULK_EXPORT)
+    );
+  }
+
+  /**
+   * Check if user can bulk import users from CSV/XLSX
+   */
+  static canBulkImport(): boolean {
+    return (
+      this.hasAllPermissions() ||
+      hasResourceRole(this.RESOURCE_NAME, UserManagementRole.BULK_IMPORT)
+    );
+  }
   
   /**
    * Get all user management roles
@@ -237,6 +259,8 @@ export function useUserManagementPermissions() {
     canEnable: UserManagementPermissions.canEnable(),
     canDeactivateEnable: UserManagementPermissions.canDeactivateEnable(),
     canAccessSettings: UserManagementPermissions.canAccessSettings(),
+    canBulkExport: UserManagementPermissions.canBulkExport(),
+    canBulkImport: UserManagementPermissions.canBulkImport(),
     hasAllPermissions: UserManagementPermissions.hasAllPermissions(),
     hasAnyAccess: UserManagementPermissions.hasAnyAccess(),
     roles: UserManagementPermissions.getRoles(),

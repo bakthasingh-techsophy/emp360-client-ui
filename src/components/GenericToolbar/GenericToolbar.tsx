@@ -51,6 +51,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
   showExport = false,
   onExportAll,
   onExportResults,
+  isExporting = false,
   showSort = false,
   sortableFields = [],
   currentSort = null,
@@ -831,6 +832,7 @@ export const GenericToolbar: React.FC<GenericToolbarProps> = ({
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         exportType={exportType}
+        isExporting={isExporting}
         onExport={(sendEmail, email) => {
           if (exportType === 'all' && onExportAll) {
             onExportAll(sendEmail, email);

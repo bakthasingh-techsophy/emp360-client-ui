@@ -13,7 +13,7 @@
           "id": "uma",
           "name": "User Management Admin",
           "description": "Full access to all user management features",
-          "permissions": ["view", "create", "edit", "delete", "deactivate", "enable", "settings"]
+          "permissions": ["view", "create", "edit", "delete", "deactivate", "enable", "settings", "bulk_export", "bulk_import"]
         },
         {
           "id": "umv",
@@ -56,6 +56,18 @@
           "name": "User Management Settings",
           "description": "Can access user management settings and configurations",
           "permissions": ["view", "settings"]
+        },
+        {
+          "id": "umbe",
+          "name": "User Management Bulk Exporter",
+          "description": "Can bulk export users to Excel (XLSX) via the export toolbar",
+          "permissions": ["view", "bulk_export"]
+        },
+        {
+          "id": "umbi",
+          "name": "User Management Bulk Importer",
+          "description": "Can bulk import users from CSV/XLSX and download the import template",
+          "permissions": ["view", "bulk_import"]
         }
       ],
       "menu_items": ["user-management", "company-management", "role-permissions", "audit-logs", "integrations", "system-settings"]
@@ -549,7 +561,7 @@
       "system_admin": {
         "description": "System administrator",
         "resources": {
-          "user-management": ["uma"],
+          "user-management": ["uma", "umbe", "umbi"],
           "visitor-management": ["vm_admin"],
           "space-management": ["sm_admin"],
           "core-hr": ["hr_admin"],

@@ -13,8 +13,11 @@ import {
   Copy,
   Check,
   Trash2,
-  AlertTriangle,  UserX,
-  Gift,} from "lucide-react";
+  AlertTriangle,
+  UserX,
+  UserCheck,
+  Gift,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -84,6 +87,7 @@ type Props = {
   };
   onCreditDeductLeaves?: (employeeIds: string[], isBulk: boolean) => void;
   onDeactivate?: (employeeIds: string[], isBulk: boolean) => void;
+  onReactivate?: (employeeIds: string[], isBulk: boolean) => void;
 };
 
 export function UsersTable({
@@ -96,6 +100,7 @@ export function UsersTable({
   permissions,
   onCreditDeductLeaves,
   onDeactivate,
+  onReactivate,
 }: Props) {
   const navigate = useNavigate();
   const { refreshUserDetailsSnapshots, deleteUser, isLoading } =
@@ -193,6 +198,12 @@ export function UsersTable({
       setDeactivateConfirmOpen(true);
     }
   }, [onDeactivate]);
+
+  const handleReactivateUser = useCallback((user: UserDetailsSnapshot) => {
+    if (onReactivate) {
+      onReactivate([user.id], false); // Single user, not bulk
+    }
+  }, [onReactivate]);
 
   const handleCreditDeductLeaves = useCallback((user: UserDetailsSnapshot) => {
     if (onCreditDeductLeaves) {
@@ -612,6 +623,8 @@ export function UsersTable({
         header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => {
           const user = row.original;
+          const isInactive = user.status === 'INACTIVE';
+
           return (
             <div className="flex items-center justify-center gap-1">
               {/* View button - always shown if user has view permission */}
@@ -638,61 +651,91 @@ export function UsersTable({
                 </TooltipProvider>
               )}
 
-              {/* Edit button - only shown if user has edit permission */}
-              {permissions.canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditUser(user);
-                  }}
-                >
-                  Edit
-                </Button>
+              {/* INACTIVE: show Reactivate button only */}
+              {isInactive && permissions.canEnable && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-950"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReactivateUser(user);
+                        }}
+                      >
+                        <UserCheck className="mr-1.5 h-3.5 w-3.5" />
+                        Reactivate
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Reactivate this employee</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
 
-              {/* Delete dropdown - only shown if user has delete permission */}
-              {permissions.canDelete && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">More actions</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {/* Deactivate action - shown if user has deactivate permission */}
-                    {permissions.canDeactivate && (
-                      <DropdownMenuItem
-                        onClick={() => handleDeactivateUser(user)}
-                      >
-                        <UserX className="mr-2 h-4 w-4" />
-                        Deactivate
-                      </DropdownMenuItem>
-                    )}
-
-                    {/* Credit/Deduct Leaves action - shown if user has edit permission */}
-                    {permissions.canEdit && (
-                      <DropdownMenuItem
-                        onClick={() => handleCreditDeductLeaves(user)}
-                      >
-                        <Gift className="mr-2 h-4 w-4" />
-                        Credit/Deduct Leaves
-                      </DropdownMenuItem>
-                    )}
-
-                    {/* Delete action */}
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteUser(user)}
-                      className="text-destructive"
+              {/* ACTIVE: Edit + dropdown with Deactivate / Credit-Deduct / Delete */}
+              {!isInactive && (
+                <>
+                  {/* Edit button */}
+                  {permissions.canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditUser(user);
+                      }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete User
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      Edit
+                    </Button>
+                  )}
+
+                  {/* Dropdown for destructive/secondary actions */}
+                  {permissions.canDelete && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">More actions</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {/* Deactivate action */}
+                        {permissions.canDeactivate && (
+                          <DropdownMenuItem
+                            onClick={() => handleDeactivateUser(user)}
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            Deactivate
+                          </DropdownMenuItem>
+                        )}
+
+                        {/* Credit/Deduct Leaves action */}
+                        {permissions.canEdit && (
+                          <DropdownMenuItem
+                            onClick={() => handleCreditDeductLeaves(user)}
+                          >
+                            <Gift className="mr-2 h-4 w-4" />
+                            Credit/Deduct Leaves
+                          </DropdownMenuItem>
+                        )}
+
+                        {/* Delete action */}
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteUser(user)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete User
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
               )}
             </div>
           );
@@ -707,6 +750,7 @@ export function UsersTable({
       handleEditUser,
       handleDeleteUser,
       handleDeactivateUser,
+      handleReactivateUser,
       handleCreditDeductLeaves,
       permissions,
       selectionMode,

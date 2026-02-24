@@ -35,6 +35,28 @@ const BASE_ENDPOINT = "/emp-user-management/v1/users";
 export type UpdatePayload = Record<string, any>;
 
 /**
+ * Deactivation carrier - payload for bulk user deactivation
+ */
+export interface DeactivationCarrier {
+  employeeIds: string[];
+  lastWorkingDay: string;          // ISO UTC Instant
+  deactivationType: 'termination' | 'resignation';
+  comments?: string;
+  createdAt: string;               // ISO UTC Instant
+}
+
+/**
+ * Reactivation carrier - payload for bulk user reactivation
+ */
+export interface ReactivationCarrier {
+  employeeIds: string[];
+  reactivationDate: string;        // ISO UTC Instant
+  reactivationType: 'rehire' | 'reinstatement' | 'contract_renewal' | 'other';
+  comments?: string;
+  createdAt: string;               // ISO UTC Instant
+}
+
+/**
  * Onboard New User
  * POST /emp-user-management/v1/users/onboard
  * 
@@ -298,23 +320,15 @@ export const apiBulkDeleteUsers = async (
  * Bulk Deactivate Users
  * POST /emp-user-management/v1/users/bulk/deactivate
  * 
- * Deactivates multiple users matching the provided filter criteria.
- * The request body contains UniversalSearchRequest with filters.
- * Backend handles the selection and deactivation internally.
+ * Deactivates multiple users identified by employeeIds with deactivation details.
  * 
- * @param searchRequest - UniversalSearchRequest with filters (e.g., { filters: { and: { status: "active" } } })
+ * @param carrier - DeactivationCarrier with employeeIds, lastWorkingDay, deactivationType, comments, createdAt
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<void>>
- * 
- * @example
- * const response = await apiBulkDeactivateUsers(
- *   { filters: { and: { status: "active", department: "IT" } } },
- *   'tenant-001'
- * );
  */
 export const apiBulkDeactivateUsers = async (
-  searchRequest: UniversalSearchRequest,
+  carrier: DeactivationCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<void>> => {
@@ -323,40 +337,34 @@ export const apiBulkDeactivateUsers = async (
     endpoint: `${BASE_ENDPOINT}/bulk/deactivate`,
     tenant,
     accessToken,
-    body: searchRequest,
+    body: carrier,
   });
 };
 
 /**
- * Bulk Enable Users
- * POST /emp-user-management/v1/users/bulk/enable
+ * Bulk Reactivate Users
+ * POST /emp-user-management/v1/users/bulk/reactivate
  * 
- * Enables/activates multiple users matching the provided filter criteria.
- * The request body contains UniversalSearchRequest with filters.
- * Backend handles the selection and activation internally.
+ * Reactivates multiple previously deactivated users with reactivation details.
+ * Updates UserDetails, UserDetailsSnapshot, and JobDetails with status=ACTIVE.
+ * Enables users in Keycloak and saves reactivation history for audit.
  * 
- * @param searchRequest - UniversalSearchRequest with filters (e.g., { filters: { and: { status: "inactive" } } })
+ * @param carrier - ReactivationCarrier with employeeIds, reactivationDate, reactivationType, comments, createdAt
  * @param tenant - Tenant ID
  * @param accessToken - Optional access token for authorization
  * @returns Promise<ApiResponse<void>>
- * 
- * @example
- * const response = await apiBulkEnableUsers(
- *   { filters: { and: { status: "inactive", department: "IT" } } },
- *   'tenant-001'
- * );
  */
-export const apiBulkEnableUsers = async (
-  searchRequest: UniversalSearchRequest,
+export const apiBulkReactivateUsers = async (
+  carrier: ReactivationCarrier,
   tenant: string,
   accessToken?: string
 ): Promise<ApiResponse<void>> => {
   return apiRequest<void>({
     method: "POST",
-    endpoint: `${BASE_ENDPOINT}/bulk/enable`,
+    endpoint: `${BASE_ENDPOINT}/bulk/reactivate`,
     tenant,
     accessToken,
-    body: searchRequest,
+    body: carrier,
   });
 };
 
@@ -674,7 +682,7 @@ export const userManagementService = {
   apiDeleteSkill,
   apiBulkDeleteUsers,
   apiBulkDeactivateUsers,
-  apiBulkEnableUsers,
+  apiBulkReactivateUsers,
   apiUpdateEmployeeTypeViaUsers,
   apiDeleteEmployeeTypeViaUsers,
   apiUpdateDepartmentViaUsers,
