@@ -16,11 +16,13 @@ import { LeaveBalanceModel } from "../../../modules/leave-management-system/type
 import {
   CalendarDays,
   Plus,
+  Gift,
 } from "lucide-react";
 
 interface EditableLeaveCardsProps {
   employeeLeavesInfo: EmployeeLeavesInformation | null;
   onCreditDeduct?: (leaveCode: string) => void;
+  onAddCredits?: () => void;
   isLoading?: boolean;
 }
 
@@ -38,6 +40,7 @@ const CARD_GRADIENTS = [
 export function EditableLeaveCards({
   employeeLeavesInfo,
   onCreditDeduct,
+  onAddCredits,
   isLoading = false,
 }: EditableLeaveCardsProps) {
   // Show loading skeleton
@@ -82,6 +85,7 @@ export function EditableLeaveCards({
               gradient={gradient}
               category={category}
               onCreditDeduct={() => onCreditDeduct?.(leaveCode)}
+              onAddCredits={onAddCredits}
             />
           );
         })}
@@ -105,6 +109,7 @@ interface EditableLeaveCardByTypeProps {
   gradient: string;
   category?: string;
   onCreditDeduct?: () => void;
+  onAddCredits?: () => void;
 }
 
 function EditableLeaveCardByType({
@@ -113,6 +118,7 @@ function EditableLeaveCardByType({
   gradient,
   category,
   onCreditDeduct,
+  onAddCredits,
 }: EditableLeaveCardByTypeProps) {
   const available = balance.available ?? 0;
   const consumed = balance.consumed ?? 0;
@@ -242,18 +248,33 @@ function EditableLeaveCardByType({
           </div>
         )}
 
-        {/* Credit/Deduct Button - Not shown for flexible leaves */}
-        {category !== "flexible" && (
-          <Button
-            className="w-full mt-2"
-            variant="secondary"
-            size="sm"
-            onClick={onCreditDeduct}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Credit / Deduct
-          </Button>
-        )}
+        {/* Action Buttons */}
+        <div className="space-y-2 pt-2 flex flex-col gap-2">
+          {/* Credit/Deduct Button - For accrued and monetization leaves */}
+          {category !== "flexible" && category !== "special" && (
+            <Button
+              className="w-full"
+              variant="secondary"
+              size="sm"
+              onClick={onCreditDeduct}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Credit / Deduct
+            </Button>
+          )}
+          {/* Add Credits Button - Only for special leaves */}
+          {category === "special" && (
+            <Button
+              className="w-full"
+              variant="default"
+              size="sm"
+              onClick={onAddCredits}
+            >
+              <Gift className="h-3.5 w-3.5 mr-1.5" />
+              Add Credits
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

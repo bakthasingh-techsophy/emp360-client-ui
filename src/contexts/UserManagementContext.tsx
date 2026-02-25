@@ -48,8 +48,10 @@ import {
   apiBulkDeactivateUsers,
   apiBulkReactivateUsers,
   apiGetLeaveDetails,
+  apiBulkAddCredits,
   apiCreditLeaves,
   apiDeductLeaves,
+  type BulkCreditCarrier,
   type LeaveAdjustmentCarrier,
   type DeactivationCarrier,
   type ReactivationCarrier,
@@ -463,6 +465,7 @@ interface UserManagementContextType {
 
   // Leave Details Methods (Admin can view/edit employee leave details)
   getLeaveDetails: (employeeId: string) => Promise<any | null>;
+  bulkAddCredits: (userIds: string[], carrier: Omit<BulkCreditCarrier, 'userIds'>) => Promise<boolean>;
   creditLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
   deductLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
 
@@ -1648,6 +1651,24 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const bulkAddCredits = async (
+    userIds: string[],
+    carrierData: Omit<BulkCreditCarrier, 'userIds'>,
+  ): Promise<boolean> => {
+    const carrier: BulkCreditCarrier = {
+      ...carrierData,
+      userIds,
+    };
+
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiBulkAddCredits(carrier, tenant, accessToken),
+      "Add Credits",
+      `${carrier.creditType} credits added successfully for ${userIds.length} employee(s)`,
+      true,
+    );
+    return result as boolean;
+  };
+
   const creditLeaves = async (
     carrier: LeaveAdjustmentCarrier,
   ): Promise<boolean> => {
@@ -1792,6 +1813,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
     // Leave Details
     getLeaveDetails,
+    bulkAddCredits,
     creditLeaves,
     deductLeaves,
 

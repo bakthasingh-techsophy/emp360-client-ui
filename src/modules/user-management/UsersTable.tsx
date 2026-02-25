@@ -86,6 +86,7 @@ type Props = {
     roles: string[];
   };
   onCreditDeductLeaves?: (employeeIds: string[], isBulk: boolean) => void;
+  onAddCredits?: (employeeIds: string[], isBulk: boolean) => void;
   onDeactivate?: (employeeIds: string[], isBulk: boolean) => void;
   onReactivate?: (employeeIds: string[], isBulk: boolean) => void;
 };
@@ -99,6 +100,7 @@ export function UsersTable({
   refreshTrigger = 0,
   permissions,
   onCreditDeductLeaves,
+  onAddCredits,
   onDeactivate,
   onReactivate,
 }: Props) {
@@ -212,6 +214,14 @@ export function UsersTable({
       console.log('Credit/Deduct leaves for user:', user.id);
     }
   }, [onCreditDeductLeaves]);
+
+  const handleAddCredits = useCallback((user: UserDetailsSnapshot) => {
+    if (onAddCredits) {
+      onAddCredits([user.id], false); // Single user, not bulk
+    } else {
+      console.log('Add credits for user:', user.id);
+    }
+  }, [onAddCredits]);
 
   const fetchData = async () => {
     try {
@@ -724,6 +734,16 @@ export function UsersTable({
                           </DropdownMenuItem>
                         )}
 
+                        {/* Add Credits action */}
+                        {permissions.canEdit && (
+                          <DropdownMenuItem
+                            onClick={() => handleAddCredits(user)}
+                          >
+                            <Gift className="mr-2 h-4 w-4" />
+                            Add Credits
+                          </DropdownMenuItem>
+                        )}
+
                         {/* Delete action */}
                         <DropdownMenuItem
                           onClick={() => handleDeleteUser(user)}
@@ -752,6 +772,7 @@ export function UsersTable({
       handleDeactivateUser,
       handleReactivateUser,
       handleCreditDeductLeaves,
+      handleAddCredits,
       permissions,
       selectionMode,
     ],

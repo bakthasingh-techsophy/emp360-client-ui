@@ -28,6 +28,19 @@ import {
 import { EmployeeType, Department, Designation, WorkLocation } from "@/modules/user-management/types/settings.types";
 import { LeaveDetails } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
+/**
+ * BulkCreditCarrier - Carrier for bulk credit allocation to multiple employees
+ * Used for allocating credits like comp-off, special leave credits to multiple employees at once
+ */
+export interface BulkCreditCarrier {
+  userIds: string[]; // List of user IDs (single or multiple)
+  creditType: string; // Type of credit
+  fromDate: string; // ISO instant
+  toDate: string; // ISO instant
+  reason: string; // Reason for credit
+  createdAt: string; // ISO instant
+}
+
 const BASE_ENDPOINT = "/emp-user-management/v1/users";
 
 /**
@@ -704,6 +717,46 @@ export const apiGetLeaveDetails = async (
 };
 
 /**
+ * Bulk Add Credits to Multiple Employees
+ * POST /emp-user-management/v1/users/credits/bulk-add
+ *
+ * Adds credits (comp-off, special leave, etc.) to one or multiple employees
+ * Credits are immediately approved with reporting manager set
+ * Works with both single and multiple employee IDs
+ * Requires UMA (all) or UML (lead) role
+ *
+ * @param carrier - BulkCreditCarrier with userIds, creditType, fromDate, toDate, reason, createdAt
+ * @param tenant - Tenant ID
+ * @param accessToken - Optional access token
+ * @returns Promise<ApiResponse<number>> - Returns count of successfully processed employees
+ *
+ * @example
+ * const carrier: BulkCreditCarrier = {
+ *   userIds: ['EMP-001', 'EMP-002', 'EMP-003'],
+ *   creditType: 'comp-off',
+ *   fromDate: new Date('2026-02-01').toISOString(),
+ *   toDate: new Date('2026-02-05').toISOString(),
+ *   reason: 'Performance bonus for Q1',
+ *   createdAt: new Date().toISOString(),
+ * };
+ * const response = await apiBulkAddCredits(carrier, 'techsophy', token);
+ * // Returns: { data: 3, status: 'success', ... }
+ */
+export const apiBulkAddCredits = async (
+  carrier: BulkCreditCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<number>> => {
+  return apiRequest<number>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/credits/bulk-add`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
  * Leave Adjustment Carrier
  * Payload for bulk credit / deduct leave operations
  */
@@ -788,6 +841,7 @@ export const userManagementService = {
   apiGetGeneralDetailsSnapshot,
   apiGetJobDetailsSnapshot,
   apiGetLeaveDetails,
+  apiBulkAddCredits,
   apiCreditLeaves,
   apiDeductLeaves,
 };

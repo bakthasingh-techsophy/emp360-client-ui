@@ -222,7 +222,7 @@ export function RequestCreditsPage({}: RequestCreditsPageProps) {
                       name="fromDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valid From *</FormLabel>
+                          <FormLabel>From Date *</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
@@ -261,7 +261,7 @@ export function RequestCreditsPage({}: RequestCreditsPageProps) {
                       name="toDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valid Until *</FormLabel>
+                          <FormLabel>To Date *</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button

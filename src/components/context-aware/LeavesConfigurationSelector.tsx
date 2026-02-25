@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/popover";
 import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import { LMSConfiguration } from "@/modules/leave-management-system/types/leaveConfiguration.types";
-import UniversalSearchRequest from "@/types/search";
+import UniversalSearchRequest, { Filters } from "@/types/search";
 
 interface LeavesConfigurationSelectorProps {
   value?: string; // Leave Configuration ID
@@ -52,6 +52,7 @@ interface LeavesConfigurationSelectorProps {
   className?: string;
   error?: string;
   onRefresh?: () => void; // Callback when refresh button is clicked
+  categories?: string[]; // Array of leave categories to load (e.g., ['accrued', 'monetization', 'special'])
 }
 
 export function LeavesConfigurationSelector({
@@ -62,6 +63,7 @@ export function LeavesConfigurationSelector({
   className,
   error,
   onRefresh,
+  categories,
 }: LeavesConfigurationSelectorProps) {
   const { searchLeaveConfigurations } = useLeaveManagement();
 
@@ -112,6 +114,8 @@ export function LeavesConfigurationSelector({
 
   useEffect(() => {
     loadSelectedConfiguration();
+    // categories is stable enough as a dependency since it's an array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Search configurations with debounce
@@ -125,9 +129,18 @@ export function LeavesConfigurationSelector({
 
       setIsLoadingConfigs(true);
       try {
+        const filters: Filters | undefined = categories && categories.length > 0
+          ? {
+              and: {
+                category: { op: "in", values: categories },
+              },
+            }
+          : undefined;
+
         const searchRequest: UniversalSearchRequest = {
           searchText: query.trim(),
-          searchFields: ["name", "code", "description", "tagline"], // Assuming backend supports searching across multiple fields
+          searchFields: ["name", "code", "description", "tagline"],
+          filters,
         };
 
         const result = await searchLeaveConfigurations(searchRequest, 0, 20);
@@ -144,14 +157,24 @@ export function LeavesConfigurationSelector({
         setIsLoadingConfigs(false);
       }
     },
-    [searchLeaveConfigurations],
+    [searchLeaveConfigurations, categories],
   );
 
   // Load initial configurations (page 0, size 10)
   const loadInitialConfigurations = async () => {
     setIsLoadingConfigs(true);
     try {
-      const result = await searchLeaveConfigurations({}, 0, 10);
+      const filters: Filters | undefined = categories && categories.length > 0
+        ? {
+            and: {
+              category: { op: "in", values: categories },
+            },
+          }
+        : undefined;
+
+      const searchRequest: UniversalSearchRequest = { filters };
+
+      const result = await searchLeaveConfigurations(searchRequest, 0, 10);
 
       if (result && result.content) {
         setConfigurations(result.content);

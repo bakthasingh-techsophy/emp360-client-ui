@@ -49,6 +49,7 @@ export function CreditDeductLeavesDialog({
 }: CreditDeductLeavesDialogProps) {
   const isValid = formData.leaveTypeId && formData.count;
   const isFlexible = formData.category?.toLowerCase() === "flexible";
+  const isSpecial = formData.category?.toLowerCase() === "special";
   const canSubmit = isValid && !isFlexible;
 
   const handleCredit = () => {
@@ -116,10 +117,11 @@ export function CreditDeductLeavesDialog({
               <LeavesConfigurationSelector
                 value={formData.leaveTypeId}
                 onChange={(leaveTypeId, category) =>
-                  onFormDataChange({ ...formData, leaveTypeId, category })
+                  onFormDataChange({ ...formData, leaveTypeId, category: category || "" })
                 }
                 placeholder="Select leave type"
                 disabled={isSubmitting}
+                categories={["accrued", "monetization"]}
               />
             </div>
 
@@ -129,6 +131,16 @@ export function CreditDeductLeavesDialog({
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Cannot modify flexible leaves:</strong> Flexible leaves are consumption-based and cannot be credited or deducted. They are tracked based on actual consumption only.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Info for Special Leaves */}
+            {isSpecial && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Special Leave:</strong> Special leaves can only be credited through the add credits feature. Deduction is not supported for special leaves.
                 </AlertDescription>
               </Alert>
             )}
@@ -191,8 +203,9 @@ export function CreditDeductLeavesDialog({
           </Button>
           <Button
             variant="destructive"
-            disabled={!canSubmit || isSubmitting}
+            disabled={!canSubmit || isSubmitting || isSpecial}
             onClick={handleDeduct}
+            title={isSpecial ? "Deduction not supported for special leaves" : ""}
           >
             {isSubmitting ? (
               <>

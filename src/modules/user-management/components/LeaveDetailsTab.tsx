@@ -11,6 +11,8 @@ import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import { useToast } from "@/hooks/use-toast";
 import { EditableLeaveCards } from "./EditableLeaveCards";
 import { CreditDeductLeavesDialog, CreditDeductFormData } from "./CreditDeductLeavesDialog";
+import { AddCreditsDialog, AddCreditsFormData } from "./AddCreditsDialog";
+import { BulkCreditCarrier } from "@/services/userManagementService";
 import { 
   EmployeeLeavesInformation,
   LeaveDetails,
@@ -30,7 +32,7 @@ export function LeaveDetailsTab({
   employeeId,
   onDataChange,
 }: LeaveDetailsTabProps) {
-  const { getLeaveDetails, creditLeaves, deductLeaves } = useUserManagement();
+  const { getLeaveDetails, bulkAddCredits, creditLeaves, deductLeaves } = useUserManagement();
   const { searchLeaveConfigurations } = useLeaveManagement();
   const { toast } = useToast();
 
@@ -50,6 +52,10 @@ export function LeaveDetailsTab({
   });
   const [creditDeductTargetLeaveTypeId, setCreditDeductTargetLeaveTypeId] = useState<string>("");
   const [isProcessingCredit, setIsProcessingCredit] = useState(false);
+
+  // Add Credits Dialog state
+  const [addCreditsDialogOpen, setAddCreditsDialogOpen] = useState(false);
+  const [isProcessingAddCredits, setIsProcessingAddCredits] = useState(false);
 
   // Fetch leave details on mount or when employeeId changes
   useEffect(() => {
@@ -144,42 +150,92 @@ export function LeaveDetailsTab({
     setIsProcessingCredit(true);
 
     try {
-      const carrier = {
-        leaveTypes: [leaveTypeId],
-        employeeIds: [employeeId],
-        leaveAmount: amount,
-      };
+      // Get the leave configuration to check category
+      const config = leaveData?.configurations[leaveTypeId];
+      const category = config?.category?.toLowerCase();
+      const leaveTypeName = config?.name || leaveTypeId;
 
-      const success =
-        action === "credit"
-          ? await creditLeaves(carrier)
-          : await deductLeaves(carrier);
+      // For special leaves, use addCreditsToEmployee API
+      // For other leaves, use creditLeaves/deductLeaves API
+      if (category === "special" && action === "credit") {
+        // Special leave - use bulkAddCredits API with single employee
+        const now = new Date().toISOString();
+        const fromDate = new Date().toISOString();
+        const toDate = new Date(Date.now() + amount * 24 * 60 * 60 * 1000).toISOString(); // Add days
 
-      if (success) {
-        toast({
-          title: "Success",
-          description: `Leave ${
-            action === "credit" ? "credited" : "deducted"
-          } successfully`,
-        });
+        const success = await bulkAddCredits(
+          [employeeId],
+          {
+            creditType: leaveTypeName,
+            fromDate: fromDate,
+            toDate: toDate,
+            reason: `Special leave credit allocation: ${amount} days`,
+            createdAt: now,
+          },
+        );
 
-        // Refresh leave details
-        await fetchLeaveDetails();
-        return true;
-      } else {
+        if (success) {
+          toast({
+            title: "Success",
+            description: `Special leave credits added successfully`,
+          });
+          await fetchLeaveDetails();
+          return true;
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to add special leave credits",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } else if (category === "special" && action === "deduct") {
+        // Special leaves cannot be deducted via addCreditsToEmployee
         toast({
           title: "Error",
-          description: `Failed to ${action} leave credits`,
+          description: "Special leaves cannot be deducted. Only credit operation is supported for special leaves.",
           variant: "destructive",
         });
         return false;
+      } else {
+        // Regular leaves - use creditLeaves/deductLeaves API
+        const carrier = {
+          leaveTypes: [leaveTypeId],
+          employeeIds: [employeeId],
+          leaveAmount: amount,
+        };
+
+        const success =
+          action === "credit"
+            ? await creditLeaves(carrier)
+            : await deductLeaves(carrier);
+
+        if (success) {
+          toast({
+            title: "Success",
+            description: `Leave ${
+              action === "credit" ? "credited" : "deducted"
+            } successfully`,
+          });
+
+          // Refresh leave details
+          await fetchLeaveDetails();
+          return true;
+        } else {
+          toast({
+            title: "Error",
+            description: `Failed to ${action} leave credits`,
+            variant: "destructive",
+          });
+          return false;
+        }
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred";
       toast({
         title: "Error",
-        description: `Failed to ${action} leave credits: ${errorMessage}`,
+        description: `Failed to process leave credits: ${errorMessage}`,
         variant: "destructive",
       });
       return false;
@@ -228,6 +284,44 @@ export function LeaveDetailsTab({
     }
   };
 
+  const handleSubmitAddCredits = async (carrier: BulkCreditCarrier) => {
+    setIsProcessingAddCredits(true);
+    try {
+      const result = await bulkAddCredits(carrier.userIds, {
+        creditType: carrier.creditType,
+        fromDate: carrier.fromDate,
+        toDate: carrier.toDate,
+        reason: carrier.reason,
+        createdAt: carrier.createdAt,
+      });
+
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Credits added successfully",
+        });
+        setAddCreditsDialogOpen(false);
+        // Refresh leave details
+        await fetchLeaveDetails();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add credits",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast({
+        title: "Error",
+        description: `Failed to add credits: ${errorMessage}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingAddCredits(false);
+    }
+  };
+
   if (!employeeId) {
     return (
       <Alert variant="destructive">
@@ -269,6 +363,7 @@ export function LeaveDetailsTab({
       <EditableLeaveCards
         employeeLeavesInfo={leaveData}
         onCreditDeduct={handleOpenCreditDeductDialog}
+        onAddCredits={() => setAddCreditsDialogOpen(true)}
         isLoading={isLoading}
       />
 
@@ -292,6 +387,15 @@ export function LeaveDetailsTab({
         isBulk={false}
         onSubmit={handleSubmitCreditDeduct}
         isSubmitting={isProcessingCredit}
+      />
+
+      {/* Add Credits Dialog */}
+      <AddCreditsDialog
+        open={addCreditsDialogOpen}
+        onOpenChange={setAddCreditsDialogOpen}
+        userIds={employeeId ? [employeeId] : []}
+        onSubmit={handleSubmitAddCredits}
+        isSubmitting={isProcessingAddCredits}
       />
     </div>
   );

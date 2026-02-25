@@ -59,13 +59,15 @@ import { format } from "date-fns";
 import type {
   DeactivationCarrier,
   ReactivationCarrier,
+  BulkCreditCarrier,
 } from "@/services/userManagementService";
 import { BulkImportDialog } from "./components/BulkImportDialog";
 import { CreditDeductLeavesDialog } from "./components/CreditDeductLeavesDialog";
+import { AddCreditsDialog } from "./components/AddCreditsDialog";
 
 export function UserManagement() {
   const navigate = useNavigate();
-  const { bulkDeleteUsers, bulkReactivateUsers, bulkDeactivateUsers, creditLeaves, deductLeaves } =
+  const { bulkDeleteUsers, bulkReactivateUsers, bulkDeactivateUsers, bulkAddCredits, creditLeaves, deductLeaves } =
     useUserManagement();
   const {
     exportUsersToExcel,
@@ -141,6 +143,11 @@ export function UserManagement() {
   const [reactivationIsBulk, setReactivationIsBulk] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
+  // Add Credits Dialog state
+  const [addCreditsDialogOpen, setAddCreditsDialogOpen] = useState(false);
+  const [addCreditsTargetIds, setAddCreditsTargetIds] = useState<string[]>([]);
+  const [isSubmittingAddCredits, setIsSubmittingAddCredits] = useState(false);
+
   // Action handlers
   const handleSettings = useCallback(() => {
     navigate("/user-management/settings");
@@ -186,6 +193,42 @@ export function UserManagement() {
       setRefreshTrigger((prev) => prev + 1);
     }
   }, [creditDeductFormData, creditDeductTargetIds, creditLeaves, deductLeaves]);
+
+  // Add Credits handlers
+  const handleOpenAddCreditsDialog = useCallback(
+    (employeeIds: string[], _isBulk: boolean = false) => {
+      setAddCreditsTargetIds(employeeIds);
+      setAddCreditsDialogOpen(true);
+    },
+    [],
+  );
+
+  const handleSubmitAddCredits = useCallback(
+    async (carrier: BulkCreditCarrier) => {
+      setIsSubmittingAddCredits(true);
+      try {
+        const success = await bulkAddCredits(
+          carrier.userIds,
+          {
+            creditType: carrier.creditType,
+            fromDate: carrier.fromDate,
+            toDate: carrier.toDate,
+            reason: carrier.reason,
+            createdAt: carrier.createdAt,
+          },
+        );
+
+        if (success) {
+          setAddCreditsDialogOpen(false);
+          setAddCreditsTargetIds([]);
+          setRefreshTrigger((prev) => prev + 1);
+        }
+      } finally {
+        setIsSubmittingAddCredits(false);
+      }
+    },
+    [bulkAddCredits],
+  );
 
   // Deactivation handlers
   const handleOpenDeactivationDialog = useCallback(
@@ -628,6 +671,12 @@ export function UserManagement() {
     }
   }, [selectedIds, handleOpenCreditDeductDialog]);
 
+  const handleBulkAddCredits = useCallback(() => {
+    if (selectedIds.length > 0) {
+      handleOpenAddCreditsDialog(selectedIds, true);
+    }
+  }, [selectedIds, handleOpenAddCreditsDialog]);
+
   const handleBulkDeactivate = useCallback(() => {
     if (selectedIds.length === 0) return;
     handleOpenDeactivationDialog(selectedIds, true);
@@ -691,6 +740,16 @@ export function UserManagement() {
         variant: "outline",
         onClick: handleBulkCreditLeaves,
       });
+
+      // Add Credits action
+      actions.push({
+        id: "add-credits",
+        label: "Add Credits",
+        icon: <Gift className="h-4 w-4" />,
+        type: "button",
+        variant: "outline",
+        onClick: handleBulkAddCredits,
+      });
     }
 
     return actions;
@@ -700,6 +759,7 @@ export function UserManagement() {
     handleBulkDeactivate,
     handleBulkEnable,
     handleBulkCreditLeaves,
+    handleBulkAddCredits,
   ]);
 
   return (
@@ -808,6 +868,7 @@ export function UserManagement() {
           refreshTrigger={refreshTrigger}
           permissions={permissions}
           onCreditDeductLeaves={handleOpenCreditDeductDialog}
+          onAddCredits={handleOpenAddCreditsDialog}
           onDeactivate={handleOpenDeactivationDialog}
           onReactivate={handleOpenReactivationDialog}
         />
@@ -862,6 +923,15 @@ export function UserManagement() {
         onSubmit={handleSubmitReactivation}
         onRemoveEmployeeId={handleRemoveReactivationEmployeeId}
         isSubmitting={isReactivating}
+      />
+
+      {/* Add Credits Dialog */}
+      <AddCreditsDialog
+        open={addCreditsDialogOpen}
+        onOpenChange={setAddCreditsDialogOpen}
+        userIds={addCreditsTargetIds}
+        onSubmit={handleSubmitAddCredits}
+        isSubmitting={isSubmittingAddCredits}
       />
 
       {/* Bulk Import Dialog */}

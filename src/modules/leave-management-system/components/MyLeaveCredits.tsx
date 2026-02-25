@@ -182,7 +182,8 @@ export function MyLeaveCredits({}: MyLeaveCreditsProps) {
     );
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "-";
     return format(new Date(dateString), "MMM dd, yyyy");
   };
 
@@ -354,7 +355,7 @@ export function MyLeaveCredits({}: MyLeaveCreditsProps) {
         cell: ({ row }) => (
           <div className="text-center">
             <span className="whitespace-nowrap">
-              {formatDate(row.original.expiryOn)}
+              {row.original.expiryOn ? formatDate(row.original.expiryOn) : "-"}
             </span>
           </div>
         ),
