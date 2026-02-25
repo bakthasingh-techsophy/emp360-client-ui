@@ -4,3 +4,4 @@
 
 export { RoleManagement } from './RoleManagement';
 export * from './types';
+export * from './components';

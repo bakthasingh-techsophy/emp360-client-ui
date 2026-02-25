@@ -17,6 +17,7 @@ import {
   UserX,
   UserCheck,
   Gift,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -222,6 +223,10 @@ export function UsersTable({
       console.log('Add credits for user:', user.id);
     }
   }, [onAddCredits]);
+
+  const handleManageRoles = useCallback((user: UserDetailsSnapshot) => {
+    navigate(`/user-management/roles-edit?id=${user.id}`);
+  }, [navigate]);
 
   const fetchData = async () => {
     try {
@@ -744,6 +749,14 @@ export function UsersTable({
                           </DropdownMenuItem>
                         )}
 
+                        {/* Manage Roles action */}
+                        <DropdownMenuItem
+                          onClick={() => handleManageRoles(user)}
+                        >
+                          <Shield className="mr-2 h-4 w-4" />
+                          Manage Roles
+                        </DropdownMenuItem>
+
                         {/* Delete action */}
                         <DropdownMenuItem
                           onClick={() => handleDeleteUser(user)}
@@ -773,6 +786,7 @@ export function UsersTable({
       handleReactivateUser,
       handleCreditDeductLeaves,
       handleAddCredits,
+      handleManageRoles,
       permissions,
       selectionMode,
     ],

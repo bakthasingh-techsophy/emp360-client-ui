@@ -59,3 +59,47 @@ export interface UserStats {
   activeUsers: number;
   inactiveUsers: number;
 }
+
+/**
+ * Carrier for assigning roles to multiple users for a specific resource/client
+ * Used when assigning Keycloak roles to users in a resource
+ */
+export interface AssignRolesCarrier {
+  userIds: string[];      // List of Keycloak user UUIDs
+  resourceId: string;     // Resource/client ID (e.g., "user-management")
+  roleIds: string[];      // List of role IDs to assign (e.g., ["UMA", "UME", "UMC"])
+}
+
+/**
+ * UserResourceRoles - Represents roles assigned to a specific resource/client
+ * Maps a resource (client) to its list of assigned role names
+ */
+export interface UserResourceRoles {
+  roleIds: string[];      // List of role names assigned to this resource (e.g., ["uma", "ume", "umc"])
+}
+
+/**
+ * UserRoles - Stores role assignments for a user across multiple resources/clients
+ * Maps resources to their assigned roles in a hierarchical structure
+ * 
+ * Example structure:
+ * {
+ *   "id": "user-123",
+ *   "rolesData": {
+ *     "user-management": {
+ *       "roleIds": ["uma", "ume", "umc"]
+ *     },
+ *     "leave-management-system": {
+ *       "roleIds": ["lmss", "lmsv"]
+ *     }
+ *   },
+ *   "createdAt": "2024-01-15T10:30:00Z",
+ *   "updatedAt": "2024-01-20T15:45:00Z"
+ * }
+ */
+export interface UserRoles {
+  id: string;                                   // Unique identifier - typically the user ID or employee ID
+  rolesData: Record<string, UserResourceRoles>; // Map of resource IDs to their assigned roles
+  createdAt?: string;                           // ISO timestamp when the user roles were created
+  updatedAt?: string;                           // ISO timestamp when the user roles were last updated
+}

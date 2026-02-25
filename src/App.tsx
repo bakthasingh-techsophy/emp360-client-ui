@@ -119,6 +119,7 @@ import {
 import { UserManagement } from "./modules/user-management/UserManagement";
 import { UserManagementSettings } from "./modules/user-management/UserManagementSettings";
 import { EmployeeOnboarding } from "./modules/user-management/EmployeeOnboarding";
+import RolesEditingPage from "./modules/user-management/pages/RolesEditingPage";
 import { CompanyManagement } from "./modules/administration/CompanyManagement";
 import { CompanyForm } from "./modules/administration/CompanyForm";
 import { RolePermissions } from "./modules/user-management/RolePermissions";
@@ -480,6 +481,10 @@ function App() {
                                 <Route
                                   path="/user-management/employee-onboarding"
                                   element={<EmployeeOnboarding />}
+                                />
+                                <Route
+                                  path="/user-management/roles-edit"
+                                  element={<RolesEditingPage />}
                                 />
                                 <Route
                                   path="/company-management"

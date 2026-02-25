@@ -11,7 +11,7 @@ import { useLeaveManagement } from "@/contexts/LeaveManagementContext";
 import { useToast } from "@/hooks/use-toast";
 import { EditableLeaveCards } from "./EditableLeaveCards";
 import { CreditDeductLeavesDialog, CreditDeductFormData } from "./CreditDeductLeavesDialog";
-import { AddCreditsDialog, AddCreditsFormData } from "./AddCreditsDialog";
+import { AddCreditsDialog } from "./AddCreditsDialog";
 import { BulkCreditCarrier } from "@/services/userManagementService";
 import { 
   EmployeeLeavesInformation,

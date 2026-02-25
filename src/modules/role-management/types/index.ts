@@ -25,6 +25,27 @@ export interface ResourceCarrier {
   id: string;
   name: string;
   description?: string;
+  loadFromKeycloak: boolean;
+}
+
+// ============= DELETE CARRIERS =============
+
+/**
+ * Delete Resource Carrier
+ * Used for deleting resources with option to delete from Keycloak
+ */
+export interface DeleteResourceCarrier {
+  resourceId: string;
+  deleteFromKeycloak: boolean;
+}
+
+/**
+ * Delete Role Carrier
+ * Used for deleting roles with option to delete from Keycloak
+ */
+export interface DeleteRoleCarrier {
+  roleId: string;
+  deleteFromKeycloak: boolean;
 }
 
 // ============= ROLE MODEL TYPES =============
@@ -48,10 +69,11 @@ export interface RoleModel {
  * Maps to backend RoleModelCarrier
  */
 export interface RoleModelCarrier {
-  id: string; // Role identifier/key (e.g., "ADMIN", "USER")
+  id?: string; // Role identifier/key (e.g., "ADMIN", "USER")
   resourceId: string; // Reference to the Resource this role belongs to
   roleName: string; // Human-readable role name
   description?: string; // Optional description
+  loadFromKeycloak: boolean;
 }
 
 // ============= UPDATE PAYLOAD TYPE =============

@@ -51,6 +51,8 @@ import {
   apiBulkAddCredits,
   apiCreditLeaves,
   apiDeductLeaves,
+  apiAssignRolesToUsers,
+  apiGetUserRoles,
   type BulkCreditCarrier,
   type LeaveAdjustmentCarrier,
   type DeactivationCarrier,
@@ -66,6 +68,9 @@ import {
   apiGetGeneralDetailsSnapshot,
   apiGetJobDetailsSnapshot,
 } from "@/services/userManagementService";
+
+// User Management Types
+import { AssignRolesCarrier, UserRoles } from "@/modules/user-management/types/user.types";
 
 // Employee Aggregate Service
 import {
@@ -468,6 +473,10 @@ interface UserManagementContextType {
   bulkAddCredits: (userIds: string[], carrier: Omit<BulkCreditCarrier, 'userIds'>) => Promise<boolean>;
   creditLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
   deductLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
+
+  // Role Assignment Methods
+  assignRolesToUsers: (carrier: AssignRolesCarrier) => Promise<boolean>;
+  getUserRoles: (userId: string) => Promise<UserRoles | null>;
 
   // Loading State
   isLoading: boolean;
@@ -1693,6 +1702,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     return result as boolean;
   };
 
+  // ==================== ROLE ASSIGNMENT ====================
+
+  const assignRolesToUsers = async (
+    carrier: AssignRolesCarrier,
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiAssignRolesToUsers(carrier, tenant, accessToken),
+      "Assign Roles",
+      `Roles assigned successfully to ${carrier.userIds.length} user(s) for resource ${carrier.resourceId}`,
+      true,
+    );
+    return result as boolean;
+  };
+
+  const getUserRoles = async (userId: string): Promise<UserRoles | null> => {
+    return (await executeApiCall(
+      (tenant, accessToken) => apiGetUserRoles(userId, tenant, accessToken),
+      "Fetch User Roles",
+      "", // Empty string for no success toast
+    )) as UserRoles | null;
+  };
+
   // ==================== PROVIDER VALUE ====================
 
   const contextValue: UserManagementContextType = {
@@ -1816,6 +1847,10 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     bulkAddCredits,
     creditLeaves,
     deductLeaves,
+
+    // Role Assignment
+    assignRolesToUsers,
+    getUserRoles,
 
     // Loading State
     isLoading,

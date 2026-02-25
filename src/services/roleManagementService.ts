@@ -4,15 +4,14 @@
  *
  * Endpoints:
  * - POST /emp-user-management/v1/role-management/resources - Create resource
- * - PATCH /emp-user-management/v1/role-management/resources/:id - Update resource
- * - DELETE /emp-user-management/v1/role-management/resources/:id - Delete resource
+ * - POST /emp-user-management/v1/role-management/resources/delete - Delete resource
  * - POST /emp-user-management/v1/role-management/resources/:resourceId/roles - Create role
- * - PATCH /emp-user-management/v1/role-management/roles/:id - Update role
+ * - POST /emp-user-management/v1/role-management/roles/delete - Delete role
  */
 
 import { ApiResponse } from "@/types/responses";
 import { apiRequest } from "./utils";
-import { ResourceCarrier, RoleModelCarrier } from "@/modules/role-management";
+import { ResourceCarrier, RoleModelCarrier, DeleteResourceCarrier, DeleteRoleCarrier } from "@/modules/role-management";
 
 const BASE_PATH = "/emp-user-management/v1/role-management";
 
@@ -55,18 +54,20 @@ export const apiUpdateResourceViaRoleManagement = async (
 
 /**
  * Delete Resource via Role Management
- * DELETE /emp-user-management/v1/role-management/resources/:id
+ * POST /emp-user-management/v1/role-management/resources/delete
+ * Accepts DeleteResourceCarrier with resourceId and deleteFromKeycloak flag
  */
 export const apiDeleteResourceViaRoleManagement = async (
-  id: string,
+  carrier: DeleteResourceCarrier,
   tenant: string,
   accessToken: string
 ): Promise<ApiResponse<any>> => {
   return apiRequest<any>({
-    method: "DELETE",
-    endpoint: `${BASE_PATH}/resources/${id}`,
+    method: "POST",
+    endpoint: `${BASE_PATH}/resources/delete`,
     tenant,
     accessToken,
+    body: carrier,
   });
 };
 
@@ -110,17 +111,19 @@ export const apiUpdateRoleViaRoleManagement = async (
 
 /**
  * Delete Role via Role Management
- * DELETE /emp-user-management/v1/role-management/roles/:id
+ * POST /emp-user-management/v1/role-management/roles/delete
+ * Accepts DeleteRoleCarrier with roleId and deleteFromKeycloak flag
  */
 export const apiDeleteRoleViaRoleManagement = async (
-  id: string,
+  carrier: DeleteRoleCarrier,
   tenant: string,
   accessToken: string
 ): Promise<ApiResponse<any>> => {
   return apiRequest<any>({
-    method: "DELETE",
-    endpoint: `${BASE_PATH}/roles/${id}`,
+    method: "POST",
+    endpoint: `${BASE_PATH}/roles/delete`,
     tenant,
     accessToken,
+    body: carrier,
   });
 };

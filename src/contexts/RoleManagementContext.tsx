@@ -47,6 +47,8 @@ import {
   RoleModel,
   RoleModelCarrier,
   UpdatePayload,
+  DeleteResourceCarrier,
+  DeleteRoleCarrier,
 } from "@/modules/role-management/types";
 import UniversalSearchRequest from "@/types/search";
 import Pagination from "@/types/pagination";
@@ -62,7 +64,7 @@ interface RoleManagementContextType {
   // Resource Methods (Via Role Management Service)
   createResourceViaRoleManagement: (carrier: ResourceCarrier) => Promise<Resource | null>;
   updateResourceViaRoleManagement: (id: string, payload: UpdatePayload) => Promise<Resource | null>;
-  deleteResourceViaRoleManagement: (id: string) => Promise<boolean>;
+  deleteResourceViaRoleManagement: (carrier: DeleteResourceCarrier) => Promise<boolean>;
 
   // Role Methods (Detail operations)
   getRoleById: (id: string) => Promise<RoleModel | null>;
@@ -71,7 +73,7 @@ interface RoleManagementContextType {
   // Role Methods (Via Role Management Service)
   createRoleViaRoleManagement: (resourceId: string, carrier: RoleModelCarrier) => Promise<RoleModel | null>;
   updateRoleViaRoleManagement: (id: string, payload: UpdatePayload) => Promise<RoleModel | null>;
-  deleteRoleViaRoleManagement: (id: string) => Promise<boolean>;
+  deleteRoleViaRoleManagement: (carrier: DeleteRoleCarrier) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -225,13 +227,13 @@ export function RoleManagementProvider({ children }: { children: ReactNode }) {
   /**
    * Delete a Resource via Role Management Service
    */
-  const deleteResourceViaRoleManagement = async (id: string): Promise<boolean> => {
+  const deleteResourceViaRoleManagement = async (carrier: DeleteResourceCarrier): Promise<boolean> => {
     const auth = validateToken();
     if (!auth) return false;
 
     try {
       const result = await executeApiCall(() =>
-        apiDeleteResourceViaRoleManagement(id, auth.tenant, auth.token)
+        apiDeleteResourceViaRoleManagement(carrier, auth.tenant, auth.token)
       );
 
       if (!result || !result.success) {
@@ -380,13 +382,13 @@ export function RoleManagementProvider({ children }: { children: ReactNode }) {
   /**
    * Delete a Role via Role Management Service
    */
-  const deleteRoleViaRoleManagement = async (id: string): Promise<boolean> => {
+  const deleteRoleViaRoleManagement = async (carrier: DeleteRoleCarrier): Promise<boolean> => {
     const auth = validateToken();
     if (!auth) return false;
 
     try {
       const result = await executeApiCall(() =>
-        apiDeleteRoleViaRoleManagement(id, auth.tenant, auth.token)
+        apiDeleteRoleViaRoleManagement(carrier, auth.tenant, auth.token)
       );
 
       if (!result || !result.success) {

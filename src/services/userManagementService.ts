@@ -9,6 +9,10 @@
  * - PATCH /emp-user-management/v1/users/departments/{id} - Update department
  * - PATCH /emp-user-management/v1/users/designations/{id} - Update designation
  * - PATCH /emp-user-management/v1/users/work-locations/{id} - Update work location
+ * - POST /emp-user-management/v1/users/leaves/credit - Add credits to leaves
+ * - POST /emp-user-management/v1/users/leaves/deduct - Deduct credits from leaves
+ * - POST /emp-user-management/v1/users/roles/assign - Assign roles to multiple users
+ * - GET /emp-user-management/v1/users/{userId}/roles - Get user roles for a specific user
  * 
  * All responses follow ApiResponse<T> wrapper format
  */
@@ -26,6 +30,7 @@ import {
   JobDetailsSnapshot 
 } from "@/modules/user-management/types/onboarding.types";
 import { EmployeeType, Department, Designation, WorkLocation } from "@/modules/user-management/types/settings.types";
+import { AssignRolesCarrier, UserRoles } from "@/modules/user-management/types/user.types";
 import { LeaveDetails } from "@/modules/leave-management-system/types/leaveConfiguration.types";
 
 /**
@@ -817,6 +822,59 @@ export const apiDeductLeaves = async (
 };
 
 /**
+ * Assign Roles to Multiple Users
+ * POST /emp-user-management/v1/users/roles/assign
+ * Assigns Keycloak roles to multiple users for a specific resource/client
+ * Roles are assigned in Keycloak and stored in UserRoles collection in MongoDB
+ * Tenant is extracted from JWT token automatically
+ * Requires UMA (all) role
+ * 
+ * @param carrier - AssignRolesCarrier containing userIds, resourceId, and roleIds
+ * @param tenant  - Tenant ID
+ * @param accessToken - JWT token for authorization
+ * @returns Promise<ApiResponse<void>>
+ */
+export const apiAssignRolesToUsers = async (
+  carrier: AssignRolesCarrier,
+  tenant: string,
+  accessToken: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/roles/assign`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Get User Roles
+ * GET /emp-user-management/v1/users/{userId}/roles
+ * Get user roles for a specific user by user ID (Keycloak UUID)
+ * Returns the UserRoles document containing all role assignments across different resources/clients for that user
+ * Requires UMA (all) or UMV (view) role
+ * Tenant is extracted from JWT token automatically
+ * 
+ * @param userId - Keycloak user UUID or user ID
+ * @param tenant  - Tenant ID
+ * @param accessToken - JWT token for authorization
+ * @returns Promise<ApiResponse<UserRoles>>
+ */
+export const apiGetUserRoles = async (
+  userId: string,
+  tenant: string,
+  accessToken: string
+): Promise<ApiResponse<UserRoles>> => {
+  return apiRequest<UserRoles>({
+    method: "GET",
+    endpoint: `${BASE_ENDPOINT}/${userId}/roles`,
+    tenant,
+    accessToken,
+  });
+};
+
+/**
  * Export all service functions as object for easier importing
  */
 export const userManagementService = {
@@ -844,4 +902,6 @@ export const userManagementService = {
   apiBulkAddCredits,
   apiCreditLeaves,
   apiDeductLeaves,
+  apiAssignRolesToUsers,
+  apiGetUserRoles,
 };

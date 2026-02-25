@@ -38,7 +38,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -70,8 +69,14 @@ import { useRoleManagement } from "@/contexts/RoleManagementContext";
 import {
   Resource,
   RoleModel,
+  DeleteResourceCarrier,
+  DeleteRoleCarrier,
 } from "@/modules/role-management/types";
 import UniversalSearchRequest from "@/types/search";
+import { CreateResourceDialog } from "./components/CreateResourceDialog";
+import { CreateRoleDialog } from "./components/CreateRoleDialog";
+import { DeleteResourceDialog } from "./components/DeleteResourceDialog";
+import { DeleteRoleDialog } from "./components/DeleteRoleDialog";
 
 // ── Confirmation dialog state shape ──
 interface ConfirmState {
@@ -112,23 +117,20 @@ export const RoleManagement: React.FC = () => {
   const [isMutating, setIsMutating] = useState(false);
 
   // ── Dialog / sheet states ──
-  const [createClientDialogOpen, setCreateClientDialogOpen] = useState(false);
+  const [createResourceDialogOpen, setCreateResourceDialogOpen] = useState(false);
   const [createRoleDialogOpen, setCreateRoleDialogOpen] = useState(false);
+  const [deleteResourceDialogOpen, setDeleteResourceDialogOpen] = useState(false);
+  const [deleteRoleDialogOpen, setDeleteRoleDialogOpen] = useState(false);
   const [assignRoleDialogOpen, setAssignRoleDialogOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState>(CONFIRM_CLOSED);
   
   // ── Edit mode states ──
-  const [isEditingResource, setIsEditingResource] = useState(false);
-  const [isEditingRole, setIsEditingRole] = useState(false);
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editingRole, setEditingRole] = useState<RoleModel | null>(null);
+  const [deletingResource, setDeletingResource] = useState<Resource | null>(null);
+  const [deletingRole, setDeletingRole] = useState<RoleModel | null>(null);
 
-  // ── Form states ──
-  const [newClientId, setNewClientId] = useState("");
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientDescription, setNewClientDescription] = useState("");
-  const [newRoleName, setNewRoleName] = useState("");
-  const [newRoleDisplayName, setNewRoleDisplayName] = useState("");
-  const [newRoleDescription, setNewRoleDescription] = useState("");
+  // ── Form states (for assign roles dialog) ──
   const [assignUserId, setAssignUserId] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
@@ -201,77 +203,99 @@ export const RoleManagement: React.FC = () => {
     );
   }, [selectedResourceRoles, searchQuery]);
 
-  // ──────────────────────────────────────────────────────
-  // Validation & Transformation Utilities
-  // ──────────────────────────────────────────────────────
 
-  /**
-   * Transform ID input: slug style
-   * - Only alphanumeric and hyphens
-   * - Spaces convert to hyphens
-   * - Removes all other special characters
-   * - Converts to lowercase
-   * Examples: "My App" → "my-app", "Hello_World 123!" → "hello-world-123"
-   */
-  const transformIdInput = (value: string): string => {
-    return value
-      .replace(/\s+/g, "-")           // Replace spaces with hyphens
-      .replace(/[^a-zA-Z0-9-]/g, "") // Remove all non-alphanumeric and non-hyphen chars
-      .toLowerCase();                  // Convert to lowercase
-  };
-
-  /**
-   * Validate ID format
-   */
-  const isValidId = (id: string): boolean => {
-    if (!id.trim()) return false;
-    return /^[a-zA-Z0-9-]+$/.test(id) && id.length <= 100;
-  };
-
-  /**
-   * Validate name format (allows spaces and special chars except certain ones)
-   */
-  const isValidName = (name: string): boolean => {
-    if (!name.trim()) return false;
-    return name.length >= 2 && name.length <= 100;
-  };
 
   // ── Handlers ──
 
-  // ──────────────────────────────────────────────────────
-  // Placeholder Handler Functions (to be implemented)
-  // ──────────────────────────────────────────────────────
-
-  const handleCreateClient = async () => {
-    if (!isValidId(newClientId) || !isValidName(newClientName)) return;
+  // Create Resource Handler
+  const handleCreateResource = async (carrier: any) => {
     setIsMutating(true);
-    await createResourceViaRoleManagement({
-      id: newClientId.trim(),
-      name: newClientName.trim(),
-      description: newClientDescription.trim() || undefined,
-    });
-    setNewClientId("");
-    setNewClientName("");
-    setNewClientDescription("");
-    setCreateClientDialogOpen(false);
+    await createResourceViaRoleManagement(carrier);
+    setCreateResourceDialogOpen(false);
+    setEditingResource(null);
     await loadResources();
     setIsMutating(false);
   };
 
-  const handleCreateRole = async () => {
-    if (!selectedResource || !isValidId(newRoleName) || !isValidName(newRoleDisplayName)) return;
+  // Update Resource Handler
+  const handleUpdateResource = async (id: string, data: any) => {
     setIsMutating(true);
-    await createRoleViaRoleManagement(selectedResource.id, {
-      id: newRoleName.trim(),
-      resourceId: selectedResource.id,
-      roleName: newRoleDisplayName.trim(),
-      description: newRoleDescription.trim() || undefined,
-    });
-    setNewRoleName("");
-    setNewRoleDisplayName("");
-    setNewRoleDescription("");
+    await updateResourceViaRoleManagement(id, data);
+    setCreateResourceDialogOpen(false);
+    setEditingResource(null);
+    await loadResources();
+    setIsMutating(false);
+  };
+
+  // Open edit resource dialog
+  const handleEditResource = () => {
+    if (!selectedResource) return;
+    setEditingResource(selectedResource);
+    setCreateResourceDialogOpen(true);
+  };
+
+  // Create Role Handler
+  const handleCreateRole = async (carrier: any) => {
+    setIsMutating(true);
+    await createRoleViaRoleManagement(selectedResource?.id || "", carrier);
     setCreateRoleDialogOpen(false);
-    await loadRoles(selectedResource.id);
+    setEditingRole(null);
+    if (selectedResource) {
+      await loadRoles(selectedResource.id);
+    }
+    setIsMutating(false);
+  };
+
+  // Update Role Handler
+  const handleUpdateRole = async (id: string, data: any) => {
+    setIsMutating(true);
+    await updateRoleViaRoleManagement(id, data);
+    setCreateRoleDialogOpen(false);
+    setEditingRole(null);
+    if (selectedResource) {
+      await loadRoles(selectedResource.id);
+    }
+    setIsMutating(false);
+  };
+
+  // Open edit role dialog
+  const handleEditRole = (role: RoleModel) => {
+    setEditingRole(role);
+    setCreateRoleDialogOpen(true);
+  };
+
+  // Delete Resource Handler
+  const handleDeleteResource = () => {
+    if (!selectedResource) return;
+    setDeletingResource(selectedResource);
+    setDeleteResourceDialogOpen(true);
+  };
+
+  // Delete Resource Submit Handler
+  const handleSubmitDeleteResource = async (carrier: DeleteResourceCarrier) => {
+    setIsMutating(true);
+    await deleteResourceViaRoleManagement(carrier);
+    setDeleteResourceDialogOpen(false);
+    setDeletingResource(null);
+    await loadResources();
+    setIsMutating(false);
+  };
+
+  // Delete Role Handler
+  const handleDeleteRole = (role: RoleModel) => {
+    setDeletingRole(role);
+    setDeleteRoleDialogOpen(true);
+  };
+
+  // Delete Role Submit Handler
+  const handleSubmitDeleteRole = async (carrier: DeleteRoleCarrier) => {
+    setIsMutating(true);
+    await deleteRoleViaRoleManagement(carrier);
+    setDeleteRoleDialogOpen(false);
+    setDeletingRole(null);
+    if (selectedResource) {
+      await loadRoles(selectedResource.id);
+    }
     setIsMutating(false);
   };
 
@@ -281,88 +305,6 @@ export const RoleManagement: React.FC = () => {
     setAssignRoleDialogOpen(false);
     await loadRoles(selectedResource.id);
     setIsMutating(false);
-  };
-
-  const handleEditResource = () => {
-    if (!selectedResource) return;
-    setNewClientId(selectedResource.id);
-    setNewClientName(selectedResource.name);
-    setNewClientDescription(selectedResource.description || "");
-    setIsEditingResource(true);
-    setCreateClientDialogOpen(true);
-  };
-
-  const handleEditRole = (role: RoleModel) => {
-    setNewRoleName(role.id);
-    setNewRoleDisplayName(role.roleName);
-    setNewRoleDescription(role.description || "");
-    setEditingRoleId(role.id);
-    setIsEditingRole(true);
-    setCreateRoleDialogOpen(true);
-  };
-
-  const handleUpdateResource = async () => {
-    if (!selectedResource || !newClientName.trim()) return;
-    setIsMutating(true);
-    await updateResourceViaRoleManagement(selectedResource.id, {
-      name: newClientName.trim(),
-      description: newClientDescription.trim() || undefined,
-    });
-    setNewClientId("");
-    setNewClientName("");
-    setNewClientDescription("");
-    setIsEditingResource(false);
-    setCreateClientDialogOpen(false);
-    await loadResources();
-    setIsMutating(false);
-  };
-
-  const handleUpdateRole = async () => {
-    if (!selectedResource || !newRoleDisplayName.trim() || !editingRoleId) return;
-    setIsMutating(true);
-    await updateRoleViaRoleManagement(editingRoleId, {
-      roleName: newRoleDisplayName.trim(),
-      description: newRoleDescription.trim() || undefined,
-    });
-    setNewRoleName("");
-    setNewRoleDisplayName("");
-    setNewRoleDescription("");
-    setEditingRoleId(null);
-    setIsEditingRole(false);
-    setCreateRoleDialogOpen(false);
-    await loadRoles(selectedResource.id);
-    setIsMutating(false);
-  };
-
-  const handleDeleteResource = () => {
-    if (!selectedResource) return;
-    setConfirm({
-      open: true,
-      title: "Delete Resource",
-      description: `Are you sure you want to delete "${selectedResource.name}"? This action cannot be undone.`,
-      onConfirm: async () => {
-        setIsMutating(true);
-        await deleteResourceViaRoleManagement(selectedResource.id);
-        setConfirm(CONFIRM_CLOSED);
-        await loadResources();
-        setIsMutating(false);
-      },
-    });
-  };
-
-  const handleDeleteRole = (role: RoleModel) => {
-    setConfirm({
-      open: true,
-      title: "Delete Role",
-      description: `Are you sure you want to delete "${role.roleName}"? This action cannot be undone.`,
-      onConfirm: async () => {
-        setIsMutating(true);
-        await deleteRoleViaRoleManagement(role.id);
-        setConfirm(CONFIRM_CLOSED);
-        if (selectedResource) await loadRoles(selectedResource.id);
-        setIsMutating(false);
-      },
-    });
   };
 
   // ════════════════════════════════════════════════════════
@@ -401,7 +343,10 @@ export const RoleManagement: React.FC = () => {
                 className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
               />
             </Button>
-            <Button onClick={() => setCreateClientDialogOpen(true)}>
+            <Button onClick={() => {
+              setEditingResource(null);
+              setCreateResourceDialogOpen(true);
+            }}>
               <PackagePlus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Create Resource</span>
             </Button>
@@ -473,7 +418,10 @@ export const RoleManagement: React.FC = () => {
                   and permissions.
                 </p>
               </div>
-              <Button size="lg" onClick={() => setCreateClientDialogOpen(true)}>
+              <Button size="lg" onClick={() => {
+                setEditingResource(null);
+                setCreateResourceDialogOpen(true);
+              }}>
                 <PackagePlus className="h-5 w-5 mr-2" />
                 Create your first Resource
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -629,7 +577,10 @@ export const RoleManagement: React.FC = () => {
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => setCreateRoleDialogOpen(true)}
+                          onClick={() => {
+                            setEditingRole(null);
+                            setCreateRoleDialogOpen(true);
+                          }}
                         >
                           <Plus className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Add Role</span>
@@ -657,7 +608,10 @@ export const RoleManagement: React.FC = () => {
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => setCreateRoleDialogOpen(true)}
+                            onClick={() => {
+                              setEditingRole(null);
+                              setCreateRoleDialogOpen(true);
+                            }}
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add first role
@@ -748,207 +702,44 @@ export const RoleManagement: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create/Edit Resource */}
-      <Dialog
-        open={createClientDialogOpen}
-        onOpenChange={(open) => {
-          setCreateClientDialogOpen(open);
-          if (!open) {
-            setIsEditingResource(false);
-            setNewClientId("");
-            setNewClientName("");
-            setNewClientDescription("");
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditingResource ? "Edit Resource" : "Create New Resource"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditingResource
-                ? "Update the resource details."
-                : "A resource groups roles for a specific application or service."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="client-id">Resource ID {isEditingResource ? "(readonly)" : "*"}</Label>
-              <Input
-                id="client-id"
-                placeholder="e.g., my_application"
-                value={newClientId}
-                onChange={(e) => setNewClientId(transformIdInput(e.target.value))}
-                disabled={isEditingResource}
-              />
-              <p className="text-xs text-muted-foreground">
-                {isEditingResource
-                  ? "Resource ID cannot be changed."
-                  : "Alphanumeric with hyphens only (spaces auto-convert to hyphens)."}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="client-name">Resource Name *</Label>
-              <Input
-                id="client-name"
-                placeholder="e.g., My Application"
-                value={newClientName}
-                onChange={(e) => setNewClientName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="client-description">Description</Label>
-              <Textarea
-                id="client-description"
-                placeholder="Describe what this resource is for..."
-                value={newClientDescription}
-                onChange={(e) => setNewClientDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCreateClientDialogOpen(false);
-                setIsEditingResource(false);
-                setNewClientId("");
-                setNewClientName("");
-                setNewClientDescription("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={isEditingResource ? handleUpdateResource : handleCreateClient}
-              disabled={!newClientId.trim() || !newClientName.trim() || isMutating}
-            >
-              {isMutating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : isEditingResource ? (
-                <Edit className="h-4 w-4 mr-2" />
-              ) : (
-                <PackagePlus className="h-4 w-4 mr-2" />
-              )}
-              {isMutating
-                ? isEditingResource
-                  ? "Updating…"
-                  : "Creating…"
-                : isEditingResource
-                  ? "Update Resource"
-                  : "Create Resource"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create/Edit Resource Dialog Component */}
+      <CreateResourceDialog
+        open={createResourceDialogOpen}
+        onOpenChange={setCreateResourceDialogOpen}
+        editingResource={editingResource}
+        onSubmit={handleCreateResource}
+        onUpdate={handleUpdateResource}
+        isSubmitting={isMutating}
+      />
 
-      {/* Add/Edit Role */}
-      <Dialog
+      {/* Create/Edit Role Dialog Component */}
+      <CreateRoleDialog
         open={createRoleDialogOpen}
-        onOpenChange={(open) => {
-          setCreateRoleDialogOpen(open);
-          if (!open) {
-            setIsEditingRole(false);
-            setEditingRoleId(null);
-            setNewRoleName("");
-            setNewRoleDisplayName("");
-            setNewRoleDescription("");
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditingRole ? "Edit Role" : "Add Role"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditingRole
-                ? "Update the role details."
-                : `Add a new role to resource ${
-                    selectedResource ? selectedResource.name : ""
-                  }`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="role-id">Role ID {isEditingRole ? "(readonly)" : "*"}</Label>
-              <Input
-                id="role-id"
-                placeholder="e.g., admin_user"
-                value={newRoleName}
-                onChange={(e) => setNewRoleName(transformIdInput(e.target.value))}
-                disabled={isEditingRole}
-              />
-              <p className="text-xs text-muted-foreground">
-                {isEditingRole
-                  ? "Role ID cannot be changed."
-                  : "Alphanumeric with hyphens (spaces auto-convert to hyphens)."}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role-display-name">Role Name *</Label>
-              <Input
-                id="role-display-name"
-                placeholder="e.g., Administrator, Viewer, Editor"
-                value={newRoleDisplayName}
-                onChange={(e) => setNewRoleDisplayName(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Human-readable role name (2-100 characters).
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role-description">Description</Label>
-              <Textarea
-                id="role-description"
-                placeholder="Describe what this role allows..."
-                value={newRoleDescription}
-                onChange={(e) => setNewRoleDescription(e.target.value)}
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional description of the role.
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCreateRoleDialogOpen(false);
-                setIsEditingRole(false);
-                setEditingRoleId(null);
-                setNewRoleName("");
-                setNewRoleDisplayName("");
-                setNewRoleDescription("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={isEditingRole ? handleUpdateRole : handleCreateRole}
-              disabled={!newRoleName.trim() || !newRoleDisplayName.trim() || isMutating}
-            >
-              {isMutating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : isEditingRole ? (
-                <Edit className="h-4 w-4 mr-2" />
-              ) : (
-                <Plus className="h-4 w-4 mr-2" />
-              )}
-              {isMutating
-                ? isEditingRole
-                  ? "Updating…"
-                  : "Adding…"
-                : isEditingRole
-                  ? "Update Role"
-                  : "Add Role"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setCreateRoleDialogOpen}
+        selectedResource={selectedResource}
+        editingRole={editingRole}
+        onSubmit={handleCreateRole}
+        onUpdate={handleUpdateRole}
+        isSubmitting={isMutating}
+      />
+
+      {/* Delete Resource Dialog Component */}
+      <DeleteResourceDialog
+        open={deleteResourceDialogOpen}
+        onOpenChange={setDeleteResourceDialogOpen}
+        resource={deletingResource}
+        onSubmit={handleSubmitDeleteResource}
+        isSubmitting={isMutating}
+      />
+
+      {/* Delete Role Dialog Component */}
+      <DeleteRoleDialog
+        open={deleteRoleDialogOpen}
+        onOpenChange={setDeleteRoleDialogOpen}
+        role={deletingRole}
+        onSubmit={handleSubmitDeleteRole}
+        isSubmitting={isMutating}
+      />
 
       {/* Assign Roles to User */}
       <Dialog
