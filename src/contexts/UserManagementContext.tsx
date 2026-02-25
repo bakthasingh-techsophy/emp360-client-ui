@@ -48,6 +48,9 @@ import {
   apiBulkDeactivateUsers,
   apiBulkReactivateUsers,
   apiGetLeaveDetails,
+  apiCreditLeaves,
+  apiDeductLeaves,
+  type LeaveAdjustmentCarrier,
   type DeactivationCarrier,
   type ReactivationCarrier,
   apiUpdateEmployeeTypeViaUsers,
@@ -460,7 +463,8 @@ interface UserManagementContextType {
 
   // Leave Details Methods (Admin can view/edit employee leave details)
   getLeaveDetails: (employeeId: string) => Promise<any | null>;
-  bulkUpdateLeaveCredits: (employeeId: string, updates: Record<string, number>) => Promise<boolean>;
+  creditLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
+  deductLeaves: (carrier: LeaveAdjustmentCarrier) => Promise<boolean>;
 
   // Loading State
   isLoading: boolean;
@@ -1644,16 +1648,28 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const bulkUpdateLeaveCredits = async (
-    _employeeId: string,
-    _updates: Record<string, number>,
+  const creditLeaves = async (
+    carrier: LeaveAdjustmentCarrier,
   ): Promise<boolean> => {
-    // Placeholder - leave credit APIs not available yet
-    console.warn(
-      "Leave credit update not yet implemented. Awaiting backend API.",
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiCreditLeaves(carrier, tenant, accessToken),
+      "Credit Leaves",
+      `Leaves credited successfully for ${carrier.employeeIds.length} employee(s)`,
+      true,
     );
-    // TODO: Replace with actual apiUpdateLeaveCredits when available
-    return true;
+    return result as boolean;
+  };
+
+  const deductLeaves = async (
+    carrier: LeaveAdjustmentCarrier,
+  ): Promise<boolean> => {
+    const result = await executeApiCall(
+      (tenant, accessToken) => apiDeductLeaves(carrier, tenant, accessToken),
+      "Deduct Leaves",
+      `Leaves deducted successfully from ${carrier.employeeIds.length} employee(s)`,
+      true,
+    );
+    return result as boolean;
   };
 
   // ==================== PROVIDER VALUE ====================
@@ -1776,7 +1792,8 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
     // Leave Details
     getLeaveDetails,
-    bulkUpdateLeaveCredits,
+    creditLeaves,
+    deductLeaves,
 
     // Loading State
     isLoading,

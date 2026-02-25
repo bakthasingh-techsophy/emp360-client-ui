@@ -2,6 +2,7 @@
  * Credit/Deduct Leaves Dialog Component
  * Reusable dialog for crediting or deducting employee leaves
  * Used in both bulk employee management and individual leave details
+ * Dynamically loads leave configurations from LMS
  */
 
 import {
@@ -14,17 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X, Gift } from "lucide-react";
+import { X, Gift, AlertCircle } from "lucide-react";
+import { LeavesConfigurationSelector } from "@/components/context-aware/LeavesConfigurationSelector";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface CreditDeductFormData {
-  leaveType: string;
+  leaveTypeId: string; // Leave Configuration ID
+  category: string; // Leave category (for validation)
   count: string;
   actionType: "credit" | "deduct";
 }
@@ -36,9 +33,8 @@ export interface CreditDeductLeavesDialogProps {
   onFormDataChange: (data: CreditDeductFormData) => void;
   targetIds: string[];
   isBulk: boolean;
-  onSubmit: () => void;
+  onSubmit: (action: "credit" | "deduct") => void;
   isSubmitting?: boolean;
-  leaveTypes?: { value: string; label: string }[];
 }
 
 export function CreditDeductLeavesDialog({
@@ -50,26 +46,17 @@ export function CreditDeductLeavesDialog({
   isBulk,
   onSubmit,
   isSubmitting = false,
-  leaveTypes = [
-    { value: "sick", label: "Sick Leave" },
-    { value: "casual", label: "Casual Leave" },
-    { value: "earned", label: "Earned Leave" },
-    { value: "privilege", label: "Privilege Leave" },
-    { value: "maternity", label: "Maternity Leave" },
-    { value: "paternity", label: "Paternity Leave" },
-    { value: "general_leave", label: "General Leave" },
-  ],
 }: CreditDeductLeavesDialogProps) {
-  const isValid = formData.leaveType && formData.count;
+  const isValid = formData.leaveTypeId && formData.count;
+  const isFlexible = formData.category?.toLowerCase() === "flexible";
+  const canSubmit = isValid && !isFlexible;
 
   const handleCredit = () => {
-    onFormDataChange({ ...formData, actionType: "credit" });
-    onSubmit();
+    onSubmit("credit");
   };
 
   const handleDeduct = () => {
-    onFormDataChange({ ...formData, actionType: "deduct" });
-    onSubmit();
+    onSubmit("deduct");
   };
 
   return (
@@ -123,28 +110,28 @@ export function CreditDeductLeavesDialog({
               </div>
             )}
 
-            {/* Leave Type */}
+            {/* Leave Type - Context-Aware Selector */}
             <div className="space-y-2">
               <Label htmlFor="leave-type">Leave Type *</Label>
-              <Select
-                value={formData.leaveType}
-                onValueChange={(value) =>
-                  onFormDataChange({ ...formData, leaveType: value })
+              <LeavesConfigurationSelector
+                value={formData.leaveTypeId}
+                onChange={(leaveTypeId, category) =>
+                  onFormDataChange({ ...formData, leaveTypeId, category })
                 }
+                placeholder="Select leave type"
                 disabled={isSubmitting}
-              >
-                <SelectTrigger id="leave-type">
-                  <SelectValue placeholder="Select leave type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {leaveTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
+
+            {/* Warning for Flexible Leaves */}
+            {isFlexible && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Cannot modify flexible leaves:</strong> Flexible leaves are consumption-based and cannot be credited or deducted. They are tracked based on actual consumption only.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Count */}
             <div className="space-y-2">
@@ -154,10 +141,18 @@ export function CreditDeductLeavesDialog({
                 type="number"
                 placeholder="e.g., 2.5"
                 value={formData.count}
-                onChange={(e) =>
-                  onFormDataChange({ ...formData, count: e.target.value })
-                }
-                step="0.5"
+                onChange={(e) => {
+                  let value = e.target.value;
+                  // Limit to 1 decimal place
+                  if (value && value.includes(".")) {
+                    const parts = value.split(".");
+                    if (parts[1].length > 1) {
+                      value = `${parts[0]}.${parts[1].substring(0, 1)}`;
+                    }
+                  }
+                  onFormDataChange({ ...formData, count: value });
+                }}
+                step="0.1"
                 min="0"
                 disabled={isSubmitting}
               />
@@ -179,7 +174,7 @@ export function CreditDeductLeavesDialog({
           </Button>
           <Button
             className="bg-green-600 hover:bg-green-700"
-            disabled={!isValid || isSubmitting}
+            disabled={!canSubmit || isSubmitting}
             onClick={handleCredit}
           >
             {isSubmitting ? (
@@ -196,7 +191,7 @@ export function CreditDeductLeavesDialog({
           </Button>
           <Button
             variant="destructive"
-            disabled={!isValid || isSubmitting}
+            disabled={!canSubmit || isSubmitting}
             onClick={handleDeduct}
           >
             {isSubmitting ? (

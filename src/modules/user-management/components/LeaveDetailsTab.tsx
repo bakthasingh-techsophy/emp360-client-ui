@@ -30,7 +30,7 @@ export function LeaveDetailsTab({
   employeeId,
   onDataChange,
 }: LeaveDetailsTabProps) {
-  const { getLeaveDetails, bulkUpdateLeaveCredits } = useUserManagement();
+  const { getLeaveDetails, creditLeaves, deductLeaves } = useUserManagement();
   const { searchLeaveConfigurations } = useLeaveManagement();
   const { toast } = useToast();
 
@@ -43,11 +43,12 @@ export function LeaveDetailsTab({
   // Credit/Deduct Dialog state
   const [creditDeductDialogOpen, setCreditDeductDialogOpen] = useState(false);
   const [creditDeductFormData, setCreditDeductFormData] = useState<CreditDeductFormData>({
-    leaveType: "",
+    leaveTypeId: "",
+    category: "",
     count: "",
     actionType: "credit",
   });
-  const [creditDeductTargetCode, setCreditDeductTargetCode] = useState<string>("");
+  const [creditDeductTargetLeaveTypeId, setCreditDeductTargetLeaveTypeId] = useState<string>("");
   const [isProcessingCredit, setIsProcessingCredit] = useState(false);
 
   // Fetch leave details on mount or when employeeId changes
@@ -127,8 +128,9 @@ export function LeaveDetailsTab({
   };
 
   const handleUpdateCredits = async (
-    leaveCode: string,
-    updates: Record<string, number>,
+    leaveTypeId: string,
+    action: "credit" | "deduct",
+    amount: number,
   ): Promise<boolean> => {
     if (!employeeId) {
       toast({
@@ -142,12 +144,23 @@ export function LeaveDetailsTab({
     setIsProcessingCredit(true);
 
     try {
-      const success = await bulkUpdateLeaveCredits(employeeId, updates);
+      const carrier = {
+        leaveTypes: [leaveTypeId],
+        employeeIds: [employeeId],
+        leaveAmount: amount,
+      };
+
+      const success =
+        action === "credit"
+          ? await creditLeaves(carrier)
+          : await deductLeaves(carrier);
 
       if (success) {
         toast({
           title: "Success",
-          description: `Leave credits updated for ${leaveCode}`,
+          description: `Leave ${
+            action === "credit" ? "credited" : "deducted"
+          } successfully`,
         });
 
         // Refresh leave details
@@ -156,7 +169,7 @@ export function LeaveDetailsTab({
       } else {
         toast({
           title: "Error",
-          description: "Failed to update leave credits",
+          description: `Failed to ${action} leave credits`,
           variant: "destructive",
         });
         return false;
@@ -166,7 +179,7 @@ export function LeaveDetailsTab({
         err instanceof Error ? err.message : "An error occurred";
       toast({
         title: "Error",
-        description: `Failed to update leave credits: ${errorMessage}`,
+        description: `Failed to ${action} leave credits: ${errorMessage}`,
         variant: "destructive",
       });
       return false;
@@ -175,18 +188,22 @@ export function LeaveDetailsTab({
     }
   };
 
-  const handleOpenCreditDeductDialog = (leaveCode: string) => {
-    setCreditDeductTargetCode(leaveCode);
+  const handleOpenCreditDeductDialog = (leaveTypeId: string) => {
+    const config = leaveData?.configurations[leaveTypeId];
+    const category = config?.category || "";
+    
+    setCreditDeductTargetLeaveTypeId(leaveTypeId);
     setCreditDeductFormData({
-      leaveType: leaveCode,
+      leaveTypeId: leaveTypeId,
+      category: category,
       count: "",
       actionType: "credit",
     });
     setCreditDeductDialogOpen(true);
   };
 
-  const handleSubmitCreditDeduct = async () => {
-    if (!creditDeductFormData.leaveType || !creditDeductFormData.count) {
+  const handleSubmitCreditDeduct = async (action: "credit" | "deduct") => {
+    if (!creditDeductFormData.leaveTypeId || !creditDeductFormData.count) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
@@ -195,15 +212,16 @@ export function LeaveDetailsTab({
       return;
     }
 
-    const updates: Record<string, number> = {
-      [creditDeductFormData.actionType]: parseFloat(creditDeductFormData.count),
-    };
-
-    const success = await handleUpdateCredits(creditDeductTargetCode, updates);
+    const success = await handleUpdateCredits(
+      creditDeductTargetLeaveTypeId,
+      action,
+      parseFloat(creditDeductFormData.count),
+    );
     if (success) {
       setCreditDeductDialogOpen(false);
       setCreditDeductFormData({
-        leaveType: "",
+        leaveTypeId: "",
+        category: "",
         count: "",
         actionType: "credit",
       });

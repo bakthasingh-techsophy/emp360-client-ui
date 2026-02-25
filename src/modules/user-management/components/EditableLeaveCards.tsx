@@ -15,7 +15,6 @@ import { EmployeeLeavesInformation, LMSConfiguration } from "../../../modules/le
 import { LeaveBalanceModel } from "../../../modules/leave-management-system/types/leaveConfiguration.types";
 import {
   CalendarDays,
-  AlertCircle,
   Plus,
 } from "lucide-react";
 
@@ -190,12 +189,6 @@ function EditableLeaveCardByType({
         {category === "accrued" && (
           <div className="space-y-2 pt-1 border-t">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Available</span>
-              <span className="font-semibold">
-                {Math.round(available * 10) / 10} days
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Consumed</span>
               <span className="font-semibold">
                 {Math.round(consumed * 10) / 10} days
@@ -211,18 +204,22 @@ function EditableLeaveCardByType({
         )}
 
         {category === "flexible" && (
-          <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200">
-            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-            <p className="text-xs text-amber-700">Consumption-based</p>
+          <div className="space-y-2 pt-1 border-t">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Consumed</span>
+              <span className="font-semibold">
+                {Math.round(consumed * 10) / 10} days
+              </span>
+            </div>
           </div>
         )}
 
         {category === "special" && (
           <div className="space-y-2 pt-1 border-t">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Available</span>
+              <span className="text-muted-foreground">Consumed</span>
               <span className="font-semibold">
-                {Math.round(available * 10) / 10} days
+                {Math.round(consumed * 10) / 10} days
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
@@ -245,16 +242,18 @@ function EditableLeaveCardByType({
           </div>
         )}
 
-        {/* Credit/Deduct Button */}
-        <Button
-          className="w-full mt-2"
-          variant="secondary"
-          size="sm"
-          onClick={onCreditDeduct}
-        >
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Credit / Deduct
-        </Button>
+        {/* Credit/Deduct Button - Not shown for flexible leaves */}
+        {category !== "flexible" && (
+          <Button
+            className="w-full mt-2"
+            variant="secondary"
+            size="sm"
+            onClick={onCreditDeduct}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Credit / Deduct
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

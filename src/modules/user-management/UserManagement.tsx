@@ -3,7 +3,7 @@
  * Manage users with filtering, search, and CRUD operations
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   UserPlus,
@@ -39,7 +39,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -57,26 +56,30 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 
-// Type definitions for carriers
-interface CreditDeductLeavesPayload {
-  employeeIds: string[];
-  leaveType: string;
-  count: number;
-  action: "credit" | "deduct";
-}
-
 import type {
   DeactivationCarrier,
   ReactivationCarrier,
 } from "@/services/userManagementService";
 import { BulkImportDialog } from "./components/BulkImportDialog";
+import { CreditDeductLeavesDialog } from "./components/CreditDeductLeavesDialog";
 
 export function UserManagement() {
   const navigate = useNavigate();
-  const { bulkDeleteUsers, bulkReactivateUsers, bulkDeactivateUsers } =
+  const { bulkDeleteUsers, bulkReactivateUsers, bulkDeactivateUsers, creditLeaves, deductLeaves } =
     useUserManagement();
-  const { exportUsersToExcel, isExporting, downloadImportTemplate, bulkImportUsers, isImporting } = useExcelSheet();
-  const { companies } = useCompany();
+  const {
+    exportUsersToExcel,
+    isExporting,
+    downloadImportTemplate,
+    bulkImportUsers,
+    isImporting,
+  } = useExcelSheet();
+  const { companies, refreshCompanies } = useCompany();
+
+  // Load companies on mount so the company filter options are available
+  useEffect(() => {
+    refreshCompanies();
+  }, []);
   const permissions = useUserManagementPermissions();
 
   // State management
@@ -98,7 +101,8 @@ export function UserManagement() {
   // Credit/Deduct Leaves Dialog state
   const [creditDeductDialogOpen, setCreditDeductDialogOpen] = useState(false);
   const [creditDeductFormData, setCreditDeductFormData] = useState({
-    leaveType: "",
+    leaveTypeId: "",
+    category: "",
     count: "",
     actionType: "credit" as "credit" | "deduct",
   });
@@ -106,6 +110,7 @@ export function UserManagement() {
     [],
   );
   const [creditDeductIsBulk, setCreditDeductIsBulk] = useState(false);
+  const [isSubmittingCredit, setIsSubmittingCredit] = useState(false);
 
   // Deactivation Dialog state
   const [deactivationDialogOpen, setDeactivationDialogOpen] = useState(false);
@@ -147,7 +152,8 @@ export function UserManagement() {
       setCreditDeductTargetIds(employeeIds);
       setCreditDeductIsBulk(isBulk);
       setCreditDeductFormData({
-        leaveType: "",
+        leaveTypeId: "",
+        category: "",
         count: "",
         actionType: "credit",
       });
@@ -156,26 +162,30 @@ export function UserManagement() {
     [],
   );
 
-  const handleSubmitCreditDeduct = useCallback(async () => {
-    if (!creditDeductFormData.leaveType || !creditDeductFormData.count) {
+  const handleSubmitCreditDeduct = useCallback(async (action: "credit" | "deduct") => {
+    if (!creditDeductFormData.leaveTypeId || !creditDeductFormData.count) {
       alert("Please fill all required fields");
       return;
     }
 
-    const payload: CreditDeductLeavesPayload = {
+    const carrier = {
+      leaveTypes: [creditDeductFormData.leaveTypeId],
       employeeIds: creditDeductTargetIds,
-      leaveType: creditDeductFormData.leaveType,
-      count: parseFloat(creditDeductFormData.count),
-      action: creditDeductFormData.actionType,
+      leaveAmount: parseFloat(creditDeductFormData.count),
     };
 
-    console.log("Credit/Deduct Leaves Payload:", payload);
-    // TODO: Replace with actual API call
-    // const response = await creditDeductLeavesAPI(payload);
+    setIsSubmittingCredit(true);
+    const success =
+      action === "credit"
+        ? await creditLeaves(carrier)
+        : await deductLeaves(carrier);
+    setIsSubmittingCredit(false);
 
-    setCreditDeductDialogOpen(false);
-    setRefreshTrigger((prev) => prev + 1);
-  }, [creditDeductFormData, creditDeductTargetIds]);
+    if (success) {
+      setCreditDeductDialogOpen(false);
+      setRefreshTrigger((prev) => prev + 1);
+    }
+  }, [creditDeductFormData, creditDeductTargetIds, creditLeaves, deductLeaves]);
 
   // Deactivation handlers
   const handleOpenDeactivationDialog = useCallback(
@@ -371,8 +381,8 @@ export function UserManagement() {
     "status",
   ]);
 
-  // Filter configuration
-  const filterConfig: AvailableFilter[] = [
+  // Filter configuration – memoized so options update when companies load
+  const filterConfig: AvailableFilter[] = useMemo(() => [
     {
       id: "employeeId",
       label: "Employee ID",
@@ -484,7 +494,7 @@ export function UserManagement() {
       label: "Updated At",
       type: "date",
     },
-  ];
+  ], [companies]);
 
   // Define available columns for column visibility toggle
   const allColumns = [
@@ -825,6 +835,7 @@ export function UserManagement() {
         targetIds={creditDeductTargetIds}
         isBulk={creditDeductIsBulk}
         onSubmit={handleSubmitCreditDeduct}
+        isSubmitting={isSubmittingCredit}
       />
 
       {/* Deactivation Dialog */}
@@ -863,160 +874,6 @@ export function UserManagement() {
     </>
   );
 }
-
-// Credit/Deduct Leaves Dialog Component
-interface CreditDeductLeavesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  formData: {
-    leaveType: string;
-    count: string;
-    actionType: "credit" | "deduct";
-  };
-  onFormDataChange: (data: any) => void;
-  targetIds: string[];
-  isBulk: boolean;
-  onSubmit: () => void;
-}
-
-function CreditDeductLeavesDialog({
-  open,
-  onOpenChange,
-  formData,
-  onFormDataChange,
-  targetIds,
-  isBulk,
-  onSubmit,
-}: CreditDeductLeavesDialogProps) {
-  const isValid = formData.leaveType && formData.count;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col"
-        hideClose
-      >
-        {/* Fixed Header */}
-        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>Credit/Deduct Leaves</DialogTitle>
-              <DialogDescription className="mt-1">
-                {isBulk
-                  ? `Manage leaves for ${targetIds.length} selected employee(s)`
-                  : "Manage leaves for the selected employee"}
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 rounded-full shrink-0 -mt-2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="space-y-4">
-            {/* Employee IDs - Bulk Mode */}
-            {isBulk && (
-              <div className="bg-muted/30 dark:bg-muted/10 rounded-lg p-4">
-                <Label className="text-xs font-semibold">
-                  Selected Employees
-                </Label>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {targetIds.map((id) => (
-                    <div
-                      key={id}
-                      className="flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-sm font-medium"
-                    >
-                      {id}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Leave Type */}
-            <div className="space-y-2">
-              <Label htmlFor="leave-type">Leave Type *</Label>
-              <Select
-                value={formData.leaveType}
-                onValueChange={(value) =>
-                  onFormDataChange({ ...formData, leaveType: value })
-                }
-              >
-                <SelectTrigger id="leave-type">
-                  <SelectValue placeholder="Select leave type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sick">Sick Leave</SelectItem>
-                  <SelectItem value="casual">Casual Leave</SelectItem>
-                  <SelectItem value="earned">Earned Leave</SelectItem>
-                  <SelectItem value="privilege">Privilege Leave</SelectItem>
-                  <SelectItem value="maternity">Maternity Leave</SelectItem>
-                  <SelectItem value="paternity">Paternity Leave</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Count */}
-            <div className="space-y-2">
-              <Label htmlFor="leave-count">Count (decimals up to 1) *</Label>
-              <Input
-                id="leave-count"
-                type="number"
-                placeholder="e.g., 2.5"
-                value={formData.count}
-                onChange={(e) =>
-                  onFormDataChange({ ...formData, count: e.target.value })
-                }
-                step="0.5"
-                min="0"
-              />
-              <p className="text-xs text-muted-foreground">
-                Accepted format: 0.5, 1, 1.5, 2, etc.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Fixed Footer with Actions */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 bg-muted/20">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-green-600 hover:bg-green-700"
-            disabled={!isValid}
-            onClick={() => {
-              onFormDataChange({ ...formData, actionType: "credit" });
-              onSubmit();
-            }}
-          >
-            <Gift className="mr-2 h-4 w-4" />
-            Credit Leaves
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={!isValid}
-            onClick={() => {
-              onFormDataChange({ ...formData, actionType: "deduct" });
-              onSubmit();
-            }}
-          >
-            <Gift className="mr-2 h-4 w-4" />
-            Deduct Leaves
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // Deactivation Dialog Component
 interface DeactivationDialogProps {
   open: boolean;

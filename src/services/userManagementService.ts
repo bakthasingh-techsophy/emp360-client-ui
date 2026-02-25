@@ -670,32 +670,10 @@ export const apiGetJobDetailsSnapshot = async (
   });
 };
 
+
 /**
  * Export all service functions as default object for easier importing
  */
-export const userManagementService = {
-  apiOnboardUser,
-  apiUpdateUser,
-  apiSearchUserSnapshots,
-  apiDeleteUser,
-  apiCreateSkill,
-  apiUpdateSkill,
-  apiDeleteSkill,
-  apiBulkDeleteUsers,
-  apiBulkDeactivateUsers,
-  apiBulkReactivateUsers,
-  apiUpdateEmployeeTypeViaUsers,
-  apiDeleteEmployeeTypeViaUsers,
-  apiUpdateDepartmentViaUsers,
-  apiDeleteDepartmentViaUsers,
-  apiUpdateDesignationViaUsers,
-  apiDeleteDesignationViaUsers,
-  apiUpdateWorkLocationViaUsers,
-  apiDeleteWorkLocationViaUsers,
-  apiGetGeneralDetailsSnapshot,
-  apiGetJobDetailsSnapshot,
-};
-
 /**
  * Get Leave Details for Employee
  * GET /emp-user-management/v1/users/{employeeId}/leave-details
@@ -723,4 +701,93 @@ export const apiGetLeaveDetails = async (
     tenant,
     accessToken,
   });
+};
+
+/**
+ * Leave Adjustment Carrier
+ * Payload for bulk credit / deduct leave operations
+ */
+export interface LeaveAdjustmentCarrier {
+  leaveTypes: string[];
+  employeeIds: string[];
+  leaveAmount: number;
+}
+
+/**
+ * Credit Leaves to Employees
+ * POST /emp-user-management/v1/users/leaves/credit
+ *
+ * Credits the specified number of leaves to the given employees for the given leave types.
+ *
+ * @param carrier - LeaveAdjustmentCarrier
+ * @param tenant  - Tenant ID
+ * @param accessToken - Optional access token
+ * @returns Promise<ApiResponse<void>>
+ */
+export const apiCreditLeaves = async (
+  carrier: LeaveAdjustmentCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/leaves/credit`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Deduct Leaves from Employees
+ * POST /emp-user-management/v1/users/leaves/deduct
+ *
+ * Deducts the specified number of leaves from the given employees for the given leave types.
+ *
+ * @param carrier - LeaveAdjustmentCarrier
+ * @param tenant  - Tenant ID
+ * @param accessToken - Optional access token
+ * @returns Promise<ApiResponse<void>>
+ */
+export const apiDeductLeaves = async (
+  carrier: LeaveAdjustmentCarrier,
+  tenant: string,
+  accessToken?: string
+): Promise<ApiResponse<void>> => {
+  return apiRequest<void>({
+    method: "POST",
+    endpoint: `${BASE_ENDPOINT}/leaves/deduct`,
+    tenant,
+    accessToken,
+    body: carrier,
+  });
+};
+
+/**
+ * Export all service functions as object for easier importing
+ */
+export const userManagementService = {
+  apiOnboardUser,
+  apiUpdateUser,
+  apiSearchUserSnapshots,
+  apiDeleteUser,
+  apiCreateSkill,
+  apiUpdateSkill,
+  apiDeleteSkill,
+  apiBulkDeleteUsers,
+  apiBulkDeactivateUsers,
+  apiBulkReactivateUsers,
+  apiUpdateEmployeeTypeViaUsers,
+  apiDeleteEmployeeTypeViaUsers,
+  apiUpdateDepartmentViaUsers,
+  apiDeleteDepartmentViaUsers,
+  apiUpdateDesignationViaUsers,
+  apiDeleteDesignationViaUsers,
+  apiUpdateWorkLocationViaUsers,
+  apiDeleteWorkLocationViaUsers,
+  apiGetGeneralDetailsSnapshot,
+  apiGetJobDetailsSnapshot,
+  apiGetLeaveDetails,
+  apiCreditLeaves,
+  apiDeductLeaves,
 };
